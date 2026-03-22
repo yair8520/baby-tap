@@ -230,6 +230,8 @@ const SONGS = [
 ]
 
 let audioCtx = null
+let globalMute = false  // synced from component via useEffect
+
 // Timeline pointer for random tap sounds
 let nextNoteTime = 0
 // Separate timeline for melody (so melody rhythm is never disrupted by tap sounds)
@@ -256,6 +258,7 @@ function scheduleNote(ctx, freq, type, volume, startAt, dur) {
 const MAX_TAP_QUEUE = 0.55  // never more than 0.55s of queued tap notes
 
 async function playSound(type = 'normal') {
+  if (globalMute) return
   try {
     const ctx = getAudioCtx()
     if (ctx.state === 'suspended') await ctx.resume()
@@ -292,9 +295,10 @@ export default function App() {
   const [trail, setTrail] = useState([])
   const [keyFlash, setKeyFlash] = useState(null)
   const [showIdle, setShowIdle] = useState(false)
-  const [isFullscreen, setIsFullscreen] = useState(isWebView)
+  const [isFullscreen, setIsFullscreen] = useState(false)   // always show start screen first
   const [holdProgress, setHoldProgress] = useState(0)
   const [vibrateOn, setVibrateOn] = useState(true)
+  const [muteOn,    setMuteOn]    = useState(false)
   const [combo, setCombo] = useState(0)
   const [showCombo, setShowCombo] = useState(false)
   const [ultraFlash, setUltraFlash] = useState(false)
@@ -309,6 +313,7 @@ export default function App() {
   const longPressTimerRef = useRef({})
   const longPressIntervalRef = useRef({})
   const vibrateRef = useRef(true)
+  const muteRef    = useRef(false)
   const comboRef = useRef(0)
   const lastTapTimeRef = useRef(0)
   const comboTimerRef = useRef(null)
@@ -325,11 +330,19 @@ export default function App() {
   const [songName, setSongName] = useState(SONGS[0].name)
   const [showSongName, setShowSongName] = useState(false)
 
-  // keep vibrateRef in sync with state (avoids stale closures in effects)
+  // keep refs in sync with state (avoids stale closures in effects)
   useEffect(() => { vibrateRef.current = vibrateOn }, [vibrateOn])
+  useEffect(() => {
+    muteRef.current = muteOn
+    globalMute      = muteOn  // sync module-level flag for playSound
+  }, [muteOn])
 
   const vibrate = (pattern) => {
-    if (vibrateRef.current && canVibrate) navigator.vibrate(pattern)
+    if (!vibrateRef.current) return
+    // Android browser
+    if (canVibrate) navigator.vibrate(pattern)
+    // React Native WebView (iOS + Android) — caught via onMessage
+    window.ReactNativeWebView?.postMessage(JSON.stringify({ type: 'vibrate', pattern }))
   }
 
   // ── resetIdle ──────────────────────────────────────────────────────────────
@@ -341,6 +354,7 @@ export default function App() {
 
   // ── melody player ──────────────────────────────────────────────────────────
   const playMelodyNote = useCallback(async () => {
+    if (muteRef.current) return   // muted — don't advance position, note will replay when unmuted
     const song   = SONGS[songIdxRef.current]
     const [freq, beats] = song.notes[noteIdxRef.current]
     const beat   = 60 / song.bpm          // seconds per quarter note
@@ -351,12 +365,8 @@ export default function App() {
       const ctx = getAudioCtx()
       if (ctx.state === 'suspended') await ctx.resume()
 
-      // Queue next note — but cap the queue at 1 note ahead so rapid tapping never creates a backlog
       const now     = ctx.currentTime
-      const maxAhead = slot * 1.5   // never more than 1.5 note-slots ahead
-      const startAt = (nextMelodyTime > now && nextMelodyTime - now < maxAhead)
-        ? nextMelodyTime
-        : now
+      const startAt = nextMelodyTime > now ? nextMelodyTime : now
       nextMelodyTime = startAt + slot
 
       // Main tone
@@ -433,7 +443,12 @@ export default function App() {
       }
     })
     setParticles(prev => [...prev, ...newParticles])
-    playMelodyNote()
+    // Only queue a melody note if the queue isn't already too full.
+    // This keeps the note sequence intact — we just don't add when overloaded.
+    const ctx = audioCtx
+    if (!ctx || nextMelodyTime - ctx.currentTime < 0.9) {
+      playMelodyNote()
+    }
   }, [resetIdle, playMelodyNote])
 
   // ── combo tracking (after spawnAt) ────────────────────────────────────────
@@ -450,7 +465,7 @@ export default function App() {
 
     // Milestone: combo 10 → ULTRA flash + auto-burst
     if (c === 10) {
-      if (vibrateRef.current) navigator.vibrate?.([100,40,100,40,200])
+      vibrate([100,40,100,40,200])
       setUltraFlash(true)
       setTimeout(() => setUltraFlash(false), 800)
       for (let i = 0; i < 8; i++) {
@@ -491,7 +506,7 @@ export default function App() {
       const mag = Math.sqrt((acc.x || 0) ** 2 + (acc.y || 0) ** 2 + (acc.z || 0) ** 2)
       if (mag > 28 && Date.now() - lastShake > 1200) {
         lastShake = Date.now()
-        if (vibrateRef.current) navigator.vibrate?.([80, 40, 80, 40, 120])
+        vibrate([80, 40, 80, 40, 120])
         for (let i = 0; i < 10; i++) {
           setTimeout(() => {
             spawnAt(
@@ -619,13 +634,26 @@ export default function App() {
     if (typeof DeviceMotionEvent?.requestPermission === 'function') {
       try { await DeviceMotionEvent.requestPermission() } catch (e) {}
     }
-    containerRef.current?.requestFullscreen?.()
+    if (isWebView) {
+      // In WebView the container IS already fullscreen — just show the game
+      setIsFullscreen(true)
+    } else {
+      containerRef.current?.requestFullscreen?.()
+    }
   }
-  const exitFullscreen = () => document.fullscreenElement && document.exitFullscreen()
+  const exitFullscreen = () => {
+    if (isWebView) {
+      // In WebView — go back to start screen (native app handles its own nav separately)
+      setIsFullscreen(false)
+      window.ReactNativeWebView?.postMessage(JSON.stringify({ type: 'exit' }))
+    } else {
+      document.fullscreenElement && document.exitFullscreen()
+    }
+  }
 
   // ── Touch handlers ─────────────────────────────────────────────────────────
   const handleTouchStart = (e) => {
-    if (e.target.closest('.corner-hold') || e.target.closest('.start-screen') || e.target.closest('.vibrate-btn')) return
+    if (e.target.closest('.corner-hold') || e.target.closest('.start-screen') || e.target.closest('.vibrate-btn') || e.target.closest('.mute-btn')) return
     Array.from(e.changedTouches).forEach(t => {
       const pos = { x: t.clientX, y: t.clientY }
       touchStartRef.current[t.identifier] = pos
@@ -655,7 +683,7 @@ export default function App() {
   }
 
   const handleTouchEnd = (e) => {
-    if (e.target.closest('.corner-hold') || e.target.closest('.start-screen') || e.target.closest('.vibrate-btn')) return
+    if (e.target.closest('.corner-hold') || e.target.closest('.start-screen') || e.target.closest('.vibrate-btn') || e.target.closest('.mute-btn')) return
     Array.from(e.changedTouches).forEach(t => {
       const wasLongPress = !!longPressIntervalRef.current[t.identifier]
       clearTimeout(longPressTimerRef.current[t.identifier])
@@ -702,7 +730,7 @@ export default function App() {
   // ── Mouse handlers (long press + double click + combo, mirrors touch) ──────
   const handleMouseDown = (e) => {
     if (e.button !== 0) return
-    if (e.target.closest('.corner-hold') || e.target.closest('.start-screen') || e.target.closest('.vibrate-btn')) return
+    if (e.target.closest('.corner-hold') || e.target.closest('.start-screen') || e.target.closest('.vibrate-btn') || e.target.closest('.mute-btn')) return
     mousePosRef.current = { x: e.clientX, y: e.clientY }
     mouseLongTimerRef.current = setTimeout(() => {
       vibrate([20])
@@ -715,7 +743,7 @@ export default function App() {
 
   const handleMouseUp = (e) => {
     if (e.button !== 0) return
-    if (e.target.closest('.corner-hold') || e.target.closest('.start-screen') || e.target.closest('.vibrate-btn')) return
+    if (e.target.closest('.corner-hold') || e.target.closest('.start-screen') || e.target.closest('.vibrate-btn') || e.target.closest('.mute-btn')) return
     const wasLong = !!mouseLongIntervalRef.current
     clearTimeout(mouseLongTimerRef.current)
     clearInterval(mouseLongIntervalRef.current)
@@ -793,15 +821,23 @@ export default function App() {
       onMouseMove={IS_TOUCH ? undefined : handleMouseMoveLong}
       onMouseLeave={IS_TOUCH ? undefined : handleMouseLeaveLong}
     >
-      <div className="bg-gradient" />
+      {/* Background layers */}
+      <div className="bg-base" />
+      <div className="bg-aurora">
+        <div className="aurora-blob aurora-blob-1" />
+        <div className="aurora-blob aurora-blob-2" />
+        <div className="aurora-blob aurora-blob-3" />
+        <div className="aurora-blob aurora-blob-4" />
+      </div>
+      <div className="bg-stars" />
       <div className="bg-bubbles">
-        {Array.from({ length: 16 }).map((_, i) => (
-          <div key={i} className="bubble" style={{
-            left: `${(i * 6.5 + 3) % 100}%`,
-            width: `${28 + (i * 17) % 65}px`,
-            height: `${28 + (i * 17) % 65}px`,
-            animationDuration: `${14 + (i * 1.7) % 8}s`,
-            animationDelay: `-${(i * 3.1) % 14}s`,
+        {Array.from({ length: 20 }).map((_, i) => (
+          <div key={i} className={`bubble bubble-${(i % 4) + 1}`} style={{
+            left:            `${(i * 5.2 + 2) % 100}%`,
+            width:           `${20 + (i * 19) % 70}px`,
+            height:          `${20 + (i * 19) % 70}px`,
+            animationDuration:`${13 + (i * 1.9) % 10}s`,
+            animationDelay:  `-${(i * 2.8) % 16}s`,
           }} />
         ))}
       </div>
@@ -851,14 +887,25 @@ export default function App() {
         </div>
       )}
 
-      {/* Vibrate toggle button – only on devices that support it */}
-      {isFullscreen && canVibrate && (
+      {/* Mute toggle */}
+      {isFullscreen && (
+        <button
+          className="mute-btn"
+          onTouchEnd={(e) => { e.stopPropagation(); setMuteOn(m => !m) }}
+          onMouseUp={(e)  => { e.stopPropagation(); setMuteOn(m => !m) }}
+        >
+          {muteOn ? '🔇' : '🔊'}
+        </button>
+      )}
+
+      {/* Vibrate toggle */}
+      {isFullscreen && (
         <button
           className="vibrate-btn"
           onTouchEnd={(e) => { e.stopPropagation(); setVibrateOn(v => !v) }}
           onMouseUp={(e) => { e.stopPropagation(); setVibrateOn(v => !v) }}
         >
-          {vibrateOn ? '📳' : '🔇'}
+          {vibrateOn ? '📳' : '📴'}
         </button>
       )}
 

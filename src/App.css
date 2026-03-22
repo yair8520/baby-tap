@@ -20,19 +20,124 @@ body, html, #root {
 }
 
 /* ===================== BACKGROUND ===================== */
-.bg-gradient {
+
+/* 1 — deep space base */
+.bg-base {
   position: absolute;
   inset: 0;
-  background: linear-gradient(135deg, #1a0533 0%, #0d1b5e 45%, #0a3d62 100%);
-  animation: gradHue 18s linear infinite;
+  background:
+    radial-gradient(ellipse 120% 80% at 50% 0%,   #0e0630 0%, transparent 65%),
+    radial-gradient(ellipse 100% 80% at 0%  100%,  #071440 0%, transparent 70%),
+    radial-gradient(ellipse 90%  90% at 100% 50%,  #0a1a50 0%, transparent 70%),
+    linear-gradient(180deg, #060214 0%, #090520 40%, #040d2a 100%);
 }
 
-@keyframes gradHue {
-  0%   { filter: hue-rotate(0deg)   brightness(1); }
-  50%  { filter: hue-rotate(60deg)  brightness(1.15); }
-  100% { filter: hue-rotate(0deg)   brightness(1); }
+/* 2 — aurora blobs */
+.bg-aurora {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
 }
 
+.aurora-blob {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(70px);
+  mix-blend-mode: screen;
+}
+
+.aurora-blob-1 {
+  width: 70vmax; height: 70vmax;
+  top: -20%; left: -15%;
+  background: radial-gradient(circle, rgba(120,40,255,0.55), transparent 70%);
+  animation: aBlob1 14s ease-in-out infinite alternate;
+}
+.aurora-blob-2 {
+  width: 65vmax; height: 65vmax;
+  bottom: -20%; right: -15%;
+  background: radial-gradient(circle, rgba(30,100,255,0.50), transparent 70%);
+  animation: aBlob2 17s ease-in-out infinite alternate;
+}
+.aurora-blob-3 {
+  width: 50vmax; height: 50vmax;
+  top: 30%; left: 35%;
+  background: radial-gradient(circle, rgba(200,40,160,0.35), transparent 70%);
+  animation: aBlob3 11s ease-in-out infinite alternate;
+}
+.aurora-blob-4 {
+  width: 40vmax; height: 40vmax;
+  top: -10%; right: 20%;
+  background: radial-gradient(circle, rgba(0,200,200,0.25), transparent 70%);
+  animation: aBlob4 19s ease-in-out infinite alternate;
+}
+
+@keyframes aBlob1 {
+  0%   { transform: translate(0,    0)    scale(1);    opacity:.7; }
+  50%  { transform: translate(8%,  15%)   scale(1.15); opacity:.9; }
+  100% { transform: translate(-5%, 8%)    scale(0.9);  opacity:.6; }
+}
+@keyframes aBlob2 {
+  0%   { transform: translate(0,   0)    scale(1);    opacity:.65; }
+  50%  { transform: translate(-10%,-12%) scale(1.2);  opacity:.85; }
+  100% { transform: translate(6%,  -5%)  scale(0.95); opacity:.7;  }
+}
+@keyframes aBlob3 {
+  0%   { transform: translate(0,  0)   scale(1);    opacity:.5; }
+  50%  { transform: translate(12%,8%)  scale(1.3);  opacity:.75; }
+  100% { transform: translate(-8%,5%)  scale(0.85); opacity:.45; }
+}
+@keyframes aBlob4 {
+  0%   { transform: translate(0,   0)   scale(1);   opacity:.4; }
+  50%  { transform: translate(-6%,18%)  scale(1.25);opacity:.65; }
+  100% { transform: translate(10%, 5%)  scale(0.9); opacity:.35; }
+}
+
+/* 3 — star field */
+.bg-stars {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background-image:
+    radial-gradient(1.5px 1.5px at  3%  7%, rgba(255,255,255,.95), transparent),
+    radial-gradient(1px   1px   at  8% 14%, rgba(255,255,255,.7),  transparent),
+    radial-gradient(2px   2px   at 14%  3%, rgba(255,255,255,.85), transparent),
+    radial-gradient(1px   1px   at 21% 19%, rgba(255,255,255,.6),  transparent),
+    radial-gradient(1.5px 1.5px at 27%  9%, rgba(255,255,255,.9),  transparent),
+    radial-gradient(1px   1px   at 33% 28%, rgba(255,255,255,.65), transparent),
+    radial-gradient(2px   2px   at 40%  6%, rgba(255,255,255,.8),  transparent),
+    radial-gradient(1px   1px   at 47% 21%, rgba(255,255,255,.55), transparent),
+    radial-gradient(1.5px 1.5px at 53% 12%, rgba(255,255,255,.9),  transparent),
+    radial-gradient(1px   1px   at 59% 35%, rgba(255,255,255,.6),  transparent),
+    radial-gradient(2px   2px   at 66%  4%, rgba(255,255,255,.85), transparent),
+    radial-gradient(1px   1px   at 72% 18%, rgba(255,255,255,.7),  transparent),
+    radial-gradient(1.5px 1.5px at 78% 29%, rgba(255,255,255,.95), transparent),
+    radial-gradient(1px   1px   at 84%  8%, rgba(255,255,255,.6),  transparent),
+    radial-gradient(2px   2px   at 91% 16%, rgba(255,255,255,.8),  transparent),
+    radial-gradient(1px   1px   at 96% 33%, rgba(255,255,255,.65), transparent),
+    radial-gradient(1px   1px   at 11% 52%, rgba(255,255,255,.55), transparent),
+    radial-gradient(2px   2px   at 24% 67%, rgba(255,255,255,.8),  transparent),
+    radial-gradient(1px   1px   at 38% 48%, rgba(255,255,255,.6),  transparent),
+    radial-gradient(1.5px 1.5px at 51% 73%, rgba(255,255,255,.9),  transparent),
+    radial-gradient(1px   1px   at 63% 59%, rgba(255,255,255,.7),  transparent),
+    radial-gradient(2px   2px   at 75% 82%, rgba(255,255,255,.85), transparent),
+    radial-gradient(1px   1px   at 87% 64%, rgba(255,255,255,.6),  transparent),
+    radial-gradient(1.5px 1.5px at  6% 88%, rgba(255,255,255,.75), transparent),
+    radial-gradient(1px   1px   at 19% 95%, rgba(255,255,255,.55), transparent),
+    radial-gradient(2px   2px   at 43% 91%, rgba(255,255,255,.8),  transparent),
+    radial-gradient(1px   1px   at 67% 78%, rgba(255,255,255,.65), transparent),
+    radial-gradient(1.5px 1.5px at 82% 93%, rgba(255,255,255,.9),  transparent),
+    radial-gradient(1px   1px   at 95% 85%, rgba(255,255,255,.7),  transparent);
+  animation: starTwinkle 6s ease-in-out infinite alternate;
+}
+
+@keyframes starTwinkle {
+  0%   { opacity: .6; }
+  50%  { opacity: 1;  }
+  100% { opacity: .7; }
+}
+
+/* 4 — bubbles */
 .bg-bubbles {
   position: absolute;
   inset: 0;
@@ -44,17 +149,32 @@ body, html, #root {
   position: absolute;
   bottom: -120px;
   border-radius: 50%;
-  background: radial-gradient(circle at 30% 30%, rgba(255,255,255,0.35), rgba(130,80,255,0.08));
-  border: 1px solid rgba(255,255,255,0.12);
   animation: bubbleRise linear infinite;
-  /* negative delay = start mid-animation, no pop-in */
+}
+
+.bubble-1 {
+  background: radial-gradient(circle at 30% 30%, rgba(255,255,255,0.5), rgba(160,100,255,0.05));
+  border: 1px solid rgba(255,255,255,0.18);
+}
+.bubble-2 {
+  background: radial-gradient(circle at 35% 30%, rgba(255,255,255,0.4), rgba(80,150,255,0.05));
+  border: 1px solid rgba(100,180,255,0.2);
+}
+.bubble-3 {
+  background: radial-gradient(circle at 30% 35%, rgba(255,255,255,0.45), rgba(255,80,200,0.05));
+  border: 1px solid rgba(255,100,200,0.15);
+}
+.bubble-4 {
+  background: radial-gradient(circle at 30% 30%, rgba(255,255,255,0.35), rgba(0,220,200,0.05));
+  border: 1px solid rgba(0,220,200,0.15);
 }
 
 @keyframes bubbleRise {
-  0%   { transform: translateY(0) scale(1); opacity: 0; }
-  8%   { opacity: 0.22; }
-  92%  { opacity: 0.12; }
-  100% { transform: translateY(-115vh) scale(0.75); opacity: 0; }
+  0%   { transform: translateY(0)        scale(1)    rotate(0deg);   opacity: 0; }
+  6%   { opacity: 0.28; }
+  50%  { transform: translateY(-55vh)    scale(1.05) rotate(180deg); opacity: 0.18; }
+  94%  { opacity: 0.1; }
+  100% { transform: translateY(-115vh)   scale(0.7)  rotate(360deg); opacity: 0; }
 }
 
 /* ===================== START SCREEN ===================== */
@@ -172,6 +292,30 @@ body, html, #root {
 }
 
 /* ===================== VIBRATE BUTTON ===================== */
+.mute-btn {
+  position: fixed;
+  top: 12px;
+  right: 72px;     /* sits to the left of vibrate-btn */
+  z-index: 200;
+  background: rgba(0,0,0,0.35);
+  border: 1px solid rgba(255,255,255,0.15);
+  border-radius: 50%;
+  width: 48px;
+  height: 48px;
+  font-size: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  touch-action: none;
+  -webkit-tap-highlight-color: transparent;
+  transition: transform 0.15s, background 0.15s;
+}
+.mute-btn:active {
+  transform: scale(0.88);
+  background: rgba(255,255,255,0.15);
+}
+
 .vibrate-btn {
   position: fixed;
   top: 12px;

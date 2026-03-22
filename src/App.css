@@ -323,25 +323,30 @@ body, html, #root {
   border-radius: 50%;
   pointer-events: none;
   z-index: 60;
-  transform: translate(-50%, -50%);
-  animation: trailFade 0.5s ease-out forwards;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  mix-blend-mode: screen;
+  animation: trailFade 0.75s cubic-bezier(0.2, 0.8, 0.4, 1) forwards;
 }
 
 @keyframes trailFade {
-  0%   { opacity: 0.9; transform: translate(-50%, -50%) scale(1); }
-  100% { opacity: 0; transform: translate(-50%, -50%) scale(0.1); }
+  0%   { opacity: 1;   transform: translate(-50%, -50%)               scale(1);    }
+  35%  { opacity: 0.9; transform: translate(-50%, calc(-50% - 12px))  scale(1.18); }
+  100% { opacity: 0;   transform: translate(-50%, calc(-50% - 40px))  scale(0.05); }
 }
 
 /* ===================== SWIPE TRAIL ===================== */
 .swipe-trail {
-  animation: swipeTrailFade 0.75s cubic-bezier(0.22, 0.61, 0.36, 1) forwards;
+  mix-blend-mode: screen;
+  animation: swipeTrailFade 0.8s cubic-bezier(0.22, 0.61, 0.36, 1) forwards;
 }
 
 @keyframes swipeTrailFade {
-  0%   { opacity: 1;   transform: translate(-50%, -50%) scale(0.6); }
-  25%  { opacity: 0.9; transform: translate(-50%, -50%) scale(1.4); }
-  60%  { opacity: 0.6; transform: translate(-50%, -50%) scale(1.1); }
-  100% { opacity: 0;   transform: translate(-50%, -50%) scale(0.15); }
+  0%   { opacity: 1;   transform: translate(-50%, -50%) scale(0.7); }
+  20%  { opacity: 1;   transform: translate(-50%, -50%) scale(1.5); }
+  60%  { opacity: 0.6; transform: translate(-50%, -50%) scale(1.2); }
+  100% { opacity: 0;   transform: translate(-50%, calc(-50% - 25px)) scale(0.1); }
 }
 
 /* ===================== SPINNING EMOJIS ===================== */

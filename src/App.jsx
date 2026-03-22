@@ -10,7 +10,7 @@ const IS_TOUCH = navigator.maxTouchPoints > 0 || window.matchMedia('(pointer: co
 
 const UI = {
   emojiRow:   '👶 🎉 🌈',
-  title:      'Baby Smash!',
+  title:      isHebrew ? 'בייבי ספארק! ✨' : 'Baby Spark! ✨',
   subtitle:   isHebrew
     ? 'תנו לתינוק ללחוץ על המסך\nולראות קסם צבעוני! ✨'
     : 'Let the baby tap the screen\nand see colorful magic! ✨',
@@ -18,6 +18,8 @@ const UI = {
   hint:       isHebrew
     ? 'לצאת: החזק פינה שמאלית-עליונה 2 שניות'
     : 'To exit: hold top-left corner for 2 seconds',
+  ultra:      isHebrew ? '👑 עוצמה ×' : '👑 ULTRA ×',
+  fire:       isHebrew ? '🔥 לוהט ×' : '🔥 ×',
 }
 
 // ── Emoji maps ────────────────────────────────────────────────────────────────
@@ -145,124 +147,135 @@ const C4=261.63,D4=293.66,E4=329.63,F4=349.23,G4=392.00,A4=440.00,B4=493.88
 const C5=523.25,D5=587.33,E5=659.25,F5=698.46,G5=783.99,A5=880.00
 
 // note lengths encoded by repetition: quarter=1×, half=2×, dotted-half=3×
+// Each note: [frequency, beats]  (1=quarter, 2=half, 4=whole, 0.5=eighth)
 const SONGS = [
   {
-    // C C | G G | A A | G(half) | F F | E E | D D | C(half)
     name: 'כוכב קטן ✨',
+    bpm: 126,
     notes: [
-      C4,C4, G4,G4, A4,A4, G4,G4,
-      F4,F4, E4,E4, D4,D4, C4,C4,
-      G4,G4, F4,F4, E4,E4, D4,D4,
-      G4,G4, F4,F4, E4,E4, D4,D4,
-      C4,C4, G4,G4, A4,A4, G4,G4,
-      F4,F4, E4,E4, D4,D4, C4,C4,
+      // Twinkle Twinkle – 4/4
+      [C4,1],[C4,1],[G4,1],[G4,1],  [A4,1],[A4,1],[G4,2],
+      [F4,1],[F4,1],[E4,1],[E4,1],  [D4,1],[D4,1],[C4,2],
+      [G4,1],[G4,1],[F4,1],[F4,1],  [E4,1],[E4,1],[D4,2],
+      [G4,1],[G4,1],[F4,1],[F4,1],  [E4,1],[E4,1],[D4,2],
+      [C4,1],[C4,1],[G4,1],[G4,1],  [A4,1],[A4,1],[G4,2],
+      [F4,1],[F4,1],[E4,1],[E4,1],  [D4,1],[D4,1],[C4,2],
     ],
   },
   {
-    // G(8) G(8) A(q) G(q) | C5(q) B4(half+q) ...
     name: 'יום הולדת שמח 🎂',
+    bpm: 96,
     notes: [
-      G4,G4,A4,G4, C5,C5,B4,B4,B4,
-      G4,G4,A4,G4, D5,D5,C5,C5,C5,
-      G4,G4,G5,E5, C5,B4,A4,A4,A4,
-      F5,F5,E5,C5, D5,C5,C5,C5,
+      // Happy Birthday – 3/4   (♩=78)
+      [G4,0.5],[G4,0.5],[A4,1],[G4,1],  [C5,1],[B4,2],
+      [G4,0.5],[G4,0.5],[A4,1],[G4,1],  [D5,1],[C5,2],
+      [G4,0.5],[G4,0.5],[G5,1],[E5,1],  [C5,1],[B4,1],[A4,2],
+      [F5,0.5],[F5,0.5],[E5,1],[C5,1],  [D5,1],[C5,3],
     ],
   },
   {
-    // Old MacDonald – היה לו חווה 🐄
     name: 'היה לו חווה 🐄',
+    bpm: 132,
     notes: [
-      G4,G4,G4,D4, E4,E4,D4,D4,
-      B4,B4,A4,A4, G4,G4,
-      D4,D4, G4,G4,G4,G4,D4,D4,
-      E4,E4,D4,D4, B4,B4,A4,A4, G4,G4,
+      // Old MacDonald – 4/4
+      [G4,1],[G4,1],[G4,1],[D4,1],  [E4,1],[E4,1],[D4,2],
+      [B4,1],[B4,1],[A4,1],[A4,1],  [G4,4],
+      [D4,2],
+      [G4,1],[G4,1],[G4,1],[G4,1],  [D4,2],
+      [E4,1],[E4,1],[D4,2],
+      [B4,1],[B4,1],[A4,1],[A4,1],  [G4,4],
     ],
   },
   {
-    // Jingle Bells – with correct rhythm (eighth notes doubled)
-    name: 'ג\'ינגל בלס 🔔',
+    name: "ג'ינגל בלס 🔔",
+    bpm: 144,
     notes: [
-      E4,E4,E4,E4,  // Jin-gle bells (half)
-      E4,E4,E4,E4,  // jin-gle bells (half)
-      E4,G4,C4,D4,E4,E4,  // jin-gle all  the  way (last E half)
-      F4,F4,F4,F4,F4,  // Oh what fun it is (last F half)
-      F4,E4,E4,E4,E4,  // to ride in a (last E half)
-      E4,D4,D4,E4,D4,D4, G4,G4, // one horse open sleigh
-      E4,E4,E4,E4,
-      E4,E4,E4,E4,
-      E4,G4,C4,D4,E4,E4,
-      F4,F4,F4,F4,F4,
-      G4,G4,F4,D4,C4,C4,
+      // Jingle Bells – 4/4
+      [E4,1],[E4,1],[E4,2],
+      [E4,1],[E4,1],[E4,2],
+      [E4,1],[G4,1],[C4,1],[D4,1],  [E4,4],
+      [F4,1],[F4,1],[F4,1],[F4,1],
+      [F4,1],[E4,1],[E4,1],[E4,1],
+      [E4,1],[D4,1],[D4,1],[E4,1],  [D4,2],[G4,2],
+      [E4,1],[E4,1],[E4,2],
+      [E4,1],[E4,1],[E4,2],
+      [E4,1],[G4,1],[C4,1],[D4,1],  [E4,4],
+      [F4,1],[F4,1],[F4,1],[F4,1],
+      [G4,1],[G4,1],[F4,1],[D4,1],  [C4,4],
     ],
   },
   {
-    // Mary Had a Little Lamb
     name: 'מרי הייתה לה כבשה 🐑',
+    bpm: 126,
     notes: [
-      E4,D4,C4,D4, E4,E4,E4,E4,  // Ma-ry had a lit-tle lamb (last E half)
-      D4,D4,D4,D4, E4,G4,G4,G4,  // lit-tle lamb  lit-tle lamb (G half)
-      E4,D4,C4,D4, E4,E4,E4,E4,
-      E4,D4,D4,D4, E4,D4,C4,C4,
+      // Mary Had a Little Lamb – 4/4
+      [E4,1],[D4,1],[C4,1],[D4,1],  [E4,1],[E4,1],[E4,2],
+      [D4,1],[D4,1],[D4,2],         [E4,1],[G4,1],[G4,2],
+      [E4,1],[D4,1],[C4,1],[D4,1],  [E4,1],[E4,1],[E4,1],[E4,1],
+      [D4,1],[D4,1],[E4,1],[D4,1],  [C4,4],
     ],
   },
   {
-    // Head Shoulders Knees and Toes – ראש כתפיים
     name: 'ראש כתפיים 🙆',
+    bpm: 152,
     notes: [
-      G4,G4,G4,E4,  // ראש  וכ-תפיים
-      G4,G4,G4,     // בר-כיים
-      G4,A4,B4,C5,B4,A4,G4,G4, // ואצ-בעות  (last G half)
-      A4,B4,A4,A4,  // ואצ-בעות
-      G4,G4,G4,E4,
-      G4,G4,G4,
-      G4,A4,B4,C5,B4,A4,G4,G4,
-      A4,A4,G4,G4,
+      // Head Shoulders Knees and Toes – 4/4
+      [G4,1],[G4,1],[G4,1],[E4,1],  [G4,1],[G4,1],[G4,2],
+      [G4,0.5],[A4,0.5],[B4,1],[C5,1],  [B4,0.5],[A4,0.5],[G4,2],
+      [A4,1],[A4,1],[A4,1],[A4,1],  [G4,1],[G4,1],[G4,2],
+      [G4,1],[G4,1],[G4,1],[E4,1],  [G4,1],[G4,1],[G4,2],
+      [G4,0.5],[A4,0.5],[B4,1],[C5,1],  [B4,0.5],[A4,0.5],[G4,2],
     ],
   },
 ]
 
 let audioCtx = null
+// Timeline pointer for random tap sounds
+let nextNoteTime = 0
+// Separate timeline for melody (so melody rhythm is never disrupted by tap sounds)
+let nextMelodyTime = 0
+
 function getAudioCtx() {
   if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)()
   return audioCtx
 }
 
-function playSound(type = 'normal') {
+function scheduleNote(ctx, freq, type, volume, startAt, dur) {
+  const osc  = ctx.createOscillator()
+  const gain = ctx.createGain()
+  osc.connect(gain)
+  gain.connect(ctx.destination)
+  osc.frequency.value = freq
+  osc.type = type
+  gain.gain.setValueAtTime(volume, startAt)
+  gain.gain.exponentialRampToValueAtTime(0.001, startAt + dur)
+  osc.start(startAt)
+  osc.stop(startAt + dur)
+}
+
+const MAX_TAP_QUEUE = 0.55  // never more than 0.55s of queued tap notes
+
+async function playSound(type = 'normal') {
   try {
     const ctx = getAudioCtx()
-    if (type === 'number') {
-      const osc = ctx.createOscillator()
-      const gain = ctx.createGain()
-      osc.connect(gain)
-      gain.connect(ctx.destination)
-      osc.frequency.value = NUMBER_NOTES[Math.floor(Math.random() * NUMBER_NOTES.length)]
-      osc.type = 'triangle'
-      gain.gain.setValueAtTime(0.28, ctx.currentTime)
-      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.45)
-      osc.start(ctx.currentTime)
-      osc.stop(ctx.currentTime + 0.45)
+    if (ctx.state === 'suspended') await ctx.resume()
 
-      const osc2 = ctx.createOscillator()
-      const gain2 = ctx.createGain()
-      osc2.connect(gain2)
-      gain2.connect(ctx.destination)
-      osc2.frequency.value = NUMBER_NOTES[Math.floor(Math.random() * NUMBER_NOTES.length)] * 1.33
-      osc2.type = 'sine'
-      gain2.gain.setValueAtTime(0.12, ctx.currentTime)
-      gain2.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.28)
-      osc2.start(ctx.currentTime)
-      osc2.stop(ctx.currentTime + 0.28)
+    const now = ctx.currentTime
+    // Cap the queue: if nextNoteTime is too far ahead, drop it back to now
+    const startAt = (nextNoteTime > now && nextNoteTime - now < MAX_TAP_QUEUE)
+      ? nextNoteTime
+      : now
+
+    if (type === 'number') {
+      const dur = 0.45
+      scheduleNote(ctx, NUMBER_NOTES[Math.floor(Math.random() * NUMBER_NOTES.length)], 'triangle', 0.28, startAt, dur)
+      scheduleNote(ctx, NUMBER_NOTES[Math.floor(Math.random() * NUMBER_NOTES.length)] * 1.33, 'sine', 0.12, startAt, 0.28)
+      nextNoteTime = startAt + dur
     } else {
-      const osc = ctx.createOscillator()
-      const gain = ctx.createGain()
-      osc.connect(gain)
-      gain.connect(ctx.destination)
-      osc.frequency.value = NOTES[Math.floor(Math.random() * NOTES.length)]
-      osc.type = ['sine', 'triangle', 'sine'][Math.floor(Math.random() * 3)]
-      gain.gain.setValueAtTime(0.22, ctx.currentTime)
-      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.5)
-      osc.start(ctx.currentTime)
-      osc.stop(ctx.currentTime + 0.5)
+      const dur = 0.5
+      scheduleNote(ctx, NOTES[Math.floor(Math.random() * NOTES.length)],
+        ['sine', 'triangle', 'sine'][Math.floor(Math.random() * 3)], 0.22, startAt, dur)
+      nextNoteTime = startAt + dur
     }
   } catch (e) {}
 }
@@ -304,6 +317,7 @@ export default function App() {
   const mouseLongTimerRef = useRef(null)
   const mouseLongIntervalRef = useRef(null)
   const mousePosRef = useRef(null)
+  const lastSpawnRef = useRef(0)
   // Melody
   const songIdxRef = useRef(0)
   const noteIdxRef = useRef(0)
@@ -326,28 +340,44 @@ export default function App() {
   }, [])
 
   // ── melody player ──────────────────────────────────────────────────────────
-  const playMelodyNote = useCallback(() => {
-    const song = SONGS[songIdxRef.current]
-    const freq = song.notes[noteIdxRef.current]
+  const playMelodyNote = useCallback(async () => {
+    const song   = SONGS[songIdxRef.current]
+    const [freq, beats] = song.notes[noteIdxRef.current]
+    const beat   = 60 / song.bpm          // seconds per quarter note
+    const dur    = beats * beat * 0.88    // sound-on time (slight gap between notes)
+    const slot   = beats * beat           // full time slot this note occupies
+
     try {
       const ctx = getAudioCtx()
-      const osc = ctx.createOscillator()
+      if (ctx.state === 'suspended') await ctx.resume()
+
+      // Queue next note — but cap the queue at 1 note ahead so rapid tapping never creates a backlog
+      const now     = ctx.currentTime
+      const maxAhead = slot * 1.5   // never more than 1.5 note-slots ahead
+      const startAt = (nextMelodyTime > now && nextMelodyTime - now < maxAhead)
+        ? nextMelodyTime
+        : now
+      nextMelodyTime = startAt + slot
+
+      // Main tone
+      const osc  = ctx.createOscillator()
       const gain = ctx.createGain()
       osc.connect(gain); gain.connect(ctx.destination)
       osc.frequency.value = freq
       osc.type = 'sine'
-      gain.gain.setValueAtTime(0.28, ctx.currentTime)
-      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.38)
-      osc.start(ctx.currentTime); osc.stop(ctx.currentTime + 0.38)
-      // soft harmony
-      const osc2 = ctx.createOscillator()
+      gain.gain.setValueAtTime(0.28, startAt)
+      gain.gain.exponentialRampToValueAtTime(0.001, startAt + dur)
+      osc.start(startAt); osc.stop(startAt + dur)
+
+      // Soft upper harmonic
+      const osc2  = ctx.createOscillator()
       const gain2 = ctx.createGain()
       osc2.connect(gain2); gain2.connect(ctx.destination)
       osc2.frequency.value = freq * 1.5
       osc2.type = 'triangle'
-      gain2.gain.setValueAtTime(0.08, ctx.currentTime)
-      gain2.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.22)
-      osc2.start(ctx.currentTime); osc2.stop(ctx.currentTime + 0.22)
+      gain2.gain.setValueAtTime(0.07, startAt)
+      gain2.gain.exponentialRampToValueAtTime(0.001, startAt + dur * 0.6)
+      osc2.start(startAt); osc2.stop(startAt + dur * 0.6)
     } catch (e) {}
 
     noteIdxRef.current++
@@ -364,6 +394,7 @@ export default function App() {
 
   // ── spawnAt (must be before any effect that uses it) ──────────────────────
   const spawnAt = useCallback((x, y, emojiList = null, soundType = 'normal', isNumber = false, comboScale = 1) => {
+    lastSpawnRef.current = Date.now()
     resetIdle()
 
     const bonus = Math.min(Math.floor((comboScale - 1) * 1.5), 6)
@@ -504,11 +535,18 @@ export default function App() {
       })
     }
 
+    let hue = 0
     const onMove = (e) => {
-      const id = nextId()
-      const color = COLORS[randInt(0, COLORS.length)]
-      setTrail(prev => [...prev, { id, x: e.clientX, y: e.clientY, color, size: rand(8, 18) }])
-      setTimeout(() => setTrail(prev => prev.filter(t => t.id !== id)), 500)
+      hue = (hue + 12) % 360
+      const id  = nextId()
+      const size = rand(28, 58)
+      const color = `hsl(${hue},100%,62%)`
+      const sparkle = Math.random() < 0.25   // 25% chance to show a ✨ emoji
+      setTrail(prev => [
+        ...prev.slice(-28),                  // cap trail length for perf
+        { id, x: e.clientX, y: e.clientY, color, size, sparkle }
+      ])
+      setTimeout(() => setTrail(prev => prev.filter(t => t.id !== id)), 700)
     }
 
     window.addEventListener('mousemove', onMove)
@@ -522,7 +560,25 @@ export default function App() {
   // ── Keyboard ───────────────────────────────────────────────────────────────
   useEffect(() => {
     const onKey = (e) => {
+      if (!isFullscreen) return
       if (e.repeat) return
+
+      // Block browser/OS shortcuts from leaking out while game is active.
+      // We can't stop OS-level shortcuts (Cmd+Space) but we stop everything
+      // the browser can intercept: Cmd/Ctrl combos, F-keys, Space, arrows, etc.
+      const hasModifier = e.metaKey || e.ctrlKey || e.altKey
+      const isFKey      = e.key.startsWith('F') && e.key.length <= 3 && !isNaN(e.key.slice(1))
+      const isNav       = ['Tab','Escape','Backspace','Delete',
+                           'ArrowUp','ArrowDown','ArrowLeft','ArrowRight',
+                           ' '].includes(e.key)
+
+      if (hasModifier || isFKey || isNav) {
+        e.preventDefault()
+        // Still spawn an emoji so the kid sees something happen
+        spawnAt(rand(120, window.innerWidth - 120), rand(120, window.innerHeight - 120))
+        return
+      }
+
       const x = rand(120, window.innerWidth - 120)
       const y = rand(120, window.innerHeight - 120)
       const key = e.key
@@ -545,9 +601,10 @@ export default function App() {
         spawnAt(x, y)
       }
     }
-    window.addEventListener('keydown', onKey)
-    return () => window.removeEventListener('keydown', onKey)
-  }, [spawnAt])
+    // capture:true → intercepts before browser handles shortcuts (e.g. Ctrl+W, F5)
+    window.addEventListener('keydown', onKey, { capture: true })
+    return () => window.removeEventListener('keydown', onKey, { capture: true })
+  }, [spawnAt, isFullscreen])
 
   // ── Fullscreen change ──────────────────────────────────────────────────────
   useEffect(() => {
@@ -813,7 +870,7 @@ export default function App() {
       {/* Combo display */}
       {isFullscreen && showCombo && combo >= 2 && (
         <div key={combo} className={`combo-display ${combo >= 10 ? 'combo-ultra' : combo >= 7 ? 'combo-fire' : combo >= 4 ? 'combo-hot' : ''}`}>
-          {combo >= 10 ? '👑 ULTRA ×' : combo >= 7 ? '🔥 ×' : combo >= 4 ? '⚡ ×' : '✨ ×'}{combo}
+          {combo >= 10 ? UI.ultra : combo >= 7 ? UI.fire : combo >= 4 ? '⚡ ×' : '✨ ×'}{combo}
         </div>
       )}
 
@@ -844,14 +901,14 @@ export default function App() {
           style={{
             left: t.x,
             top: t.y,
-            background: t.color,
+            background: t.swipe ? t.color : `radial-gradient(circle at 35% 35%, white, ${t.color})`,
             width: t.size,
             height: t.size,
-            boxShadow: t.swipe
-              ? `0 0 ${t.size * 0.8}px ${t.color}, 0 0 ${t.size * 1.8}px ${t.color}55`
-              : undefined,
+            boxShadow: `0 0 ${t.size * 0.6}px ${t.color}, 0 0 ${t.size * 1.4}px ${t.color}88, 0 0 ${t.size * 2.5}px ${t.color}33`,
           }}
-        />
+        >
+          {t.sparkle && <span style={{ fontSize: t.size * 0.7, lineHeight: 1, userSelect: 'none' }}>✨</span>}
+        </div>
       ))}
 
       {/* Emojis */}

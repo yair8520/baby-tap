@@ -791,7 +791,7 @@ export default function App() {
     e.stopPropagation()
     holdStartRef.current = Date.now()
     holdIntervalRef.current = setInterval(() => {
-      const p = Math.min((Date.now() - holdStartRef.current) / 2000, 1)
+      const p = Math.min((Date.now() - holdStartRef.current) / 1000, 1)
       setHoldProgress(p)
       if (p >= 1) {
         clearInterval(holdIntervalRef.current)
@@ -891,7 +891,7 @@ export default function App() {
       {isFullscreen && (
         <button
           className="mute-btn"
-          onTouchEnd={(e) => { e.stopPropagation(); setMuteOn(m => !m) }}
+          onTouchEnd={(e) => { e.preventDefault(); e.stopPropagation(); setMuteOn(m => !m) }}
           onMouseUp={(e)  => { e.stopPropagation(); setMuteOn(m => !m) }}
         >
           {muteOn ? '🔇' : '🔊'}
@@ -902,7 +902,7 @@ export default function App() {
       {isFullscreen && (
         <button
           className="vibrate-btn"
-          onTouchEnd={(e) => { e.stopPropagation(); setVibrateOn(v => !v) }}
+          onTouchEnd={(e) => { e.preventDefault(); e.stopPropagation(); setVibrateOn(v => !v) }}
           onMouseUp={(e) => { e.stopPropagation(); setVibrateOn(v => !v) }}
         >
           {vibrateOn ? '📳' : '📴'}

@@ -203,6 +203,16 @@ body, html, #root {
     0 0 80px rgba(162,155,254,0.15);
 }
 
+.start-logo {
+  width: 88px;
+  height: 88px;
+  border-radius: 22px;
+  margin-bottom: 12px;
+  box-shadow:
+    0 14px 32px rgba(0,0,0,0.4),
+    inset 0 1px 0 rgba(255,255,255,0.28);
+}
+
 .start-emoji-row {
   font-size: 52px;
   margin-bottom: 16px;
@@ -738,18 +748,13 @@ body, html, #root {
 }
 
 /* ===================== BALLOONS ===================== */
-.balloon-tap-layer {
-  position: fixed;
-  inset: 0;
-  z-index: 38;
-  pointer-events: all;
-}
-
 .balloon {
   position: fixed;
   border-radius: 50% 50% 50% 50% / 60% 60% 40% 40%;
-  pointer-events: none;
+  pointer-events: auto;
   z-index: 40;
+  touch-action: manipulation;
+  cursor: pointer;
   transform-origin: center bottom;
   /* Single animation — combines rise + sway to avoid transform conflict */
   animation: balloonUp var(--rise) linear forwards;
@@ -986,6 +991,23 @@ body, html, #root {
 }
 
 /* ===================== PIANO ===================== */
+
+/* Keep piano UI isolated so only it rotates on mobile portrait */
+.piano-mode-shell {
+  position: fixed;
+  inset: 0;
+  z-index: 34;
+}
+
+.piano-mode-shell.force-landscape {
+  inset: auto;
+  top: 50%;
+  left: 50%;
+  width: 100dvh;
+  height: 100vw;
+  transform: translate(-50%, -50%) rotate(90deg);
+  transform-origin: center center;
+}
 
 /* ── Piano: rotate hint ──────────────────────────────────────────────────── */
 .piano-rotate-hint {

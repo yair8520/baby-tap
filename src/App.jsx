@@ -6,13 +6,51 @@ import {
   UI, EMOJIS, COLORS, SONGS,
   NUMBER_EMOJIS, LETTER_EMOJIS, HEBREW_LETTER_EMOJIS, SPECIAL_KEY_EMOJIS,
   COMBO_HOT_EMOJIS, COMBO_ULTRA_EMOJIS,
-  DRUM_PADS,
+  DRUM_PADS, PIANO_KEYS,
 } from './constants.js'
 
 import {
   getAudioCtx, setGlobalMute, playSound, playMelodyNote,
-  playBalloonPop, playDrum, nextMelodyTime,
+  playBalloonPop, playDrum, playPianoNote, nextMelodyTime,
 } from './audio.js'
+
+// ── Piano helpers (module-level, no React state needed) ───────────────────────
+function getBlackKeyPos(bk, whiteKeys, wKeyWidth) {
+  const noteChar = bk.id.slice(0, -1)
+  const octave = bk.id.slice(-1)
+  const leftWhiteId = noteChar[0] + octave
+  const leftIdx = whiteKeys.findIndex(k => k.id === leftWhiteId)
+  if (leftIdx < 0) return { left: 0, width: 0 }
+  const bkWidth = wKeyWidth * 0.6
+  return {
+    left: (leftIdx + 1) * wKeyWidth - bkWidth / 2,
+    width: bkWidth,
+  }
+}
+
+function findPianoKey(clientX, clientY, rect) {
+  const whiteKeys = PIANO_KEYS.filter(k => k.type === 'white')
+  const wKeyWidth = rect.width / whiteKeys.length
+  const wKeyHeight = rect.height
+
+  // First check black keys (they're on top)
+  const blackKeys = PIANO_KEYS.filter(k => k.type === 'black')
+  for (const bk of blackKeys) {
+    const bkPos = getBlackKeyPos(bk, whiteKeys, wKeyWidth)
+    if (
+      clientX >= rect.left + bkPos.left &&
+      clientX <= rect.left + bkPos.left + bkPos.width &&
+      clientY >= rect.top &&
+      clientY <= rect.top + wKeyHeight * 0.62
+    ) return bk
+  }
+
+  // Then white keys
+  const x = clientX - rect.left
+  const wIdx = Math.floor(x / wKeyWidth)
+  if (wIdx >= 0 && wIdx < whiteKeys.length) return whiteKeys[wIdx]
+  return null
+}
 
 // ── Utilities ──────────────────────────────────────────────────────────────────
 function rand(a, b) { return a + Math.random() * (b - a) }
@@ -22,11 +60,12 @@ let uid = 0
 const nextId = () => ++uid
 
 // ── Balloon helpers ────────────────────────────────────────────────────────────
-function makeBalloon() {
+// speedFactor: 1 = normal, 2 = twice as fast, etc.
+function makeBalloon(speedFactor = 1) {
   const size   = randInt(65, 106)
   const hue    = randInt(0, 360)
   const sway   = rand(-60, 60)
-  const rise   = rand(6000, 12000)
+  const rise   = rand(6000 / speedFactor, 11000 / speedFactor)
   const floatD = rand(2000, 4000)
   return {
     id:    nextId(),
@@ -42,15 +81,23 @@ function makeBalloon() {
   }
 }
 
+// Every LEVEL_STEP pops = one level up; speedFactor grows by 0.3 per level
+const BALLOON_LEVEL_STEP  = 5
+const getBalloonLevel     = (pops) => Math.min(Math.floor(pops / BALLOON_LEVEL_STEP) + 1, 10)
+const getBalloonSpeed     = (lvl)  => 1 + (lvl - 1) * 0.3   // 1.0 → 1.3 → 1.6 …
+const getBalloonInterval  = (lvl)  => Math.max(600, 1200 - (lvl - 1) * 70) // 1200 → 1130 → …
+
 // ── Main component ─────────────────────────────────────────────────────────────
 export default function App() {
   // ── Core state ──────────────────────────────────────────────────────────────
   const [isFullscreen,  setIsFullscreen]  = useState(false)
+  const [isPortrait,    setIsPortrait]    = useState(() => window.innerHeight > window.innerWidth)
   const [holdProgress,  setHoldProgress]  = useState(0)
   const [vibrateOn,     setVibrateOn]     = useState(true)
   const [muteOn,        setMuteOn]        = useState(false)
   const [gameMode,      setGameMode]      = useState('classic')  // 'classic' | 'balloons' | 'drums' | 'targets' | 'autoshow'
-  const [settingsOpen,  setSettingsOpen]  = useState(false)
+  const [settingsOpen,      setSettingsOpen]      = useState(false)
+  const [showSettingsHint,  setShowSettingsHint]  = useState(false)
 
   // ── Classic mode state ───────────────────────────────────────────────────────
   const [emojis,       setEmojis]       = useState([])
@@ -65,14 +112,22 @@ export default function App() {
   const [showSongName, setShowSongName] = useState(false)
 
   // ── Balloon mode state ───────────────────────────────────────────────────────
-  const [balloons,      setBalloons]     = useState([])
-  const [balloonHint,   setBalloonHint]  = useState(false)
-  const [popCount,      setPopCount]     = useState(0)
-  const [balloonMissed, setBalloonMissed] = useState(0)
+  const [balloons,       setBalloons]      = useState([])
+  const [balloonHint,    setBalloonHint]   = useState(false)
+  const [popCount,       setPopCount]      = useState(0)
+  const [balloonMissed,  setBalloonMissed] = useState(0)
+  const [balloonLevel,   setBalloonLevel]  = useState(1)
+  const [balloonLevelUp, setBalloonLevelUp]= useState(null)  // { level } when flashing
+  const balloonLevelRef  = useRef(1)
   const balloonsRef = useRef([])
 
   // ── Drum mode state ──────────────────────────────────────────────────────────
   const [drumRipples, setDrumRipples] = useState([])
+
+  // ── Piano mode state ──────────────────────────────────────────────────────────
+  const [pressedKeys,   setPressedKeys]   = useState(new Set())
+  const [displayedKeys, setDisplayedKeys] = useState(new Set())
+  const displayTimerRef = useRef(null)
 
   // ── Target mode state ─────────────────────────────────────────────────────────
   const [targets,     setTargets]     = useState([])
@@ -108,6 +163,7 @@ export default function App() {
   const lastBalloonPopRef   = useRef(Date.now())
   const gameModeRef         = useRef('classic')
   const settingsRef         = useRef(null)
+  const pianoRef            = useRef(null)
   const spawnAtRef          = useRef(null)
   const targetScoreRef      = useRef(0)
 
@@ -120,6 +176,26 @@ export default function App() {
   useEffect(() => { gameModeRef.current = gameMode }, [gameMode])
   useEffect(() => { targetsRef.current = targets }, [targets])
   useEffect(() => { targetScoreRef.current = targetScore }, [targetScore])
+
+  // ── Piano: pressedKeys ref (avoid stale closures in handlers) ────────────────
+  const pressedKeysRef = useRef(new Set())
+  useEffect(() => { pressedKeysRef.current = pressedKeys }, [pressedKeys])
+
+  // Keep displayed note for 2s after finger lifts
+  useEffect(() => {
+    if (pressedKeys.size > 0) {
+      clearTimeout(displayTimerRef.current)
+      setDisplayedKeys(new Set(pressedKeys))
+    } else {
+      displayTimerRef.current = setTimeout(() => setDisplayedKeys(new Set()), 2000)
+    }
+    return () => clearTimeout(displayTimerRef.current)
+  }, [pressedKeys])
+
+  // ── Piano: clear pressed keys when leaving piano mode ────────────────────────
+  useEffect(() => {
+    if (gameMode !== 'piano') setPressedKeys(new Set())
+  }, [gameMode])
 
   // ── Vibrate helper ───────────────────────────────────────────────────────────
   const vibrate = useCallback((pattern) => {
@@ -136,9 +212,12 @@ export default function App() {
   }, [])
 
   useEffect(() => {
-    if (!isFullscreen) { clearTimeout(idleTimerRef.current); setShowIdle(false); return }
+    if (!isFullscreen) { clearTimeout(idleTimerRef.current); setShowIdle(false); setShowSettingsHint(false); return }
     resetIdle()
-    return () => clearTimeout(idleTimerRef.current)
+    // Show settings hint 2s after entering fullscreen for first time
+    const hintTimer = setTimeout(() => setShowSettingsHint(true), 2000)
+    const hideTimer = setTimeout(() => setShowSettingsHint(false), 7000)
+    return () => { clearTimeout(idleTimerRef.current); clearTimeout(hintTimer); clearTimeout(hideTimer) }
   }, [isFullscreen, resetIdle])
 
   // ── Settings panel close-on-outside-click ────────────────────────────────────
@@ -204,8 +283,7 @@ export default function App() {
     })
     setParticles(prev => [...prev, ...newParticles])
 
-    playSound(soundType)
-
+    // Only the melody plays — no separate tap beep
     const ctx = getAudioCtx()
     if (!ctx || nextMelodyTime - ctx.currentTime < 0.9) {
       playMelody()
@@ -375,6 +453,17 @@ export default function App() {
     return () => document.removeEventListener('fullscreenchange', onChange)
   }, [])
 
+  // ── Orientation tracker ───────────────────────────────────────────────────────
+  useEffect(() => {
+    const update = () => setIsPortrait(window.innerHeight > window.innerWidth)
+    window.addEventListener('resize', update)
+    window.addEventListener('orientationchange', update)
+    return () => {
+      window.removeEventListener('resize', update)
+      window.removeEventListener('orientationchange', update)
+    }
+  }, [])
+
   // ── Enter / exit fullscreen ──────────────────────────────────────────────────
   const enterFullscreen = async () => {
     // Request motion permission on iOS Safari.
@@ -429,25 +518,45 @@ export default function App() {
   // Keep balloonsRef in sync so hit detection is always synchronous
   useEffect(() => { balloonsRef.current = balloons }, [balloons])
 
-  // ── Balloon mode: spawn loop ─────────────────────────────────────────────────
+  // Level-up detection: each BALLOON_LEVEL_STEP pops → new level
+  useEffect(() => {
+    if (gameMode !== 'balloons') return
+    const newLevel = getBalloonLevel(popCount)
+    if (newLevel > balloonLevelRef.current) {
+      balloonLevelRef.current = newLevel
+      setBalloonLevel(newLevel)
+      setBalloonLevelUp({ level: newLevel })
+      vibrate([60, 30, 80])
+      setTimeout(() => setBalloonLevelUp(null), 2000)
+    }
+  }, [popCount, gameMode, vibrate])
+
+  // ── Balloon mode: spawn loop (restarts when level changes) ───────────────────
   useEffect(() => {
     if (!isFullscreen || gameMode !== 'balloons') {
       clearInterval(balloonTimerRef.current)
       setBalloons([])
       setPopCount(0)
       setBalloonMissed(0)
+      setBalloonLevel(1)
+      balloonLevelRef.current = 1
       return
     }
+    const speed    = getBalloonSpeed(balloonLevel)
+    const interval = getBalloonInterval(balloonLevel)
+    const maxOnScreen = 6 + balloonLevel  // more balloons at higher levels
+
     // Spawn 3 balloons immediately so screen isn't empty on entry
-    setBalloons([makeBalloon(), makeBalloon(), makeBalloon()])
+    setBalloons([makeBalloon(speed), makeBalloon(speed), makeBalloon(speed)])
+    clearInterval(balloonTimerRef.current)
     balloonTimerRef.current = setInterval(() => {
       setBalloons(prev => {
-        if (prev.length >= 10) return prev
-        return [...prev, makeBalloon()]
+        if (prev.length >= maxOnScreen) return prev
+        return [...prev, makeBalloon(speed)]
       })
-    }, 1200)
+    }, interval)
     return () => clearInterval(balloonTimerRef.current)
-  }, [isFullscreen, gameMode])
+  }, [isFullscreen, gameMode, balloonLevel])
 
   // ── Balloon mode: remove balloons that rose off-screen ───────────────────────
   useEffect(() => {
@@ -631,15 +740,19 @@ export default function App() {
       const cx = t.clientX
       const cy = t.clientY
       // Hit detection directly from ref — synchronous, always up-to-date
+      // bx accounts for the CSS sway animation: sin wave over [0..2π] as progress goes 0→1
+      // by uses the same linear rise the CSS animation applies
       let hit = null
-      let minDist = 100  // generous tap radius
+      let hitDist = Infinity
       balloonsRef.current.forEach(b => {
         const elapsed  = now - b.born
         const progress = Math.min(elapsed / b.rise, 1)
-        const bx = b.x
-        const by = b.y - progress * (window.innerHeight + 200)
-        const dist = Math.hypot(cx - bx, cy - by)
-        if (dist < minDist) { minDist = dist; hit = b }
+        const swayX    = b.sway * Math.sin(progress * 2 * Math.PI)
+        const bx       = b.x + swayX
+        const by       = b.y - progress * (window.innerHeight + 200)
+        const radius   = b.size / 2 + 36   // visual radius + generous padding
+        const dist     = Math.hypot(cx - bx, cy - by)
+        if (dist < radius && dist < hitDist) { hitDist = dist; hit = b }
       })
       if (hit) popBalloon(hit, cx, cy)
     })
@@ -663,6 +776,7 @@ export default function App() {
 
   // ── Classic: touch handlers ──────────────────────────────────────────────────
   const handleTouchStart = (e) => {
+    if (gameModeRef.current === 'piano') return
     if (gameModeRef.current !== 'classic' && gameModeRef.current !== 'autoshow') return
     if (e.target.closest('.corner-hold') || e.target.closest('.start-screen') || e.target.closest('.settings-wrap')) return
     Array.from(e.changedTouches).forEach(t => {
@@ -739,6 +853,7 @@ export default function App() {
   // ── Classic: mouse handlers ──────────────────────────────────────────────────
   const handleMouseDown = (e) => {
     if (e.button !== 0) return
+    if (gameModeRef.current === 'piano') return
     if (gameModeRef.current !== 'classic' && gameModeRef.current !== 'autoshow') return
     if (e.target.closest('.corner-hold') || e.target.closest('.start-screen') || e.target.closest('.settings-wrap')) return
     mousePosRef.current = { x: e.clientX, y: e.clientY }
@@ -796,6 +911,52 @@ export default function App() {
     mouseLongIntervalRef.current = null
     mousePosRef.current = null
   }
+
+  // ── Piano: touch/mouse handlers ──────────────────────────────────────────────
+  const handlePianoTouch = useCallback((e) => {
+    e.preventDefault()
+    if (!pianoRef.current) return
+    const rect = pianoRef.current.getBoundingClientRect()
+    const newPressed = new Set()
+    Array.from(e.touches).forEach(t => {
+      const key = findPianoKey(t.clientX, t.clientY, rect)
+      if (key) {
+        newPressed.add(key.id)
+        if (!pressedKeysRef.current.has(key.id)) {
+          playPianoNote(key.freq)
+          vibrate([8])
+        }
+      }
+    })
+    setPressedKeys(newPressed)
+  }, [vibrate])
+
+  const handlePianoTouchEnd = useCallback((e) => {
+    e.preventDefault()
+    if (!pianoRef.current) return
+    const rect = pianoRef.current.getBoundingClientRect()
+    const newPressed = new Set()
+    Array.from(e.touches).forEach(t => {
+      const key = findPianoKey(t.clientX, t.clientY, rect)
+      if (key) newPressed.add(key.id)
+    })
+    setPressedKeys(newPressed)
+  }, [])
+
+  const handlePianoMouseDown = useCallback((e) => {
+    if (!pianoRef.current) return
+    const rect = pianoRef.current.getBoundingClientRect()
+    const key = findPianoKey(e.clientX, e.clientY, rect)
+    if (key) {
+      playPianoNote(key.freq)
+      vibrate([8])
+      setPressedKeys(new Set([key.id]))
+    }
+  }, [vibrate])
+
+  const handlePianoMouseUp = useCallback(() => {
+    setPressedKeys(new Set())
+  }, [])
 
   // ── Computed ─────────────────────────────────────────────────────────────────
   const C = 2 * Math.PI * 22
@@ -881,69 +1042,79 @@ export default function App() {
           {/* ── Settings gear (top-right) ── */}
           <div className="settings-wrap" ref={settingsRef}>
             <button
-              className="settings-gear-btn"
-              onTouchEnd={(e) => { e.preventDefault(); e.stopPropagation(); setSettingsOpen(o => !o) }}
-              onMouseUp={(e)  => { e.stopPropagation(); setSettingsOpen(o => !o) }}
+              className={`settings-gear-btn${showSettingsHint ? ' settings-gear-pulse' : ''}`}
+              onTouchEnd={(e) => { e.preventDefault(); e.stopPropagation(); setShowSettingsHint(false); setSettingsOpen(o => !o) }}
+              onMouseUp={(e)  => { e.stopPropagation(); setShowSettingsHint(false); setSettingsOpen(o => !o) }}
             >
               ⚙️
             </button>
 
+            {/* First-time hint bubble */}
+            {showSettingsHint && !settingsOpen && (
+              <div className="settings-hint-bubble">
+                {isHebrew ? '← הגדרות ומצבים' : 'Settings & modes →'}
+              </div>
+            )}
+
             {settingsOpen && (
               <div className="settings-panel" dir={isHebrew ? 'rtl' : 'ltr'}>
                 {/* Mode row */}
-                <div className="settings-row">
-                  <span className="settings-label">מצב</span>
-                  <div className="settings-mode-btns">
-                    <button
-                      className={`settings-mode-btn${gameMode === 'classic' ? ' active' : ''}`}
-                      onTouchEnd={(e) => { e.preventDefault(); e.stopPropagation(); setGameMode('classic'); setSettingsOpen(false) }}
-                      onMouseUp={(e)  => { e.stopPropagation(); setGameMode('classic'); setSettingsOpen(false) }}
-                    >🎮 קלאסי</button>
-                    <button
-                      className={`settings-mode-btn${gameMode === 'balloons' ? ' active' : ''}`}
-                      onTouchEnd={(e) => { e.preventDefault(); e.stopPropagation(); setGameMode('balloons'); setSettingsOpen(false) }}
-                      onMouseUp={(e)  => { e.stopPropagation(); setGameMode('balloons'); setSettingsOpen(false) }}
-                    >🎈 בלונים</button>
-                    <button
-                      className={`settings-mode-btn${gameMode === 'drums' ? ' active' : ''}`}
-                      onTouchEnd={(e) => { e.preventDefault(); e.stopPropagation(); setGameMode('drums'); setSettingsOpen(false) }}
-                      onMouseUp={(e)  => { e.stopPropagation(); setGameMode('drums'); setSettingsOpen(false) }}
-                    >🥁 תופים</button>
-                    <button
-                      className={`settings-mode-btn${gameMode === 'targets' ? ' active' : ''}`}
-                      onTouchEnd={(e) => { e.preventDefault(); e.stopPropagation(); setGameMode('targets'); setSettingsOpen(false) }}
-                      onMouseUp={(e)  => { e.stopPropagation(); setGameMode('targets'); setSettingsOpen(false) }}
-                    >🎯 מטרות</button>
-                    <button
-                      className={`settings-mode-btn${gameMode === 'autoshow' ? ' active' : ''}`}
-                      onTouchEnd={(e) => { e.preventDefault(); e.stopPropagation(); setGameMode('autoshow'); setSettingsOpen(false) }}
-                      onMouseUp={(e)  => { e.stopPropagation(); setGameMode('autoshow'); setSettingsOpen(false) }}
-                    >🌟 הפתעה</button>
-                  </div>
-                </div>
+                {/* Mode label */}
+                <span className="settings-label">{isHebrew ? 'בחר מצב' : 'Select mode'}</span>
 
-                {/* Sound toggle row */}
-                <div className="settings-row">
-                  <span className="settings-label">צליל</span>
+                {/* Mode grid 3×2 */}
+                {(() => {
+                  const modes = [
+                    { id:'classic',   emoji:'🎮', label: isHebrew ? 'קלאסי'  : 'Classic'  },
+                    { id:'balloons',  emoji:'🎈', label: isHebrew ? 'בלונים' : 'Balloons' },
+                    { id:'drums',     emoji:'🥁', label: isHebrew ? 'תופים'  : 'Drums'    },
+                    { id:'targets',   emoji:'🎯', label: isHebrew ? 'מטרות'  : 'Targets'  },
+                    { id:'piano',     emoji:'🎹', label: isHebrew ? 'פסנתר'  : 'Piano'    },
+                    { id:'autoshow',  emoji:'🌟', label: isHebrew ? 'הפתעה'  : 'Auto'     },
+                  ]
+                  return (
+                    <div className="settings-mode-grid">
+                      {modes.map(m => (
+                        <button
+                          key={m.id}
+                          className={`settings-mode-btn${gameMode === m.id ? ' active' : ''}`}
+                          onTouchEnd={(e) => { e.preventDefault(); e.stopPropagation(); setGameMode(m.id); setSettingsOpen(false) }}
+                          onMouseUp={(e)  => { e.stopPropagation(); setGameMode(m.id); setSettingsOpen(false) }}
+                        >
+                          <span className="mode-emoji">{m.emoji}</span>
+                          <span className="mode-label">{m.label}</span>
+                        </button>
+                      ))}
+                    </div>
+                  )
+                })()}
+
+                <div className="settings-divider" />
+
+                {/* Sound toggle */}
+                <div className="settings-toggle-row">
+                  <span className="settings-toggle-label">
+                    <span className="tl-icon">{muteOn ? '🔇' : '🔊'}</span>
+                    {isHebrew ? 'צליל' : 'Sound'}
+                  </span>
                   <button
-                    className="settings-toggle-btn"
+                    className={`settings-toggle-btn${muteOn ? '' : ' on'}`}
                     onTouchEnd={(e) => { e.preventDefault(); e.stopPropagation(); setMuteOn(m => !m) }}
                     onMouseUp={(e)  => { e.stopPropagation(); setMuteOn(m => !m) }}
-                  >
-                    {muteOn ? '🔇' : '🔊'}
-                  </button>
+                  />
                 </div>
 
-                {/* Vibrate toggle row */}
-                <div className="settings-row">
-                  <span className="settings-label">רטט</span>
+                {/* Vibrate toggle */}
+                <div className="settings-toggle-row">
+                  <span className="settings-toggle-label">
+                    <span className="tl-icon">{vibrateOn ? '📳' : '🔕'}</span>
+                    {isHebrew ? 'רטט' : 'Vibrate'}
+                  </span>
                   <button
-                    className="settings-toggle-btn"
+                    className={`settings-toggle-btn${vibrateOn ? ' on' : ''}`}
                     onTouchEnd={(e) => { e.preventDefault(); e.stopPropagation(); setVibrateOn(v => !v) }}
                     onMouseUp={(e)  => { e.stopPropagation(); setVibrateOn(v => !v) }}
-                  >
-                    {vibrateOn ? '📳' : '🔕'}
-                  </button>
+                  />
                 </div>
               </div>
             )}
@@ -995,10 +1166,22 @@ export default function App() {
           {/* ── Balloon mode content ── */}
           {gameMode === 'balloons' && (
             <>
-              {/* Pop counter */}
+              {/* Pop counter + level */}
               <div className="balloon-counter">
                 🎈 {popCount} &nbsp;|&nbsp; 💨 {balloonMissed}
+                &nbsp;|&nbsp;
+                <span className="balloon-level-badge">
+                  {'⚡'.repeat(Math.min(balloonLevel, 5))} {isHebrew ? `רמה ${balloonLevel}` : `Lv ${balloonLevel}`}
+                </span>
               </div>
+
+              {/* Level-up flash */}
+              {balloonLevelUp && (
+                <div className="balloon-levelup">
+                  {'🚀'}<br/>
+                  {isHebrew ? `רמה ${balloonLevelUp.level}!` : `Level ${balloonLevelUp.level}!`}
+                </div>
+              )}
 
               {balloonHint && (
                 <div className="balloon-hint">
@@ -1116,6 +1299,84 @@ export default function App() {
           {/* ── Autoshow mode content ── */}
           {gameMode === 'autoshow' && (
             <div className="autoshow-shimmer" />
+          )}
+
+          {/* ── Piano mode content ── */}
+          {gameMode === 'piano' && (
+            <>
+              {/* Portrait overlay — ask user to rotate */}
+              {IS_TOUCH && isPortrait && (
+                <div className="piano-rotate-hint">
+                  <div className="piano-rotate-icon">🔄</div>
+                  <div>{isHebrew ? 'סובב את המכשיר לרוחב' : 'Rotate device to landscape'}</div>
+                </div>
+              )}
+
+              {/* Note display — top portion */}
+              {(() => {
+                const SOLFEGE = isHebrew
+                  ? { C:'דו', D:'רה', E:'מי', F:'פה', G:'סול', A:'לה', B:'סי' }
+                  : { C:'Do', D:'Re', E:'Mi', F:'Fa', G:'Sol', A:'La', B:'Si' }
+                return (
+                  <div className="piano-display">
+                    {displayedKeys.size > 0
+                      ? Array.from(displayedKeys).map(kid => {
+                          const k = PIANO_KEYS.find(p => p.id === kid)
+                          if (!k) return null
+                          const name = (SOLFEGE[k.label] ?? '?') + (k.type === 'black' ? '♯' : '')
+                          return (
+                            <span key={kid} className="piano-note-label">{name}</span>
+                          )
+                        })
+                      : <span className="piano-display-hint">🎹</span>
+                    }
+                  </div>
+                )
+              })()}
+
+
+              {/* Keyboard — bottom 45% */}
+              <div
+                ref={pianoRef}
+                className="piano-container"
+                onTouchStart={IS_TOUCH ? handlePianoTouch : undefined}
+                onTouchMove={IS_TOUCH ? handlePianoTouch : undefined}
+                onTouchEnd={IS_TOUCH ? handlePianoTouchEnd : undefined}
+                onMouseDown={IS_TOUCH ? undefined : handlePianoMouseDown}
+                onMouseMove={IS_TOUCH ? undefined : (e) => { if (e.buttons === 1) handlePianoMouseDown(e) }}
+                onMouseUp={IS_TOUCH ? undefined : handlePianoMouseUp}
+                onMouseLeave={IS_TOUCH ? undefined : handlePianoMouseUp}
+              >
+                {/* White keys */}
+                {PIANO_KEYS.filter(k => k.type === 'white').map((key, idx, arr) => (
+                  <div
+                    key={key.id}
+                    className={`piano-key white-key${pressedKeys.has(key.id) ? ' pressed' : ''}`}
+                    style={{ left: `${(idx / arr.length) * 100}%`, width: `${100 / arr.length}%` }}
+                  >
+                    <span className="piano-key-label">{key.label}</span>
+                  </div>
+                ))}
+                {/* Black keys */}
+                {PIANO_KEYS.filter(k => k.type === 'black').map(key => {
+                  const whites = PIANO_KEYS.filter(k => k.type === 'white')
+                  const ww = 100 / whites.length
+                  const noteChar = key.id.slice(0, -1)
+                  const octave = key.id.slice(-1)
+                  const leftWhiteId = noteChar[0] + octave
+                  const leftIdx = whites.findIndex(k => k.id === leftWhiteId)
+                  if (leftIdx < 0) return null
+                  const leftPct = (leftIdx + 1) * ww - (ww * 0.3)
+                  return (
+                    <div
+                      key={key.id}
+                      className={`piano-key black-key${pressedKeys.has(key.id) ? ' pressed' : ''}`}
+                      style={{ left: `${leftPct}%`, width: `${ww * 0.6}%` }}
+                    />
+                  )
+                })}
+              </div>
+            </>
           )}
 
           {/* ── Shared: emojis (classic sparkles + balloon pops) ── */}

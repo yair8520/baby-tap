@@ -224,6 +224,35 @@ export const SPECIAL_KEY_EMOJIS = {
 export const COMBO_HOT_EMOJIS  = ['🔥','⚡','💥','🌟','✨','💫','🌈','🎆','🎇','🌠','🪄','🎉','💯','🏆','🥇','🎖️']
 export const COMBO_ULTRA_EMOJIS = ['🌈','🔥','⚡','💥','🌟','✨','💫','🎆','🎇','🌠','🪄','🎉','💯','🏆','👑','🫅','🥳','🎊']
 
+// ── Piano keys: 2 octaves C3–B4 plus C5 ──────────────────────────────────────
+export const PIANO_KEYS = [
+  { id:'C3',  freq:130.81, type:'white', label:'C', octave:3 },
+  { id:'Cs3', freq:138.59, type:'black', label:'C' },
+  { id:'D3',  freq:146.83, type:'white', label:'D', octave:3 },
+  { id:'Ds3', freq:155.56, type:'black', label:'D' },
+  { id:'E3',  freq:164.81, type:'white', label:'E', octave:3 },
+  { id:'F3',  freq:174.61, type:'white', label:'F', octave:3 },
+  { id:'Fs3', freq:185.00, type:'black', label:'F' },
+  { id:'G3',  freq:196.00, type:'white', label:'G', octave:3 },
+  { id:'Gs3', freq:207.65, type:'black', label:'G' },
+  { id:'A3',  freq:220.00, type:'white', label:'A', octave:3 },
+  { id:'As3', freq:233.08, type:'black', label:'A' },
+  { id:'B3',  freq:246.94, type:'white', label:'B', octave:3 },
+  { id:'C4',  freq:261.63, type:'white', label:'C', octave:4 },
+  { id:'Cs4', freq:277.18, type:'black', label:'C' },
+  { id:'D4',  freq:293.66, type:'white', label:'D', octave:4 },
+  { id:'Ds4', freq:311.13, type:'black', label:'D' },
+  { id:'E4',  freq:329.63, type:'white', label:'E', octave:4 },
+  { id:'F4',  freq:349.23, type:'white', label:'F', octave:4 },
+  { id:'Fs4', freq:369.99, type:'black', label:'F' },
+  { id:'G4',  freq:392.00, type:'white', label:'G', octave:4 },
+  { id:'Gs4', freq:415.30, type:'black', label:'G' },
+  { id:'A4',  freq:440.00, type:'white', label:'A', octave:4 },
+  { id:'As4', freq:466.16, type:'black', label:'A' },
+  { id:'B4',  freq:493.88, type:'white', label:'B', octave:4 },
+  { id:'C5',  freq:523.25, type:'white', label:'C', octave:5 },
+]
+
 // ── Drum pad definitions ──────────────────────────────────────────────────────
 export const DRUM_PADS = [
   { type: 'kick',   emoji: '🥁', label: 'תוף',   bg: 'linear-gradient(135deg, #FF4500, #FF6B35)' },

@@ -159,6 +159,50 @@ export async function playBalloonPop() {
   } catch (e) {}
 }
 
+// ── Piano note ────────────────────────────────────────────────────────────────
+export function playPianoNote(freq) {
+  if (globalMute) return
+  try {
+    const ctx = getAudioCtx()
+    if (ctx.state === 'suspended') ctx.resume()
+    const now = ctx.currentTime
+
+    // Fundamental — triangle for piano-like warmth
+    const osc = ctx.createOscillator()
+    const gain = ctx.createGain()
+    osc.connect(gain); gain.connect(ctx.destination)
+    osc.type = 'triangle'
+    osc.frequency.value = freq
+    gain.gain.setValueAtTime(0, now)
+    gain.gain.linearRampToValueAtTime(0.28, now + 0.006)   // fast attack
+    gain.gain.setTargetAtTime(0.14, now + 0.04, 0.12)      // decay to sustain
+    gain.gain.setTargetAtTime(0.001, now + 0.6, 0.25)      // slow release
+    osc.start(now); osc.stop(now + 2.2)
+
+    // 2nd harmonic — adds brightness
+    const osc2 = ctx.createOscillator()
+    const g2 = ctx.createGain()
+    osc2.connect(g2); g2.connect(ctx.destination)
+    osc2.type = 'sine'
+    osc2.frequency.value = freq * 2
+    g2.gain.setValueAtTime(0, now)
+    g2.gain.linearRampToValueAtTime(0.07, now + 0.006)
+    g2.gain.exponentialRampToValueAtTime(0.001, now + 0.5)
+    osc2.start(now); osc2.stop(now + 0.5)
+
+    // 3rd harmonic — very subtle
+    const osc3 = ctx.createOscillator()
+    const g3 = ctx.createGain()
+    osc3.connect(g3); g3.connect(ctx.destination)
+    osc3.type = 'sine'
+    osc3.frequency.value = freq * 3
+    g3.gain.setValueAtTime(0, now)
+    g3.gain.linearRampToValueAtTime(0.025, now + 0.006)
+    g3.gain.exponentialRampToValueAtTime(0.001, now + 0.25)
+    osc3.start(now); osc3.stop(now + 0.25)
+  } catch(e) {}
+}
+
 // ── Drum sounds ───────────────────────────────────────────────────────────────
 export async function playDrum(type) {
   if (globalMute) return

@@ -1126,6 +1126,8 @@ body, html, #root {
 
 /* Black keys */
 .black-key {
+  top: 0;
+  bottom: auto;
   height: 62%;
   background: linear-gradient(to bottom, #222, #111);
   border: 1px solid #000;

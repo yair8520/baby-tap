@@ -72,6 +72,19 @@ function findPianoKey(clientX, clientY, rect) {
   return null;
 }
 
+const PIANO_KEY_BY_ID = new Map(PIANO_KEYS.map((k) => [k.id, k]));
+
+function findPianoKeyAtPoint(clientX, clientY, containerEl, rect) {
+  const hitEl = document.elementFromPoint(clientX, clientY);
+  const keyEl = hitEl?.closest?.(".piano-key");
+  if (keyEl && containerEl?.contains(keyEl)) {
+    const key = PIANO_KEY_BY_ID.get(keyEl.dataset.keyId);
+    if (key) return key;
+  }
+  // Fallback for edge-cases where elementFromPoint returns null/overlay
+  return findPianoKey(clientX, clientY, rect);
+}
+
 // ── Utilities ──────────────────────────────────────────────────────────────────
 function rand(a, b) {
   return a + Math.random() * (b - a);
@@ -1180,30 +1193,38 @@ export default function App() {
     (e) => {
       e.preventDefault();
       if (!pianoRef.current) return;
-      const rect = pianoRef.current.getBoundingClientRect();
+      const containerEl = pianoRef.current;
+      const rect = containerEl.getBoundingClientRect();
       const newPressed = new Set();
+      const newDisplayed = new Set(displayedKeys);
       Array.from(e.touches).forEach((t) => {
-        const key = findPianoKey(t.clientX, t.clientY, rect);
+        const key = findPianoKeyAtPoint(t.clientX, t.clientY, containerEl, rect);
         if (key) {
           newPressed.add(key.id);
           if (!pressedKeysRef.current.has(key.id)) {
             playPianoNote(key.freq);
             vibrate([8]);
+            newDisplayed.add(key.id);
           }
         }
       });
+      if (newDisplayed.size !== displayedKeys.size) {
+        clearTimeout(displayTimerRef.current);
+        setDisplayedKeys(newDisplayed);
+      }
       setPressedKeys(newPressed);
     },
-    [vibrate],
+    [displayedKeys, vibrate],
   );
 
   const handlePianoTouchEnd = useCallback((e) => {
     e.preventDefault();
     if (!pianoRef.current) return;
-    const rect = pianoRef.current.getBoundingClientRect();
+    const containerEl = pianoRef.current;
+    const rect = containerEl.getBoundingClientRect();
     const newPressed = new Set();
     Array.from(e.touches).forEach((t) => {
-      const key = findPianoKey(t.clientX, t.clientY, rect);
+      const key = findPianoKeyAtPoint(t.clientX, t.clientY, containerEl, rect);
       if (key) newPressed.add(key.id);
     });
     setPressedKeys(newPressed);
@@ -1212,11 +1233,14 @@ export default function App() {
   const handlePianoMouseDown = useCallback(
     (e) => {
       if (!pianoRef.current) return;
-      const rect = pianoRef.current.getBoundingClientRect();
-      const key = findPianoKey(e.clientX, e.clientY, rect);
+      const containerEl = pianoRef.current;
+      const rect = containerEl.getBoundingClientRect();
+      const key = findPianoKeyAtPoint(e.clientX, e.clientY, containerEl, rect);
       if (key) {
         playPianoNote(key.freq);
         vibrate([8]);
+        clearTimeout(displayTimerRef.current);
+        setDisplayedKeys(new Set([key.id]));
         setPressedKeys(new Set([key.id]));
       }
     },
@@ -1230,7 +1254,7 @@ export default function App() {
   // ── Computed ─────────────────────────────────────────────────────────────────
   const C = 2 * Math.PI * 22;
   const shouldForcePianoLandscape =
-    IS_TOUCH && isMobileViewport && gameMode === "piano" && isPortrait;
+    isMobileViewport && gameMode === "piano" && isPortrait;
 
   // ── Render ────────────────────────────────────────────────────────────────────
   return (
@@ -1773,6 +1797,7 @@ export default function App() {
                     <div
                       key={key.id}
                       className={`piano-key white-key${pressedKeys.has(key.id) ? " pressed" : ""}`}
+                      data-key-id={key.id}
                       style={{
                         left: `${(idx / arr.length) * 100}%`,
                         width: `${100 / arr.length}%`,
@@ -1796,6 +1821,7 @@ export default function App() {
                     <div
                       key={key.id}
                       className={`piano-key black-key${pressedKeys.has(key.id) ? " pressed" : ""}`}
+                      data-key-id={key.id}
                       style={{ left: `${leftPct}%`, width: `${ww * 0.6}%` }}
                     />
                   );

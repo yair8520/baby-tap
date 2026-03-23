@@ -124,27 +124,38 @@ export async function playBalloonPop() {
     const ctx = getAudioCtx()
     if (ctx.state === 'suspended') await ctx.resume()
     const now = ctx.currentTime
-    // Quick sine burst at 400hz
-    const osc  = ctx.createOscillator()
-    const gain = ctx.createGain()
-    osc.connect(gain); gain.connect(ctx.destination)
-    osc.frequency.value = 400
-    osc.type = 'sine'
-    gain.gain.setValueAtTime(0.35, now)
-    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.15)
-    osc.start(now); osc.stop(now + 0.15)
 
-    // Noise burst
-    const noise = makeNoise(ctx)
+    // 1) Sharp noise burst (the actual "pop" transient)
+    const noise1 = makeNoise(ctx)
+    const hp = ctx.createBiquadFilter()
+    hp.type = 'highpass'
+    hp.frequency.value = 1400
     const ng = ctx.createGain()
-    const bp = ctx.createBiquadFilter()
-    bp.type = 'bandpass'
-    bp.frequency.value = 800
-    bp.Q.value = 0.5
-    noise.connect(bp); bp.connect(ng); ng.connect(ctx.destination)
-    ng.gain.setValueAtTime(0.15, now)
-    ng.gain.exponentialRampToValueAtTime(0.001, now + 0.1)
-    noise.start(now); noise.stop(now + 0.1)
+    noise1.connect(hp); hp.connect(ng); ng.connect(ctx.destination)
+    ng.gain.setValueAtTime(0.35, now)
+    ng.gain.exponentialRampToValueAtTime(0.001, now + 0.07)
+    noise1.start(now); noise1.stop(now + 0.07)
+
+    // 2) Pitch sweep down — balloon body resonance
+    const osc = ctx.createOscillator()
+    const og  = ctx.createGain()
+    osc.connect(og); og.connect(ctx.destination)
+    osc.type = 'sine'
+    osc.frequency.setValueAtTime(320, now)
+    osc.frequency.exponentialRampToValueAtTime(60, now + 0.18)
+    og.gain.setValueAtTime(0.12, now)
+    og.gain.exponentialRampToValueAtTime(0.001, now + 0.18)
+    osc.start(now); osc.stop(now + 0.2)
+
+    // 3) Tiny click transient right at the start
+    const click = ctx.createOscillator()
+    const cg    = ctx.createGain()
+    click.connect(cg); cg.connect(ctx.destination)
+    click.type = 'square'
+    click.frequency.value = 900
+    cg.gain.setValueAtTime(0.05, now)
+    cg.gain.exponentialRampToValueAtTime(0.001, now + 0.018)
+    click.start(now); click.stop(now + 0.02)
   } catch (e) {}
 }
 

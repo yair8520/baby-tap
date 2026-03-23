@@ -359,15 +359,17 @@ body, html, #root {
 
 .settings-mode-btns {
   display: flex;
+  flex-wrap: wrap;
   gap: 5px;
+  justify-content: flex-end;
 }
 
 .settings-mode-btn {
   background: rgba(255,255,255,0.08);
   border: 1px solid rgba(255,255,255,0.18);
   border-radius: 10px;
-  padding: 6px 10px;
-  font-size: 13px;
+  padding: 5px 8px;
+  font-size: 12px;
   color: rgba(255,255,255,0.8);
   cursor: pointer;
   touch-action: manipulation;
@@ -713,6 +715,83 @@ body, html, #root {
   white-space: nowrap;
   backdrop-filter: blur(12px);
   animation: songFade 2.2s ease forwards;
+}
+
+/* ===================== TARGETS ===================== */
+.target {
+  position: fixed;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  touch-action: manipulation;
+  z-index: 45;
+  transform: translate(-50%, -50%);
+  transition: transform 0.08s;
+  will-change: transform;
+}
+
+.target:active {
+  transform: translate(-50%, -50%) scale(0.88);
+}
+
+.target.target-pop {
+  animation: targetPop 0.25s ease-out forwards;
+  pointer-events: none;
+}
+
+@keyframes targetPop {
+  0%   { transform: translate(-50%, -50%) scale(1);   opacity: 1; }
+  60%  { transform: translate(-50%, -50%) scale(1.5); opacity: 0.7; }
+  100% { transform: translate(-50%, -50%) scale(0.1); opacity: 0; }
+}
+
+.target-ring {
+  position: absolute;
+  inset: -5px;
+  pointer-events: none;
+}
+
+@keyframes targetRingDrain {
+  0%   { stroke-dashoffset: 0; }
+  100% { stroke-dashoffset: var(--circ); }
+}
+
+.target-score {
+  position: fixed;
+  bottom: max(env(safe-area-inset-bottom, 0px) + 18px, 28px);
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(0,0,0,0.45);
+  border: 1px solid rgba(255,255,255,0.18);
+  border-radius: 40px;
+  padding: 8px 24px;
+  color: #fff;
+  font-size: clamp(20px, 5vw, 28px);
+  font-weight: 800;
+  font-family: system-ui, sans-serif;
+  pointer-events: none;
+  z-index: 90;
+  white-space: nowrap;
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+}
+
+/* ===================== AUTOSHOW SHIMMER ===================== */
+.autoshow-shimmer {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 10;
+  background: radial-gradient(ellipse at 50% 50%, rgba(162,155,254,0.06), transparent 70%);
+  animation: shimmerPulse 3s ease-in-out infinite alternate;
+}
+
+@keyframes shimmerPulse {
+  0%   { opacity: 0.4; transform: scale(1); }
+  50%  { opacity: 0.9; transform: scale(1.05); }
+  100% { opacity: 0.4; transform: scale(1); }
 }
 
 /* ===================== DRUMS ===================== */

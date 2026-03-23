@@ -49,7 +49,7 @@ export default function App() {
   const [holdProgress,  setHoldProgress]  = useState(0)
   const [vibrateOn,     setVibrateOn]     = useState(true)
   const [muteOn,        setMuteOn]        = useState(false)
-  const [gameMode,      setGameMode]      = useState('classic')  // 'classic' | 'balloons' | 'drums'
+  const [gameMode,      setGameMode]      = useState('classic')  // 'classic' | 'balloons' | 'drums' | 'targets' | 'autoshow'
   const [settingsOpen,  setSettingsOpen]  = useState(false)
 
   // ── Classic mode state ───────────────────────────────────────────────────────
@@ -68,10 +68,17 @@ export default function App() {
   const [balloons,      setBalloons]     = useState([])
   const [balloonHint,   setBalloonHint]  = useState(false)
   const [popCount,      setPopCount]     = useState(0)
+  const [balloonMissed, setBalloonMissed] = useState(0)
   const balloonsRef = useRef([])
 
   // ── Drum mode state ──────────────────────────────────────────────────────────
   const [drumRipples, setDrumRipples] = useState([])
+
+  // ── Target mode state ─────────────────────────────────────────────────────────
+  const [targets,     setTargets]     = useState([])
+  const [targetScore,  setTargetScore]  = useState(0)
+  const [targetMissed, setTargetMissed] = useState(0)
+  const targetsRef = useRef([])
 
   // ── Refs ─────────────────────────────────────────────────────────────────────
   const containerRef        = useRef(null)
@@ -101,6 +108,8 @@ export default function App() {
   const lastBalloonPopRef   = useRef(Date.now())
   const gameModeRef         = useRef('classic')
   const settingsRef         = useRef(null)
+  const spawnAtRef          = useRef(null)
+  const targetScoreRef      = useRef(0)
 
   // ── Sync refs ────────────────────────────────────────────────────────────────
   useEffect(() => { vibrateRef.current = vibrateOn }, [vibrateOn])
@@ -109,6 +118,8 @@ export default function App() {
     setGlobalMute(muteOn)
   }, [muteOn])
   useEffect(() => { gameModeRef.current = gameMode }, [gameMode])
+  useEffect(() => { targetsRef.current = targets }, [targets])
+  useEffect(() => { targetScoreRef.current = targetScore }, [targetScore])
 
   // ── Vibrate helper ───────────────────────────────────────────────────────────
   const vibrate = useCallback((pattern) => {
@@ -201,6 +212,9 @@ export default function App() {
     }
   }, [resetIdle, playMelody])
 
+  // Keep spawnAtRef in sync for use in intervals/effects without stale closures
+  useEffect(() => { spawnAtRef.current = spawnAt }, [spawnAt])
+
   // ── Classic: combo tracking ──────────────────────────────────────────────────
   const trackCombo = useCallback(() => {
     const now = Date.now()
@@ -239,7 +253,7 @@ export default function App() {
     if (!isFullscreen) return
     let lastShake = 0
     const onMotion = (e) => {
-      if (gameModeRef.current !== 'classic') return
+      if (gameModeRef.current !== 'classic' && gameModeRef.current !== 'autoshow') return
       const acc = e.accelerationIncludingGravity
       if (!acc) return
       const mag = Math.sqrt((acc.x || 0) ** 2 + (acc.y || 0) ** 2 + (acc.z || 0) ** 2)
@@ -264,7 +278,7 @@ export default function App() {
     if (!isFullscreen) return
 
     const onTouchMove = (e) => {
-      if (gameModeRef.current !== 'classic') return
+      if (gameModeRef.current !== 'classic' && gameModeRef.current !== 'autoshow') return
       Array.from(e.touches).forEach(t => {
         activeTouchPosRef.current[t.identifier] = { x: t.clientX, y: t.clientY }
         const start = touchStartRef.current[t.identifier]
@@ -289,7 +303,7 @@ export default function App() {
 
     let hue = 0
     const onMove = (e) => {
-      if (gameModeRef.current !== 'classic') return
+      if (gameModeRef.current !== 'classic' && gameModeRef.current !== 'autoshow') return
       hue = (hue + 12) % 360
       const id      = nextId()
       const size    = rand(28, 58)
@@ -421,6 +435,7 @@ export default function App() {
       clearInterval(balloonTimerRef.current)
       setBalloons([])
       setPopCount(0)
+      setBalloonMissed(0)
       return
     }
     // Spawn 3 balloons immediately so screen isn't empty on entry
@@ -439,7 +454,11 @@ export default function App() {
     if (gameMode !== 'balloons') return
     const tick = setInterval(() => {
       const now = Date.now()
-      setBalloons(prev => prev.filter(b => now - b.born < b.rise + 200))
+      setBalloons(prev => {
+        const expired = prev.filter(b => now - b.born >= b.rise + 200)
+        if (expired.length) setBalloonMissed(m => m + expired.length)
+        return prev.filter(b => now - b.born < b.rise + 200)
+      })
     }, 500)
     return () => clearInterval(tick)
   }, [gameMode])
@@ -459,6 +478,121 @@ export default function App() {
     }, 500)
     return () => clearInterval(check)
   }, [gameMode, isFullscreen])
+
+  // ── Target mode: difficulty helper ──────────────────────────────────────────
+  const getTargetDifficulty = (score) => {
+    if (score >= 16) return { duration: 1600, maxTargets: 4 }
+    if (score >= 6)  return { duration: 2200, maxTargets: 3 }
+    return { duration: 3000, maxTargets: 2 }
+  }
+
+  // ── Target mode: spawn a single target ──────────────────────────────────────
+  const spawnTarget = useCallback(() => {
+    const score = targetScoreRef.current
+    const { duration, maxTargets } = getTargetDifficulty(score)
+    if (targetsRef.current.length >= maxTargets) return
+
+    const size  = randInt(100, 141)
+    const x     = rand(80 + size / 2, window.innerWidth  - 80 - size / 2)
+    const y     = rand(80 + size / 2, window.innerHeight - 80 - size / 2)
+    const emoji = EMOJIS[randInt(0, EMOJIS.length)]
+    const hue   = randInt(0, 360)
+    const id    = nextId()
+
+    const removeTimer = setTimeout(() => {
+      // Target expired — remove it and schedule a new spawn after 800ms
+      setTargets(prev => {
+        const still = prev.find(t => t.id === id && !t.popped)
+        if (!still) return prev
+        setTargetMissed(m => m + 1)
+        return prev.filter(t => t.id !== id)
+      })
+      setTimeout(() => {
+        if (gameModeRef.current === 'targets') spawnTarget()
+      }, 800)
+    }, duration)
+
+    const target = { id, x, y, size, emoji, hue, duration, removeTimer, popped: false }
+    setTargets(prev => [...prev, target])
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
+
+  // ── Target mode: lifecycle effect ───────────────────────────────────────────
+  useEffect(() => {
+    if (!isFullscreen || gameMode !== 'targets') {
+      // Clear all pending timers and reset state
+      targetsRef.current.forEach(t => clearTimeout(t.removeTimer))
+      setTargets([])
+      setTargetScore(0)
+      setTargetMissed(0)
+      return
+    }
+    // Spawn first targets on enter
+    spawnTarget()
+    spawnTarget()
+    return () => {
+      targetsRef.current.forEach(t => clearTimeout(t.removeTimer))
+    }
+  }, [isFullscreen, gameMode]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  // ── Target mode: tap handler ─────────────────────────────────────────────────
+  const handleTargetTap = useCallback((target, e) => {
+    e.stopPropagation()
+    e.preventDefault()
+    if (target.popped) return
+
+    // Mark as popped so the expiry timer won't count it as missed
+    clearTimeout(target.removeTimer)
+    setTargets(prev => prev.map(t => t.id === target.id ? { ...t, popped: true } : t))
+
+    // Score increment
+    setTargetScore(s => s + 1)
+
+    // Play sound
+    playSound('number')
+    vibrate([20])
+
+    // Sparkle burst at tap position
+    const cx = e.changedTouches ? e.changedTouches[0].clientX : e.clientX
+    const cy = e.changedTouches ? e.changedTouches[0].clientY : e.clientY
+    const sparkles = ['✨','🌟','💫','⭐','🎉']
+    const newEmojis = Array.from({ length: 5 }, () => {
+      const id       = nextId()
+      const emoji    = sparkles[randInt(0, sparkles.length)]
+      const size     = randInt(24, 44)
+      const angle    = rand(0, Math.PI * 2)
+      const distance = rand(40, 110)
+      const dx       = Math.cos(angle) * distance
+      const dy       = Math.sin(angle) * distance - rand(30, 60)
+      const rotation = rand(-180, 180)
+      const duration = rand(500, 800)
+      setTimeout(() => setEmojis(prev => prev.filter(e => e.id !== id)), duration)
+      return { id, emoji, x: cx, y: cy, size, dx, dy, rotation, duration }
+    })
+    setEmojis(prev => [...prev, ...newEmojis])
+
+    // Remove the target after pop animation (250ms), then spawn a replacement after 800ms
+    setTimeout(() => {
+      setTargets(prev => prev.filter(t => t.id !== target.id))
+      setTimeout(() => {
+        if (gameModeRef.current === 'targets') spawnTarget()
+      }, 800)
+    }, 280)
+  }, [vibrate, spawnTarget]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  // ── Autoshow mode: auto-spawn interval ───────────────────────────────────────
+  useEffect(() => {
+    if (!isFullscreen || gameMode !== 'autoshow') return
+    const iv = setInterval(() => {
+      if (spawnAtRef.current) {
+        spawnAtRef.current(
+          rand(80, window.innerWidth  - 80),
+          rand(80, window.innerHeight - 80),
+          null, 'normal', false
+        )
+      }
+    }, 700)
+    return () => clearInterval(iv)
+  }, [isFullscreen, gameMode])
 
   // ── Balloon pop handler ──────────────────────────────────────────────────────
   const popBalloon = useCallback((balloon, clientX, clientY) => {
@@ -529,7 +663,7 @@ export default function App() {
 
   // ── Classic: touch handlers ──────────────────────────────────────────────────
   const handleTouchStart = (e) => {
-    if (gameModeRef.current !== 'classic') return
+    if (gameModeRef.current !== 'classic' && gameModeRef.current !== 'autoshow') return
     if (e.target.closest('.corner-hold') || e.target.closest('.start-screen') || e.target.closest('.settings-wrap')) return
     Array.from(e.changedTouches).forEach(t => {
       const pos = { x: t.clientX, y: t.clientY }
@@ -556,7 +690,7 @@ export default function App() {
   }
 
   const handleTouchEnd = (e) => {
-    if (gameModeRef.current !== 'classic') return
+    if (gameModeRef.current !== 'classic' && gameModeRef.current !== 'autoshow') return
     if (e.target.closest('.corner-hold') || e.target.closest('.start-screen') || e.target.closest('.settings-wrap')) return
     Array.from(e.changedTouches).forEach(t => {
       const wasLongPress = !!longPressIntervalRef.current[t.identifier]
@@ -575,7 +709,10 @@ export default function App() {
 
         lastTapPosRef.current = { x: t.clientX, y: t.clientY, time: now }
 
-        if (isDoubleTap) {
+        if (gameModeRef.current === 'autoshow') {
+          vibrate([20])
+          spawnAt(t.clientX, t.clientY, null, 'normal', false)
+        } else if (isDoubleTap) {
           lastTapPosRef.current = null
           vibrate([60, 30, 100])
           for (let i = 0; i < 5; i++) {
@@ -602,7 +739,7 @@ export default function App() {
   // ── Classic: mouse handlers ──────────────────────────────────────────────────
   const handleMouseDown = (e) => {
     if (e.button !== 0) return
-    if (gameModeRef.current !== 'classic') return
+    if (gameModeRef.current !== 'classic' && gameModeRef.current !== 'autoshow') return
     if (e.target.closest('.corner-hold') || e.target.closest('.start-screen') || e.target.closest('.settings-wrap')) return
     mousePosRef.current = { x: e.clientX, y: e.clientY }
     mouseLongTimerRef.current = setTimeout(() => {
@@ -616,7 +753,7 @@ export default function App() {
 
   const handleMouseUp = (e) => {
     if (e.button !== 0) return
-    if (gameModeRef.current !== 'classic') return
+    if (gameModeRef.current !== 'classic' && gameModeRef.current !== 'autoshow') return
     if (e.target.closest('.corner-hold') || e.target.closest('.start-screen') || e.target.closest('.settings-wrap')) return
     const wasLong = !!mouseLongIntervalRef.current
     clearTimeout(mouseLongTimerRef.current)
@@ -629,7 +766,10 @@ export default function App() {
       const isDouble = last && now - last.time < 300 &&
         Math.abs(e.clientX - last.x) < 60 && Math.abs(e.clientY - last.y) < 60
       lastTapPosRef.current = { x: e.clientX, y: e.clientY, time: now }
-      if (isDouble) {
+      if (gameModeRef.current === 'autoshow') {
+        vibrate([20])
+        spawnAt(e.clientX, e.clientY, null, 'normal', false)
+      } else if (isDouble) {
         lastTapPosRef.current = null
         vibrate([60, 30, 100])
         for (let i = 0; i < 5; i++) {
@@ -769,6 +909,16 @@ export default function App() {
                       onTouchEnd={(e) => { e.preventDefault(); e.stopPropagation(); setGameMode('drums'); setSettingsOpen(false) }}
                       onMouseUp={(e)  => { e.stopPropagation(); setGameMode('drums'); setSettingsOpen(false) }}
                     >🥁 תופים</button>
+                    <button
+                      className={`settings-mode-btn${gameMode === 'targets' ? ' active' : ''}`}
+                      onTouchEnd={(e) => { e.preventDefault(); e.stopPropagation(); setGameMode('targets'); setSettingsOpen(false) }}
+                      onMouseUp={(e)  => { e.stopPropagation(); setGameMode('targets'); setSettingsOpen(false) }}
+                    >🎯 מטרות</button>
+                    <button
+                      className={`settings-mode-btn${gameMode === 'autoshow' ? ' active' : ''}`}
+                      onTouchEnd={(e) => { e.preventDefault(); e.stopPropagation(); setGameMode('autoshow'); setSettingsOpen(false) }}
+                      onMouseUp={(e)  => { e.stopPropagation(); setGameMode('autoshow'); setSettingsOpen(false) }}
+                    >🌟 הפתעה</button>
                   </div>
                 </div>
 
@@ -800,11 +950,11 @@ export default function App() {
           </div>
 
           {/* ── Classic mode content ── */}
-          {gameMode === 'classic' && (
+          {(gameMode === 'classic' || gameMode === 'autoshow') && (
             <>
-              {ultraFlash && <div className="ultra-flash" />}
+              {gameMode === 'classic' && ultraFlash && <div className="ultra-flash" />}
 
-              {showCombo && combo >= 2 && (
+              {gameMode === 'classic' && showCombo && combo >= 2 && (
                 <div key={combo} className={`combo-display ${combo >= 10 ? 'combo-ultra' : combo >= 7 ? 'combo-fire' : combo >= 4 ? 'combo-hot' : ''}`}>
                   {combo >= 10 ? UI.ultra : combo >= 7 ? UI.fire : combo >= 4 ? '⚡ ×' : '✨ ×'}{combo}
                 </div>
@@ -818,7 +968,7 @@ export default function App() {
                 <div className="idle-hint"><span>👆</span></div>
               )}
 
-              {keyFlash && (
+              {gameMode === 'classic' && keyFlash && (
                 <div key={keyFlash.id} className="key-flash">{keyFlash.emoji}</div>
               )}
 
@@ -847,7 +997,7 @@ export default function App() {
             <>
               {/* Pop counter */}
               <div className="balloon-counter">
-                🎈 × {popCount}
+                🎈 {popCount} &nbsp;|&nbsp; 💨 {balloonMissed}
               </div>
 
               {balloonHint && (
@@ -905,6 +1055,67 @@ export default function App() {
                 </div>
               ))}
             </div>
+          )}
+
+          {/* ── Target mode content ── */}
+          {gameMode === 'targets' && (
+            <>
+              <div className="target-score">
+                🎯 {targetScore} &nbsp;|&nbsp; 💨 {targetMissed}
+              </div>
+
+              {targets.map(target => {
+                const circumference = 2 * Math.PI * ((target.size + 10) / 2 - 4)
+                return (
+                  <div
+                    key={target.id}
+                    className={`target${target.popped ? ' target-pop' : ''}`}
+                    style={{
+                      left:       target.x,
+                      top:        target.y,
+                      width:      target.size,
+                      height:     target.size,
+                      fontSize:   Math.round(target.size * 0.65),
+                      background: `radial-gradient(circle at 35% 30%, hsl(${target.hue},100%,85%) 0%, hsl(${target.hue},80%,60%) 50%, hsl(${target.hue},70%,40%) 100%)`,
+                      boxShadow:  `0 4px 20px hsl(${target.hue},70%,50%,0.6)`,
+                    }}
+                    onTouchEnd={IS_TOUCH ? (e) => handleTargetTap(target, e) : undefined}
+                    onMouseUp={IS_TOUCH  ? undefined : (e) => handleTargetTap(target, e)}
+                  >
+                    {target.emoji}
+                    {!target.popped && (
+                      <svg
+                        className="target-ring"
+                        viewBox={`0 0 ${target.size + 10} ${target.size + 10}`}
+                        style={{ width: target.size + 10, height: target.size + 10 }}
+                      >
+                        <circle
+                          cx={(target.size + 10) / 2}
+                          cy={(target.size + 10) / 2}
+                          r={(target.size + 10) / 2 - 4}
+                          fill="none"
+                          stroke="rgba(255,255,255,0.9)"
+                          strokeWidth="4"
+                          strokeLinecap="round"
+                          strokeDasharray={`${circumference} ${circumference}`}
+                          strokeDashoffset="0"
+                          transform={`rotate(-90 ${(target.size + 10) / 2} ${(target.size + 10) / 2})`}
+                          style={{
+                            animation: `targetRingDrain ${target.duration}ms linear forwards`,
+                            '--circ': circumference,
+                          }}
+                        />
+                      </svg>
+                    )}
+                  </div>
+                )
+              })}
+            </>
+          )}
+
+          {/* ── Autoshow mode content ── */}
+          {gameMode === 'autoshow' && (
+            <div className="autoshow-shimmer" />
           )}
 
           {/* ── Shared: emojis (classic sparkles + balloon pops) ── */}

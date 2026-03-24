@@ -5,10 +5,9 @@ import appIconLarge from "./assets/icon-512.png";
 
 import {
   IS_TOUCH,
-  isHebrew,
+  isHebrew as defaultHebrew,
   isWebView,
   canVibrate,
-  UI,
   EMOJIS,
   COLORS,
   SONGS,
@@ -32,6 +31,62 @@ import {
   playPianoNote,
   nextMelodyTime,
 } from "./audio.js";
+
+const UI_TEXT = {
+  he: {
+    emojiRow: "👶🏻 🎉 🌈",
+    title: "Baby Tap Game",
+    subtitle: "תנו לתינוק ללחוץ על המסך\nולראות קסם צבעוני! ✨",
+    btn: "🚀 התחל מסך מלא",
+    hint: "ליציאה: לחיצה בפינה הימנית העליונה",
+    ultra: "👑 עוצמה ×",
+    fire: "🔥 לוהט ×",
+  },
+  en: {
+    emojiRow: "👶🏻 🎉 🌈",
+    title: "Baby Tap Game",
+    subtitle: "Let the baby tap the screen\nand see colorful magic! ✨",
+    btn: "🚀 Start Fullscreen",
+    hint: "To exit: tap top-right corner",
+    ultra: "👑 ULTRA ×",
+    fire: "🔥 HOT ×",
+  },
+};
+
+const THEME_PRESETS = {
+  space: {
+    id: "space",
+    label: { he: "חלל", en: "Space" },
+    emoji: "🚀",
+    heroRow: "🚀 🪐 🌙 ✨",
+    emojis: ["🚀", "🛸", "🪐", "🌙", "☄️", "⭐", "🌟", "✨", "💫", "🌌", "👨‍🚀", "🛰️"],
+    colors: ["#7B2FF7", "#3A86FF", "#00C2FF", "#B5179E", "#8338EC", "#5E60CE", "#4CC9F0"],
+  },
+  animals: {
+    id: "animals",
+    label: { he: "חיות", en: "Animals" },
+    emoji: "🦁",
+    heroRow: "🦁 🐼 🐶 🦋",
+    emojis: ["🐶", "🐱", "🐭", "🐹", "🐰", "🦊", "🐻", "🐼", "🐸", "🦁", "🐮", "🐵", "🦋", "🐢", "🦄", "🌈", "⭐"],
+    colors: ["#FF9AA2", "#FFB7B2", "#FFDAC1", "#E2F0CB", "#B5EAD7", "#C7CEEA", "#A0E7E5"],
+  },
+  ocean: {
+    id: "ocean",
+    label: { he: "ים", en: "Ocean" },
+    emoji: "🐬",
+    heroRow: "🐬 🐠 🌊 🫧",
+    emojis: ["🐠", "🐟", "🐬", "🐳", "🐙", "🦀", "🐚", "🌊", "🫧", "⭐", "✨", "💧"],
+    colors: ["#00B4D8", "#0077B6", "#48CAE4", "#90E0EF", "#0096C7", "#5E60CE", "#80ED99"],
+  },
+  farm: {
+    id: "farm",
+    label: { he: "חווה", en: "Farm" },
+    emoji: "🐮",
+    heroRow: "🐮 🚜 🌾 🐔",
+    emojis: ["🐮", "🐷", "🐔", "🐥", "🐴", "🐑", "🦆", "🌾", "🚜", "🍎", "🍓", "🌻"],
+    colors: ["#FFD166", "#EF476F", "#06D6A0", "#118AB2", "#8ECAE6", "#90BE6D", "#F3722C"],
+  },
+};
 
 // ── Piano helpers (module-level, no React state needed) ───────────────────────
 function getBlackKeyPos(bk, whiteKeys, wKeyWidth) {
@@ -127,6 +182,14 @@ const getBalloonInterval = (lvl) => Math.max(600, 1200 - (lvl - 1) * 70); // 120
 
 // ── Main component ─────────────────────────────────────────────────────────────
 export default function App() {
+  const [lang, setLang] = useState(defaultHebrew ? "he" : "en");
+  const isHebrewUI = lang === "he";
+  const ui = UI_TEXT[lang];
+  const [theme, setTheme] = useState("space");
+  const activeTheme = THEME_PRESETS[theme] || THEME_PRESETS.space;
+  const activeEmojis = activeTheme.emojis;
+  const activeColors = activeTheme.colors;
+
   // ── Core state ──────────────────────────────────────────────────────────────
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [isPortrait, setIsPortrait] = useState(
@@ -366,7 +429,7 @@ export default function App() {
 
       const bonus = Math.min(Math.floor((comboScale - 1) * 0.8), 2);
       const count = isNumber ? randInt(2, 3) : randInt(2, 4) + bonus;
-      const pool = emojiList || EMOJIS;
+      const pool = emojiList || activeEmojis;
       const baseSize = isNumber ? randInt(85, 130) : randInt(45, 90);
 
       const newEmojis = Array.from({ length: count }, () => {
@@ -400,7 +463,7 @@ export default function App() {
           id,
           x,
           y,
-          color: COLORS[randInt(0, COLORS.length)],
+          color: activeColors[randInt(0, activeColors.length)],
           px: Math.cos(angle) * speed,
           py: Math.sin(angle) * speed,
           size: rand(8, isNumber ? 30 : 24),
@@ -527,7 +590,7 @@ export default function App() {
         }
         if (isSwipingRef.current[t.identifier]) {
           const id = nextId();
-          const color = COLORS[randInt(0, COLORS.length)];
+          const color = activeColors[randInt(0, activeColors.length)];
           const size = rand(18, 42);
           setTrail((prev) => [
             ...prev,
@@ -619,7 +682,7 @@ export default function App() {
       } else if (HEBREW_LETTER_EMOJIS[key]) {
         spawnAt(x, y, HEBREW_LETTER_EMOJIS[key], "normal", false);
       } else if (/^[a-zA-Z]$/.test(key)) {
-        const letterEmojis = LETTER_EMOJIS[key.toLowerCase()] || EMOJIS;
+        const letterEmojis = LETTER_EMOJIS[key.toLowerCase()] || activeEmojis;
         spawnAt(x, y, letterEmojis, "normal", false);
       } else if (SPECIAL_KEY_EMOJIS[key]) {
         spawnAt(x, y, SPECIAL_KEY_EMOJIS[key], "normal", false);
@@ -800,7 +863,7 @@ export default function App() {
     const size = randInt(100, 141);
     const x = rand(80 + size / 2, window.innerWidth - 80 - size / 2);
     const y = rand(80 + size / 2, window.innerHeight - 80 - size / 2);
-    const emoji = EMOJIS[randInt(0, EMOJIS.length)];
+    const emoji = activeEmojis[randInt(0, activeEmojis.length)];
     const hue = randInt(0, 360);
     const id = nextId();
 
@@ -917,7 +980,7 @@ export default function App() {
       }
     }, 700);
     return () => clearInterval(iv);
-  }, [isFullscreen, gameMode]);
+  }, [activeEmojis, isFullscreen, gameMode]);
 
   // ── Balloon pop handler ──────────────────────────────────────────────────────
   const popBalloon = useCallback(
@@ -1260,7 +1323,7 @@ export default function App() {
   return (
     <div
       ref={containerRef}
-      className="app"
+      className={`app theme-${theme}`}
       onTouchStart={IS_TOUCH ? handleTouchStart : undefined}
       onTouchMove={IS_TOUCH ? handleTouchMove : undefined}
       onTouchEnd={IS_TOUCH ? handleTouchEnd : undefined}
@@ -1293,15 +1356,34 @@ export default function App() {
           />
         ))}
       </div>
+      <div className="theme-symbols">
+        {Array.from({ length: 14 }).map((_, i) => {
+          const sym = activeEmojis[i % activeEmojis.length];
+          return (
+            <span
+              key={`${theme}-${i}-${sym}`}
+              className="theme-symbol"
+              style={{
+                left: `${(i * 7.1 + 3) % 100}%`,
+                animationDuration: `${11 + ((i * 1.7) % 10)}s`,
+                animationDelay: `-${(i * 2.1) % 12}s`,
+                fontSize: `${20 + ((i * 7) % 22)}px`,
+              }}
+            >
+              {sym}
+            </span>
+          );
+        })}
+      </div>
 
       {/* ── Start Screen ── */}
       {!isFullscreen && (
         <div className="start-screen">
-          <div className="start-card" dir={isHebrew ? "rtl" : "ltr"}>
-            <div className="start-emoji-row">{UI.emojiRow}</div>
-            <h1 className="start-title">{UI.title}</h1>
+          <div className="start-card" dir={isHebrewUI ? "rtl" : "ltr"}>
+            <div className="start-emoji-row">{activeTheme.heroRow || ui.emojiRow}</div>
+            <h1 className="start-title">{ui.title}</h1>
             <p className="start-subtitle">
-              {UI.subtitle.split("\n").map((line, i) => (
+              {ui.subtitle.split("\n").map((line, i) => (
                 <span key={i}>
                   {line}
                   {i === 0 && <br />}
@@ -1309,9 +1391,9 @@ export default function App() {
               ))}
             </p>
             <button className="start-btn" onClick={enterFullscreen}>
-              {UI.btn}
+              {ui.btn}
             </button>
-            <p className="start-hint">{UI.hint}</p>
+            <p className="start-hint">{ui.hint}</p>
           </div>
         </div>
       )}
@@ -1382,16 +1464,16 @@ export default function App() {
             {/* First-time hint bubble */}
             {showSettingsHint && !settingsOpen && (
               <div className="settings-hint-bubble">
-                {isHebrew ? "← הגדרות ומצבים" : "Settings & modes →"}
+                {isHebrewUI ? "← הגדרות ומצבים" : "Settings & modes →"}
               </div>
             )}
 
             {settingsOpen && (
-              <div className="settings-panel" dir={isHebrew ? "rtl" : "ltr"}>
+              <div className="settings-panel" dir={isHebrewUI ? "rtl" : "ltr"}>
                 {/* Mode row */}
                 {/* Mode label */}
                 <span className="settings-label">
-                  {isHebrew ? "בחר מצב" : "Select mode"}
+                  {isHebrewUI ? "בחר מצב" : "Select mode"}
                 </span>
 
                 {/* Mode grid 3×2 */}
@@ -1400,32 +1482,32 @@ export default function App() {
                     {
                       id: "classic",
                       emoji: "🎮",
-                      label: isHebrew ? "קלאסי" : "Classic",
+                      label: isHebrewUI ? "קלאסי" : "Classic",
                     },
                     {
                       id: "balloons",
                       emoji: "🎈",
-                      label: isHebrew ? "בלונים" : "Balloons",
+                      label: isHebrewUI ? "בלונים" : "Balloons",
                     },
                     {
                       id: "drums",
                       emoji: "🥁",
-                      label: isHebrew ? "תופים" : "Drums",
+                      label: isHebrewUI ? "תופים" : "Drums",
                     },
                     {
                       id: "targets",
                       emoji: "🎯",
-                      label: isHebrew ? "מטרות" : "Targets",
+                      label: isHebrewUI ? "מטרות" : "Targets",
                     },
                     {
                       id: "piano",
                       emoji: "🎹",
-                      label: isHebrew ? "פסנתר" : "Piano",
+                      label: isHebrewUI ? "פסנתר" : "Piano",
                     },
                     {
                       id: "autoshow",
                       emoji: "🌟",
-                      label: isHebrew ? "הפתעה" : "Auto",
+                      label: isHebrewUI ? "הפתעה" : "Auto",
                     },
                   ];
                   return (
@@ -1456,11 +1538,62 @@ export default function App() {
 
                 <div className="settings-divider" />
 
+                <span className="settings-label">
+                  {isHebrewUI ? "שפה" : "Language"}
+                </span>
+                <div className="settings-mode-grid">
+                  {[
+                    { id: "he", emoji: "🇮🇱", label: "עברית" },
+                    { id: "en", emoji: "🇬🇧", label: "English" },
+                  ].map((l) => (
+                    <button
+                      key={l.id}
+                      className={`settings-mode-btn${lang === l.id ? " active" : ""}`}
+                      onTouchEnd={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        setLang(l.id);
+                      }}
+                      onMouseUp={(e) => {
+                        e.stopPropagation();
+                        setLang(l.id);
+                      }}
+                    >
+                      <span className="mode-emoji">{l.emoji}</span>
+                      <span className="mode-label">{l.label}</span>
+                    </button>
+                  ))}
+                </div>
+
+                <span className="settings-label">
+                  {isHebrewUI ? "ערכת נושא" : "Theme"}
+                </span>
+                <div className="settings-mode-grid">
+                  {Object.values(THEME_PRESETS).map((t) => (
+                    <button
+                      key={t.id}
+                      className={`settings-mode-btn${theme === t.id ? " active" : ""}`}
+                      onTouchEnd={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        setTheme(t.id);
+                      }}
+                      onMouseUp={(e) => {
+                        e.stopPropagation();
+                        setTheme(t.id);
+                      }}
+                    >
+                      <span className="mode-emoji">{t.emoji}</span>
+                      <span className="mode-label">{t.label[lang]}</span>
+                    </button>
+                  ))}
+                </div>
+
                 {/* Sound toggle */}
                 <div className="settings-toggle-row">
                   <span className="settings-toggle-label">
                     <span className="tl-icon">{muteOn ? "🔇" : "🔊"}</span>
-                    {isHebrew ? "צליל" : "Sound"}
+                    {isHebrewUI ? "צליל" : "Sound"}
                   </span>
                   <button
                     className={`settings-toggle-btn${muteOn ? "" : " on"}`}
@@ -1480,7 +1613,7 @@ export default function App() {
                 <div className="settings-toggle-row">
                   <span className="settings-toggle-label">
                     <span className="tl-icon">{vibrateOn ? "📳" : "🔕"}</span>
-                    {isHebrew ? "רטט" : "Vibrate"}
+                    {isHebrewUI ? "רטט" : "Vibrate"}
                   </span>
                   <button
                     className={`settings-toggle-btn${vibrateOn ? " on" : ""}`}
@@ -1512,9 +1645,9 @@ export default function App() {
                   className={`combo-display ${combo >= 10 ? "combo-ultra" : combo >= 7 ? "combo-fire" : combo >= 4 ? "combo-hot" : ""}`}
                 >
                   {combo >= 10
-                    ? UI.ultra
+                    ? ui.ultra
                     : combo >= 7
-                      ? UI.fire
+                      ? ui.fire
                       : combo >= 4
                         ? "⚡ ×"
                         : "✨ ×"}
@@ -1577,7 +1710,7 @@ export default function App() {
                 &nbsp;|&nbsp;
                 <span className="balloon-level-badge">
                   {"⚡".repeat(Math.min(balloonLevel, 5))}{" "}
-                  {isHebrew ? `רמה ${balloonLevel}` : `Lv ${balloonLevel}`}
+                  {isHebrewUI ? `רמה ${balloonLevel}` : `Lv ${balloonLevel}`}
                 </span>
               </div>
 
@@ -1586,7 +1719,7 @@ export default function App() {
                 <div className="balloon-levelup">
                   {"🚀"}
                   <br />
-                  {isHebrew
+                  {isHebrewUI
                     ? `רמה ${balloonLevelUp.level}!`
                     : `Level ${balloonLevelUp.level}!`}
                 </div>
@@ -1594,7 +1727,7 @@ export default function App() {
 
               {balloonHint && (
                 <div className="balloon-hint">
-                  {isHebrew ? "! פוצצו את הבלונים" : "tap the balloons!"}
+                  {isHebrewUI ? "! פוצצו את הבלונים" : "tap the balloons!"}
                 </div>
               )}
 
@@ -1723,7 +1856,7 @@ export default function App() {
                 <div className="piano-rotate-hint">
                   <div className="piano-rotate-icon">🔄</div>
                   <div>
-                    {isHebrew
+                    {isHebrewUI
                       ? "סובב את המכשיר לרוחב"
                       : "Rotate device to landscape"}
                   </div>
@@ -1732,7 +1865,7 @@ export default function App() {
 
               {/* Note display — top portion */}
               {(() => {
-                const SOLFEGE = isHebrew
+                const SOLFEGE = isHebrewUI
                   ? {
                       C: "דו",
                       D: "רה",

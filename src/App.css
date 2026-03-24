@@ -32,6 +32,45 @@ body, html, #root {
     linear-gradient(180deg, #060214 0%, #090520 40%, #040d2a 100%);
 }
 
+.theme-animals .bg-base {
+  background:
+    radial-gradient(ellipse 120% 80% at 50% 0%, #2f1b05 0%, transparent 65%),
+    radial-gradient(ellipse 100% 80% at 0% 100%, #1d3a1b 0%, transparent 70%),
+    radial-gradient(ellipse 90% 90% at 100% 50%, #3f2e1f 0%, transparent 70%),
+    linear-gradient(180deg, #241408 0%, #2d1c10 45%, #1a2f16 100%);
+}
+
+.theme-ocean .bg-base {
+  background:
+    radial-gradient(ellipse 120% 80% at 50% 0%, #004e73 0%, transparent 65%),
+    radial-gradient(ellipse 100% 80% at 0% 100%, #003049 0%, transparent 70%),
+    radial-gradient(ellipse 90% 90% at 100% 50%, #005f73 0%, transparent 70%),
+    linear-gradient(180deg, #001219 0%, #003049 45%, #014f86 100%);
+}
+
+.theme-farm .bg-base {
+  background:
+    radial-gradient(ellipse 120% 80% at 50% 0%, #8d6e21 0%, transparent 65%),
+    radial-gradient(ellipse 100% 80% at 0% 100%, #4f772d 0%, transparent 70%),
+    radial-gradient(ellipse 90% 90% at 100% 50%, #bc6c25 0%, transparent 70%),
+    linear-gradient(180deg, #402a13 0%, #6b4f1d 45%, #31572c 100%);
+}
+
+.theme-animals .aurora-blob-1 { background: radial-gradient(circle, rgba(96, 182, 91, 0.45), transparent 70%); }
+.theme-animals .aurora-blob-2 { background: radial-gradient(circle, rgba(245, 158, 66, 0.4), transparent 70%); }
+.theme-animals .aurora-blob-3 { background: radial-gradient(circle, rgba(255, 213, 79, 0.28), transparent 70%); }
+.theme-animals .aurora-blob-4 { background: radial-gradient(circle, rgba(128, 203, 196, 0.24), transparent 70%); }
+
+.theme-ocean .aurora-blob-1 { background: radial-gradient(circle, rgba(0, 180, 216, 0.45), transparent 70%); }
+.theme-ocean .aurora-blob-2 { background: radial-gradient(circle, rgba(0, 119, 182, 0.4), transparent 70%); }
+.theme-ocean .aurora-blob-3 { background: radial-gradient(circle, rgba(72, 202, 228, 0.32), transparent 70%); }
+.theme-ocean .aurora-blob-4 { background: radial-gradient(circle, rgba(144, 224, 239, 0.24), transparent 70%); }
+
+.theme-farm .aurora-blob-1 { background: radial-gradient(circle, rgba(255, 209, 102, 0.45), transparent 70%); }
+.theme-farm .aurora-blob-2 { background: radial-gradient(circle, rgba(144, 190, 109, 0.38), transparent 70%); }
+.theme-farm .aurora-blob-3 { background: radial-gradient(circle, rgba(243, 114, 44, 0.28), transparent 70%); }
+.theme-farm .aurora-blob-4 { background: radial-gradient(circle, rgba(168, 218, 220, 0.24), transparent 70%); }
+
 /* 2 — aurora blobs */
 .bg-aurora {
   position: absolute;
@@ -144,6 +183,33 @@ body, html, #root {
   pointer-events: none;
   overflow: hidden;
 }
+
+.theme-symbols {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  overflow: hidden;
+}
+
+.theme-symbol {
+  position: absolute;
+  bottom: -14vh;
+  opacity: 0.22;
+  filter: drop-shadow(0 0 10px rgba(255, 255, 255, 0.22));
+  animation: themeSymbolRise linear infinite;
+}
+
+@keyframes themeSymbolRise {
+  0%   { transform: translateY(0) rotate(0deg); opacity: 0; }
+  15%  { opacity: 0.22; }
+  60%  { opacity: 0.18; }
+  100% { transform: translateY(-125vh) rotate(18deg); opacity: 0; }
+}
+
+.theme-animals .theme-symbol { opacity: 0.28; }
+.theme-ocean .theme-symbol { opacity: 0.24; }
+.theme-farm .theme-symbol { opacity: 0.26; }
+.theme-space .theme-symbol { opacity: 0.2; }
 
 .bubble {
   position: absolute;

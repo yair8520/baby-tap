@@ -1764,7 +1764,6 @@ export default function App() {
                   onMouseDown={(e) => handleDrumTap(pad.type, e)}
                 >
                   <span className="drum-pad-emoji">{pad.emoji}</span>
-                  <span className="drum-pad-label">{pad.label}</span>
                   {drumRipples
                     .filter((r) => r.padType === pad.type)
                     .map((r) => (

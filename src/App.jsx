@@ -2262,12 +2262,29 @@ export default function App() {
               <div className="sleep-cloud sleep-cloud-2" />
               <div className="sleep-cloud sleep-cloud-3" />
 
-              {/* Sheep stream: right-to-left arc, sequential and slow */}
-              <div className="sleep-sheep-stream" aria-hidden="true">
-                <div className="sleep-sheep-arc sleep-sheep-arc-1">🐑</div>
-                <div className="sleep-sheep-arc sleep-sheep-arc-2">🐑</div>
-                <div className="sleep-sheep-arc sleep-sheep-arc-3">🐏</div>
-                <div className="sleep-sheep-arc sleep-sheep-arc-4">🐑</div>
+              {/* Sheep falling like stars */}
+              <div className="sleep-falling-sheep" aria-hidden="true">
+                {[
+                  { emoji: "🐑", left: 18, delay: 0.8, dur: 12.5, dxMid: -12, dxEnd: -22, shuf: true },
+                  { emoji: "🐏", left: 42, delay: 3.4, dur: 13.5, dxMid: 10, dxEnd: 24, shuf: false },
+                  { emoji: "🐑", left: 64, delay: 6.2, dur: 12.8, dxMid: -8, dxEnd: -18, shuf: true },
+                  { emoji: "🐑", left: 82, delay: 9.1, dur: 14.2, dxMid: 14, dxEnd: 30, shuf: false },
+                ].map((s, i) => (
+                  <div
+                    key={i}
+                    className={`sleep-falling-sheep-emoji${s.shuf ? " shuf" : ""}`}
+                    style={{
+                      left: `${s.left}%`,
+                      top: "-12%",
+                      animationDelay: `${s.delay}s`,
+                      animationDuration: `${s.dur}s`,
+                      "--dx-mid": `${s.dxMid}vw`,
+                      "--dx-end": `${s.dxEnd}vw`,
+                    }}
+                  >
+                    {s.emoji}
+                  </div>
+                ))}
               </div>
 
               <button

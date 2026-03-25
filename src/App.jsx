@@ -53,6 +53,40 @@ const UI_TEXT = {
   },
 };
 
+// ── Sleep mode: use ONLY uploaded opus tracks ───────────────────────────────
+const SLEEP_OPUS_URLS = {
+  // Ambient noise modes
+  rain: new URL("./assets/sounds/small_42-Rain-10min.opus", import.meta.url).href,
+  ocean: new URL("./assets/sounds/small_47-Waves-10min.opus", import.meta.url).href,
+  wind: new URL("./assets/sounds/small_24-Storm-10min.opus", import.meta.url).href,
+  white: new URL("./assets/sounds/small_32-Waterfall-10min.opus", import.meta.url).href,
+  pink: new URL("./assets/sounds/small_32-Waterfall-10min.opus", import.meta.url).href,
+  brown: new URL("./assets/sounds/small_32-Waterfall-10min.opus", import.meta.url).href,
+
+  // Melody modes (lullaby buttons) - reuse the same tracks
+  lullaby: new URL("./assets/sounds/small_42-Rain-10min.opus", import.meta.url).href,
+  lullaby2: new URL("./assets/sounds/small_47-Waves-10min.opus", import.meta.url).href,
+  lullaby3: new URL("./assets/sounds/small_32-Waterfall-10min.opus", import.meta.url).href,
+};
+
+const sleepOpusBufferCache = new Map(); // url -> Promise<AudioBuffer>
+
+async function getSleepOpusBuffer(ctx, url) {
+  if (!url) return null;
+  if (!sleepOpusBufferCache.has(url)) {
+    sleepOpusBufferCache.set(
+      url,
+      (async () => {
+        const res = await fetch(url);
+        if (!res.ok) throw new Error(`Failed to fetch audio: ${res.status}`);
+        const ab = await res.arrayBuffer();
+        return await ctx.decodeAudioData(ab);
+      })(),
+    );
+  }
+  return sleepOpusBufferCache.get(url);
+}
+
 const THEME_PRESETS = {
   space: {
     id: "space",
@@ -204,6 +238,11 @@ export default function App() {
   const [gameMode, setGameMode] = useState("classic"); // 'classic' | 'balloons' | 'drums' | 'targets' | 'autoshow'
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [showSettingsHint, setShowSettingsHint] = useState(false);
+  const [sleepSoundMode, setSleepSoundMode] = useState("rain");
+  const [sleepVolume, setSleepVolume] = useState(0.5);
+  const [sleepMenuOpen, setSleepMenuOpen] = useState(true);
+  const [sleepEnabled, setSleepEnabled] = useState(true);
+  const [sleepMelodiesOpen, setSleepMelodiesOpen] = useState(false);
 
   // ── Classic mode state ───────────────────────────────────────────────────────
   const [emojis, setEmojis] = useState([]);
@@ -234,6 +273,7 @@ export default function App() {
   const [pressedKeys, setPressedKeys] = useState(new Set());
   const [displayedKeys, setDisplayedKeys] = useState(new Set());
   const displayTimerRef = useRef(null);
+  const displayDebounceRef = useRef(null);
 
   // ── Target mode state ─────────────────────────────────────────────────────────
   const [targets, setTargets] = useState([]);
@@ -269,9 +309,12 @@ export default function App() {
   const lastBalloonPopRef = useRef(Date.now());
   const gameModeRef = useRef("classic");
   const settingsRef = useRef(null);
+  const sleepPanelRef = useRef(null);
   const pianoRef = useRef(null);
   const spawnAtRef = useRef(null);
   const targetScoreRef = useRef(0);
+  const sleepAudioRef = useRef(null);
+  const sleepAudioVersionRef = useRef(0);
 
   // ── Sync refs ────────────────────────────────────────────────────────────────
   useEffect(() => {
@@ -290,6 +333,327 @@ export default function App() {
   useEffect(() => {
     targetScoreRef.current = targetScore;
   }, [targetScore]);
+
+  const stopSleepAudio = useCallback(() => {
+    sleepAudioVersionRef.current += 1;
+    const nodes = sleepAudioRef.current;
+    if (!nodes) return;
+    try {
+      if (nodes.intervalId) window.clearInterval(nodes.intervalId);
+      nodes.sources?.forEach((s) => {
+        try {
+          s.stop?.();
+          s.disconnect?.();
+        } catch (_e) {}
+      });
+      nodes.oscillators?.forEach((o) => {
+        try {
+          o.stop?.();
+          o.disconnect?.();
+        } catch (_e) {}
+      });
+      nodes.master?.disconnect?.();
+      nodes.extra?.forEach((n) => n.disconnect?.());
+    } catch (_e) {}
+    sleepAudioRef.current = null;
+  }, []);
+
+  const startSleepAudio = useCallback(
+    async (mode, volume) => {
+      if (muteRef.current) return;
+      const ctx = getAudioCtx();
+      if (!ctx) return;
+      if (ctx.state === "suspended") await ctx.resume();
+      stopSleepAudio();
+
+      const myVersion = sleepAudioVersionRef.current;
+
+      const master = ctx.createGain();
+      // Keep sleep sounds gentle (even if UI slider goes up)
+      master.gain.value = Math.max(0, Math.min(0.45, volume));
+      master.connect(ctx.destination);
+
+      // Use uploaded opus tracks for ALL sleep modes.
+      // If opus decoding fails, fall back to the previous synth logic.
+      const sleepOpusUrl = SLEEP_OPUS_URLS[mode];
+      if (sleepOpusUrl) {
+        try {
+          const buffer = await getSleepOpusBuffer(ctx, sleepOpusUrl);
+          if (!buffer) return;
+          if (myVersion !== sleepAudioVersionRef.current) return;
+          if (muteRef.current) return;
+
+          const src = ctx.createBufferSource();
+          src.buffer = buffer;
+          src.loop = true;
+          src.connect(master);
+          src.start();
+
+          sleepAudioRef.current = { master, sources: [src] };
+          return;
+        } catch (_e) {}
+      }
+
+      const makeNoiseBuffer = (kind = "white") => {
+        const length = ctx.sampleRate * 2;
+        const buffer = ctx.createBuffer(1, length, ctx.sampleRate);
+        const data = buffer.getChannelData(0);
+        let lastOut = 0;
+        // Pink noise filter states (Paul Kellet-style)
+        let b0 = 0, b1 = 0, b2 = 0;
+        for (let i = 0; i < length; i++) {
+          const white = Math.random() * 2 - 1;
+          if (kind === "brown") {
+            const brown = (lastOut + 0.02 * white) / 1.02;
+            lastOut = brown;
+            data[i] = brown * 3.5;
+          } else if (kind === "pink") {
+            b0 = 0.99886 * b0 + white * 0.0555179;
+            b1 = 0.99586 * b1 + white * 0.0750759;
+            b2 = 0.99332 * b2 + white * 0.153852;
+            const pink = b0 + b1 + b2 + white * 0.3104856;
+            data[i] = pink * 3.5;
+          } else {
+            data[i] = white;
+          }
+        }
+        return buffer;
+      };
+
+      if (mode === "lullaby" || mode === "lullaby2" || mode === "lullaby3") {
+        const sequences = {
+          lullaby: [261.63, 293.66, 329.63, 349.23, 329.63, 293.66, 261.63],
+          lullaby2: [220.0, 246.94, 261.63, 293.66, 261.63, 246.94, 220.0],
+          lullaby3: [196.0, 220.0, 246.94, 261.63, 246.94, 220.0, 196.0],
+        };
+        const notes = sequences[mode];
+        const noteDur = 0.42; // seconds
+
+        const osc = ctx.createOscillator();
+        osc.type = "sine";
+
+        const gain = ctx.createGain();
+        gain.gain.value = 0.0001;
+
+        // Gentle tone shaping
+        const toneLP = ctx.createBiquadFilter();
+        toneLP.type = "lowpass";
+        toneLP.frequency.value = 850;
+        toneLP.Q.value = 0.7;
+
+        const lfo = ctx.createOscillator();
+        lfo.type = "sine";
+        lfo.frequency.value = 4.2;
+
+        const lfoGain = ctx.createGain();
+        lfoGain.gain.value = 1.6; // subtle vibrato
+
+        lfo.connect(lfoGain);
+        lfoGain.connect(osc.frequency);
+
+        osc.connect(gain);
+        gain.connect(toneLP);
+        toneLP.connect(master);
+
+        let idx = 0;
+        const scheduleNote = () => {
+          const t = ctx.currentTime;
+          const f = notes[idx % notes.length];
+          idx++;
+
+          // Fast attack + slow decay = baby-soft envelope
+          gain.gain.cancelScheduledValues(t);
+          gain.gain.setValueAtTime(0.0001, t);
+          gain.gain.linearRampToValueAtTime(0.11, t + 0.02);
+          gain.gain.exponentialRampToValueAtTime(0.001, t + noteDur * 0.9);
+          osc.frequency.setTargetAtTime(f, t + 0.02);
+        };
+
+        osc.start();
+        lfo.start();
+
+        scheduleNote();
+        const iv = window.setInterval(scheduleNote, Math.max(250, Math.round(noteDur * 1000)));
+        sleepAudioRef.current = {
+          master,
+          oscillators: [osc, lfo],
+          extra: [gain, toneLP, lfoGain],
+          intervalId: iv,
+        };
+        return;
+      }
+
+      if (mode === "heartbeat") {
+        // Heartbeat: "thump" + gentle breathing noise.
+        // This mode is intentionally custom (not opus tracks).
+        const heartOsc = ctx.createOscillator();
+        const heartGain = ctx.createGain();
+        const heartLP = ctx.createBiquadFilter();
+        heartLP.type = "lowpass";
+        heartLP.frequency.value = 280;
+        heartLP.Q.value = 0.65;
+
+        heartOsc.type = "sine";
+        heartOsc.frequency.value = 62;
+        heartGain.gain.value = 0.0001;
+
+        heartOsc.connect(heartGain);
+        heartGain.connect(heartLP);
+        heartLP.connect(master);
+        heartOsc.start();
+
+        // Breathing: filtered noise modulated by a slow LFO.
+        const breathSrc = ctx.createBufferSource();
+        breathSrc.buffer = makeNoiseBuffer("pink");
+        breathSrc.loop = true;
+
+        const breathLP = ctx.createBiquadFilter();
+        breathLP.type = "lowpass";
+        breathLP.frequency.value = 520;
+        breathLP.Q.value = 0.3;
+
+        const breathGain = ctx.createGain();
+        breathGain.gain.value = 0.006; // base breath level
+
+        const breathLFO = ctx.createOscillator();
+        breathLFO.type = "sine";
+        breathLFO.frequency.value = 0.09; // slow ~ 1 breath every ~11s
+
+        const breathLFOGain = ctx.createGain();
+        breathLFOGain.gain.value = 0.012;
+
+        breathLFO.connect(breathLFOGain);
+        breathLFOGain.connect(breathGain.gain);
+
+        breathSrc.connect(breathLP);
+        breathLP.connect(breathGain);
+        breathGain.connect(master);
+
+        breathSrc.start();
+        breathLFO.start();
+
+        const pulse = () => {
+          const t = ctx.currentTime;
+          heartGain.gain.cancelScheduledValues(t);
+          heartGain.gain.setValueAtTime(0.001, t);
+          // Main thump
+          heartGain.gain.linearRampToValueAtTime(0.22, t + 0.04);
+          heartGain.gain.exponentialRampToValueAtTime(0.001, t + 0.19);
+          // Small second beat (so it feels like a "lub-dub")
+          heartGain.gain.linearRampToValueAtTime(0.12, t + 0.23);
+          heartGain.gain.exponentialRampToValueAtTime(0.001, t + 0.48);
+        };
+
+        pulse();
+        const iv = window.setInterval(pulse, 980);
+        sleepAudioRef.current = {
+          master,
+          sources: [breathSrc],
+          oscillators: [heartOsc, breathLFO],
+          extra: [heartGain, heartLP, breathLP, breathGain, breathLFOGain],
+          intervalId: iv,
+        };
+        return;
+      }
+
+      if (mode === "wind") {
+        const src = ctx.createBufferSource();
+        src.buffer = makeNoiseBuffer("white");
+        src.loop = true;
+        const bp = ctx.createBiquadFilter();
+        bp.type = "bandpass";
+        bp.frequency.value = 450;
+        bp.Q.value = 0.6;
+        const lfo = ctx.createOscillator();
+        const lfoGain = ctx.createGain();
+        lfo.type = "sine";
+        lfo.frequency.value = 0.08;
+        lfoGain.gain.value = 260;
+        lfo.connect(lfoGain);
+        lfoGain.connect(bp.frequency);
+        src.connect(bp);
+        bp.connect(master);
+        src.start();
+        lfo.start();
+        sleepAudioRef.current = { master, sources: [src], oscillators: [lfo], extra: [bp, lfoGain] };
+        return;
+      }
+
+      // Default ambient noise modes (white / pink / brown / rain / ocean)
+      const noiseKind =
+        mode === "ocean" || mode === "brown"
+          ? "brown"
+          : mode === "pink"
+            ? "pink"
+            : "white";
+
+      const src = ctx.createBufferSource();
+      src.buffer = makeNoiseBuffer(noiseKind);
+      src.loop = true;
+
+      const filter1 = ctx.createBiquadFilter();
+      const filter2 = ctx.createBiquadFilter();
+
+      // Keep everything softer by limiting highs.
+      if (mode === "rain") {
+        filter1.type = "bandpass";
+        filter1.frequency.value = 1700;
+        filter1.Q.value = 0.75;
+
+        filter2.type = "lowpass";
+        filter2.frequency.value = 800;
+        filter2.Q.value = 0.6;
+      } else if (mode === "ocean") {
+        filter1.type = "bandpass";
+        filter1.frequency.value = 260;
+        filter1.Q.value = 0.5;
+
+        filter2.type = "lowpass";
+        filter2.frequency.value = 520;
+        filter2.Q.value = 0.6;
+      } else if (mode === "white") {
+        filter1.type = "lowpass";
+        filter1.frequency.value = 1100;
+        filter1.Q.value = 0.6;
+
+        filter2.type = "highpass";
+        filter2.frequency.value = 80;
+        filter2.Q.value = 0.5;
+      } else if (mode === "pink") {
+        filter1.type = "lowpass";
+        filter1.frequency.value = 900;
+        filter1.Q.value = 0.7;
+
+        filter2.type = "highpass";
+        filter2.frequency.value = 60;
+        filter2.Q.value = 0.5;
+      } else if (mode === "brown") {
+        filter1.type = "lowpass";
+        filter1.frequency.value = 650;
+        filter1.Q.value = 0.8;
+
+        filter2.type = "highpass";
+        filter2.frequency.value = 40;
+        filter2.Q.value = 0.5;
+      } else {
+        // Fallback
+        filter1.type = "lowpass";
+        filter1.frequency.value = 850;
+        filter1.Q.value = 0.7;
+        filter2.type = "highpass";
+        filter2.frequency.value = 70;
+        filter2.Q.value = 0.5;
+      }
+
+      src.connect(filter1);
+      filter1.connect(filter2);
+      filter2.connect(master);
+      src.start();
+
+      sleepAudioRef.current = { master, sources: [src], extra: [filter1, filter2] };
+    },
+    [stopSleepAudio],
+  );
 
   // Use uploaded app images for site/browser icons.
   useEffect(() => {
@@ -318,18 +682,27 @@ export default function App() {
     pressedKeysRef.current = pressedKeys;
   }, [pressedKeys]);
 
-  // Keep displayed note for 2s after finger lifts
+  // Keep displayed note for 2s after finger lifts.
+  // Also debounce updates to avoid flicker when pressing very fast.
   useEffect(() => {
+    clearTimeout(displayTimerRef.current);
+    clearTimeout(displayDebounceRef.current);
+
     if (pressedKeys.size > 0) {
-      clearTimeout(displayTimerRef.current);
-      setDisplayedKeys(new Set(pressedKeys));
+      const next = new Set(pressedKeys);
+      displayDebounceRef.current = setTimeout(() => {
+        setDisplayedKeys(next);
+      }, 90);
     } else {
-      displayTimerRef.current = setTimeout(
-        () => setDisplayedKeys(new Set()),
-        2000,
-      );
+      displayTimerRef.current = setTimeout(() => {
+        setDisplayedKeys(new Set());
+      }, 2000);
     }
-    return () => clearTimeout(displayTimerRef.current);
+
+    return () => {
+      clearTimeout(displayTimerRef.current);
+      clearTimeout(displayDebounceRef.current);
+    };
   }, [pressedKeys]);
 
   // ── Piano: clear pressed keys when leaving piano mode ────────────────────────
@@ -402,6 +775,26 @@ export default function App() {
       document.removeEventListener("touchstart", handler);
     };
   }, [settingsOpen]);
+
+  // Close sleep (music) menu on outside click/tap
+  useEffect(() => {
+    if (!sleepMenuOpen) return;
+    const handler = (e) => {
+      const target = e.target;
+      if (!sleepPanelRef.current) return;
+      if (!sleepPanelRef.current.contains(target)) {
+        // Avoid closing immediately when user taps the toggle itself.
+        if (target?.closest?.(".sleep-menu-toggle")) return;
+        setSleepMenuOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handler);
+    document.addEventListener("touchstart", handler);
+    return () => {
+      document.removeEventListener("mousedown", handler);
+      document.removeEventListener("touchstart", handler);
+    };
+  }, [sleepMenuOpen]);
 
   // ── Melody player wrapper ────────────────────────────────────────────────────
   const playMelody = useCallback(() => {
@@ -531,11 +924,7 @@ export default function App() {
     if (!isFullscreen) return;
     let lastShake = 0;
     const onMotion = (e) => {
-      if (
-        gameModeRef.current !== "classic" &&
-        gameModeRef.current !== "autoshow"
-      )
-        return;
+      if (gameModeRef.current !== "classic") return;
       const acc = e.accelerationIncludingGravity;
       if (!acc) return;
       const mag = Math.sqrt(
@@ -568,11 +957,7 @@ export default function App() {
     if (!isFullscreen) return;
 
     const onTouchMove = (e) => {
-      if (
-        gameModeRef.current !== "classic" &&
-        gameModeRef.current !== "autoshow"
-      )
-        return;
+      if (gameModeRef.current !== "classic") return;
       Array.from(e.touches).forEach((t) => {
         activeTouchPosRef.current[t.identifier] = {
           x: t.clientX,
@@ -606,11 +991,7 @@ export default function App() {
 
     let hue = 0;
     const onMove = (e) => {
-      if (
-        gameModeRef.current !== "classic" &&
-        gameModeRef.current !== "autoshow"
-      )
-        return;
+      if (gameModeRef.current !== "classic") return;
       hue = (hue + 12) % 360;
       const id = nextId();
       const size = rand(28, 58);
@@ -965,22 +1346,24 @@ export default function App() {
     [vibrate, spawnTarget],
   ); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // ── Autoshow mode: auto-spawn interval ───────────────────────────────────────
+  // ── Sleep mode audio engine ───────────────────────────────────────────────────
   useEffect(() => {
-    if (!isFullscreen || gameMode !== "autoshow") return;
-    const iv = setInterval(() => {
-      if (spawnAtRef.current) {
-        spawnAtRef.current(
-          rand(80, window.innerWidth - 80),
-          rand(80, window.innerHeight - 80),
-          null,
-          "normal",
-          false,
-        );
-      }
-    }, 700);
-    return () => clearInterval(iv);
-  }, [activeEmojis, isFullscreen, gameMode]);
+    if (!isFullscreen || gameMode !== "autoshow" || muteOn || !sleepEnabled) {
+      stopSleepAudio();
+      return;
+    }
+    startSleepAudio(sleepSoundMode, sleepVolume);
+    return () => stopSleepAudio();
+  }, [
+    gameMode,
+    isFullscreen,
+    muteOn,
+    sleepEnabled,
+    sleepSoundMode,
+    sleepVolume,
+    startSleepAudio,
+    stopSleepAudio,
+  ]);
 
   // ── Balloon pop handler ──────────────────────────────────────────────────────
   const popBalloon = useCallback(
@@ -1062,8 +1445,7 @@ export default function App() {
   // ── Classic: touch handlers ──────────────────────────────────────────────────
   const handleTouchStart = (e) => {
     if (gameModeRef.current === "piano") return;
-    if (gameModeRef.current !== "classic" && gameModeRef.current !== "autoshow")
-      return;
+    if (gameModeRef.current !== "classic") return;
     if (
       e.target.closest(".corner-hold") ||
       e.target.closest(".start-screen") ||
@@ -1098,8 +1480,7 @@ export default function App() {
   };
 
   const handleTouchEnd = (e) => {
-    if (gameModeRef.current !== "classic" && gameModeRef.current !== "autoshow")
-      return;
+    if (gameModeRef.current !== "classic") return;
     if (
       e.target.closest(".corner-hold") ||
       e.target.closest(".start-screen") ||
@@ -1124,10 +1505,7 @@ export default function App() {
 
         lastTapPosRef.current = { x: t.clientX, y: t.clientY, time: now };
 
-        if (gameModeRef.current === "autoshow") {
-          vibrate([20]);
-          spawnAt(t.clientX, t.clientY, null, "normal", false);
-        } else if (isDoubleTap) {
+        if (isDoubleTap) {
           lastTapPosRef.current = null;
           vibrate([60, 30, 100]);
           for (let i = 0; i < 5; i++) {
@@ -1163,8 +1541,7 @@ export default function App() {
   const handleMouseDown = (e) => {
     if (e.button !== 0) return;
     if (gameModeRef.current === "piano") return;
-    if (gameModeRef.current !== "classic" && gameModeRef.current !== "autoshow")
-      return;
+    if (gameModeRef.current !== "classic") return;
     if (
       e.target.closest(".corner-hold") ||
       e.target.closest(".start-screen") ||
@@ -1186,8 +1563,7 @@ export default function App() {
 
   const handleMouseUp = (e) => {
     if (e.button !== 0) return;
-    if (gameModeRef.current !== "classic" && gameModeRef.current !== "autoshow")
-      return;
+    if (gameModeRef.current !== "classic") return;
     if (
       e.target.closest(".corner-hold") ||
       e.target.closest(".start-screen") ||
@@ -1208,10 +1584,7 @@ export default function App() {
         Math.abs(e.clientX - last.x) < 60 &&
         Math.abs(e.clientY - last.y) < 60;
       lastTapPosRef.current = { x: e.clientX, y: e.clientY, time: now };
-      if (gameModeRef.current === "autoshow") {
-        vibrate([20]);
-        spawnAt(e.clientX, e.clientY, null, "normal", false);
-      } else if (isDouble) {
+      if (isDouble) {
         lastTapPosRef.current = null;
         vibrate([60, 30, 100]);
         for (let i = 0; i < 5; i++) {
@@ -1394,6 +1767,13 @@ export default function App() {
               {ui.btn}
             </button>
             <p className="start-hint">{ui.hint}</p>
+            <a
+              className="start-privacy-link"
+              href="privacy-policy"
+              rel="noopener noreferrer"
+            >
+              {isHebrewUI ? 'פרטיות' : 'Privacy Policy'}
+            </a>
           </div>
         </div>
       )}
@@ -1507,7 +1887,7 @@ export default function App() {
                     {
                       id: "autoshow",
                       emoji: "🌟",
-                      label: isHebrewUI ? "הפתעה" : "Auto",
+                      label: isHebrewUI ? "שינה" : "Sleep",
                     },
                   ];
                   return (
@@ -1633,7 +2013,7 @@ export default function App() {
           </div>
 
           {/* ── Classic mode content ── */}
-          {(gameMode === "classic" || gameMode === "autoshow") && (
+          {gameMode === "classic" && (
             <>
               {gameMode === "classic" && ultraFlash && (
                 <div className="ultra-flash" />
@@ -1842,8 +2222,210 @@ export default function App() {
             </>
           )}
 
-          {/* ── Autoshow mode content ── */}
-          {gameMode === "autoshow" && <div className="autoshow-shimmer" />}
+          {/* ── Sleep mode content ── */}
+          {gameMode === "autoshow" && (
+            <div className="sleep-scene">
+              <div className="sleep-gradient" />
+              <div className="sleep-moon" />
+              <div className="sleep-stars" />
+              {/* Distant points (sleep-stars) + falling emoji stars */}
+              <div className="sleep-falling-stars" aria-hidden="true">
+                {[
+                  { emoji: "⭐", dx: -18 },
+                  { emoji: "🌟", dx: 22 },
+                  { emoji: "✨", dx: -14 },
+                  { emoji: "⭐", dx: 18 },
+                  { emoji: "🌟", dx: -10 },
+                ].map((s, i) => {
+                  const left = 10 + i * 18; // 10..82
+                  const delay = i * 2.6; // every few seconds
+                  const dur = 10.5 + (i % 3) * 1.6;
+                  return (
+                    <div
+                      key={i}
+                      className="sleep-falling-star"
+                      style={{
+                        left: `${left}%`,
+                        top: "-12%",
+                        animationDelay: `${delay}s`,
+                        animationDuration: `${dur}s`,
+                        "--dx-mid": `${s.dx * 0.5}vw`,
+                        "--dx-end": `${s.dx}vw`,
+                      }}
+                    >
+                      {s.emoji}
+                    </div>
+                  );
+                })}
+              </div>
+              <div className="sleep-cloud sleep-cloud-1" />
+              <div className="sleep-cloud sleep-cloud-2" />
+              <div className="sleep-cloud sleep-cloud-3" />
+
+              {/* Sheep stream: right-to-left arc, sequential and slow */}
+              <div className="sleep-sheep-stream" aria-hidden="true">
+                <div className="sleep-sheep-arc sleep-sheep-arc-1">🐑</div>
+                <div className="sleep-sheep-arc sleep-sheep-arc-2">🐑</div>
+                <div className="sleep-sheep-arc sleep-sheep-arc-3">🐏</div>
+                <div className="sleep-sheep-arc sleep-sheep-arc-4">🐑</div>
+              </div>
+
+              <button
+                className="sleep-menu-toggle"
+                onTouchEnd={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  setSleepMenuOpen((v) => !v);
+                }}
+                onMouseUp={(e) => {
+                  e.stopPropagation();
+                  setSleepMenuOpen((v) => !v);
+                }}
+              >
+                {sleepMenuOpen ? (isHebrewUI ? "סגור 🌙" : "Hide 🌙") : (isHebrewUI ? "פתח 🌙" : "Open 🌙")}
+              </button>
+
+              {sleepMenuOpen && (
+                <div className="sleep-panel" ref={sleepPanelRef} dir={isHebrewUI ? "rtl" : "ltr"}>
+                  <div className="sleep-title">{isHebrewUI ? "מצב שינה" : "Sleep mode"}</div>
+                  <div className="sleep-subtitle">
+                    {isHebrewUI ? "רקע עדין להרגעת תינוק" : "Gentle night ambience for baby"}
+                  </div>
+
+                  <div className="sleep-control-row">
+                    <button
+                      className={`sleep-action-btn${sleepEnabled ? " active" : ""}`}
+                      onTouchEnd={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        setSleepEnabled((v) => !v);
+                      }}
+                      onMouseUp={(e) => {
+                        e.stopPropagation();
+                        setSleepEnabled((v) => !v);
+                      }}
+                    >
+                      {sleepEnabled ? (isHebrewUI ? "⏸ עצור" : "⏸ Pause") : (isHebrewUI ? "▶️ נגן" : "▶️ Play")}
+                    </button>
+                    <button
+                      className="sleep-action-btn"
+                      onTouchEnd={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        setSleepEnabled(false);
+                        setSleepMenuOpen(false);
+                      }}
+                      onMouseUp={(e) => {
+                        e.stopPropagation();
+                        setSleepEnabled(false);
+                        setSleepMenuOpen(false);
+                      }}
+                    >
+                      {isHebrewUI ? "⏹ כבה" : "⏹ Off"}
+                    </button>
+                  </div>
+
+                  <div className="sleep-section-label">
+                    {isHebrewUI ? "רעש לבן" : "White noise"}
+                  </div>
+                  <div className="sleep-noise-grid">
+                    {[
+                      { id: "rain", emoji: "🌧️", label: isHebrewUI ? "גשם עדין" : "Soft rain" },
+                      { id: "ocean", emoji: "🌊", label: isHebrewUI ? "גלי ים" : "Ocean waves" },
+                      { id: "wind", emoji: "🍃", label: isHebrewUI ? "רוח לילה" : "Night wind" },
+                      { id: "white", emoji: "🌫️", label: isHebrewUI ? "לבן רך" : "Soft white" },
+                      { id: "pink", emoji: "🩵", label: isHebrewUI ? "ורוד רך" : "Pink soft" },
+                      { id: "brown", emoji: "🌲", label: isHebrewUI ? "חום עמוק" : "Deep brown" },
+                      { id: "heartbeat", emoji: "💗", label: isHebrewUI ? "דופק רגוע" : "Heartbeat" },
+                    ].map((s) => (
+                      <button
+                        key={s.id}
+                        className={`sleep-noise-btn${sleepSoundMode === s.id ? " active" : ""}`}
+                        onTouchEnd={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          setSleepSoundMode(s.id);
+                          setSleepEnabled(true);
+                        }}
+                        onMouseUp={(e) => {
+                          e.stopPropagation();
+                          setSleepSoundMode(s.id);
+                          setSleepEnabled(true);
+                        }}
+                      >
+                        <span>{s.emoji}</span>
+                        <span>{s.label}</span>
+                      </button>
+                    ))}
+                  </div>
+
+                  <div className="sleep-melodies-toggle-row">
+                    <button
+                      className="sleep-melodies-toggle"
+                      onTouchEnd={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        setSleepMelodiesOpen((v) => !v);
+                      }}
+                      onMouseUp={(e) => {
+                        e.stopPropagation();
+                        setSleepMelodiesOpen((v) => !v);
+                      }}
+                    >
+                      {sleepMelodiesOpen
+                        ? isHebrewUI
+                          ? "מנגינות - פתוח ✅"
+                          : "Melodies - Open ✅"
+                        : isHebrewUI
+                          ? "מנגינות +"
+                          : "Melodies +"}
+                    </button>
+                  </div>
+
+                  {sleepMelodiesOpen && (
+                    <div className="sleep-noise-grid sleep-melodies-grid">
+                      {[
+                        { id: "lullaby", emoji: "🎵", label: isHebrewUI ? "מנגינה 1" : "Melody 1" },
+                        { id: "lullaby2", emoji: "🎶", label: isHebrewUI ? "מנגינה 2" : "Melody 2" },
+                        { id: "lullaby3", emoji: "🎼", label: isHebrewUI ? "מנגינה 3" : "Melody 3" },
+                      ].map((s) => (
+                        <button
+                          key={s.id}
+                          className={`sleep-noise-btn${sleepSoundMode === s.id ? " active" : ""}`}
+                          onTouchEnd={(e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            setSleepSoundMode(s.id);
+                            setSleepEnabled(true);
+                          }}
+                          onMouseUp={(e) => {
+                            e.stopPropagation();
+                            setSleepSoundMode(s.id);
+                            setSleepEnabled(true);
+                          }}
+                        >
+                          <span>{s.emoji}</span>
+                          <span>{s.label}</span>
+                        </button>
+                      ))}
+                    </div>
+                  )}
+
+                  <div className="sleep-volume-row">
+                    <span>{isHebrewUI ? "עוצמה" : "Volume"}</span>
+                    <input
+                      type="range"
+                      min="0"
+                      max="0.9"
+                      step="0.05"
+                      value={sleepVolume}
+                      onChange={(e) => setSleepVolume(Number(e.target.value))}
+                    />
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
 
           {/* ── Piano mode content ── */}
           {gameMode === "piano" && (

@@ -2,6 +2,11 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import "./App.css";
 import appIcon from "./assets/icon-192.png";
 import appIconLarge from "./assets/icon-512.png";
+import ShapeMatch from "./ShapeMatch.jsx";
+import ColorMix from "./ColorMix.jsx";
+import SizeSort from "./SizeSort.jsx";
+import ShapeMemory from "./ShapeMemory.jsx";
+import PatternGame from "./PatternGame.jsx";
 
 import {
   IS_TOUCH,
@@ -1889,6 +1894,31 @@ export default function App() {
                       emoji: "🌟",
                       label: isHebrewUI ? "שינה" : "Sleep",
                     },
+                    {
+                      id: "shapes",
+                      emoji: "🔵",
+                      label: isHebrewUI ? "צורות" : "Shapes",
+                    },
+                    {
+                      id: "colormix",
+                      emoji: "🎨",
+                      label: isHebrewUI ? "ערבוב" : "Mix Colors",
+                    },
+                    {
+                      id: "sizesort",
+                      emoji: "📏",
+                      label: isHebrewUI ? "מיון" : "Size Sort",
+                    },
+                    {
+                      id: "memory",
+                      emoji: "🧠",
+                      label: isHebrewUI ? "זיכרון" : "Memory",
+                    },
+                    {
+                      id: "pattern",
+                      emoji: "🔷",
+                      label: isHebrewUI ? "דפוס" : "Pattern",
+                    },
                   ];
                   return (
                     <div className="settings-mode-grid">
@@ -2597,6 +2627,51 @@ export default function App() {
             />
           ))}
         </>
+      )}
+
+      {/* ── Shape Match mode ── */}
+      {isFullscreen && gameMode === "shapes" && (
+        <ShapeMatch
+          onExit={() => setGameMode("classic")}
+          lang={lang}
+          vibrateOn={vibrateOn && canVibrate}
+        />
+      )}
+
+      {/* ── Color Mix mode ── */}
+      {isFullscreen && gameMode === "colormix" && (
+        <ColorMix
+          onExit={() => setGameMode("classic")}
+          lang={lang}
+          vibrateOn={vibrateOn && canVibrate}
+        />
+      )}
+
+      {/* ── Size Sort mode ── */}
+      {isFullscreen && gameMode === "sizesort" && (
+        <SizeSort
+          onExit={() => setGameMode("classic")}
+          lang={lang}
+          vibrateOn={vibrateOn && canVibrate}
+        />
+      )}
+
+      {/* ── Shape Memory mode ── */}
+      {isFullscreen && gameMode === "memory" && (
+        <ShapeMemory
+          onExit={() => setGameMode("classic")}
+          lang={lang}
+          vibrateOn={vibrateOn && canVibrate}
+        />
+      )}
+
+      {/* ── Pattern Game mode ── */}
+      {isFullscreen && gameMode === "pattern" && (
+        <PatternGame
+          onExit={() => setGameMode("classic")}
+          lang={lang}
+          vibrateOn={vibrateOn && canVibrate}
+        />
       )}
     </div>
   );

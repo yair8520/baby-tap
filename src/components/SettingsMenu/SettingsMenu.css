@@ -5,7 +5,7 @@
 .sm-panel {
   position: absolute;
   top: 56px;
-  inset-inline-end: 8px;        /* RTL-aware right/left */
+  right: 8px;                   /* always anchor to gear button on the right */
   width: min(400px, calc(100vw - 12px));
   max-height: min(82vh, 580px);
   background: rgba(10, 4, 30, 0.97);

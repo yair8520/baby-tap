@@ -1,0 +1,135 @@
+{
+  "common": {
+    "emojiRow": "👶🏻 🎉 🌈",
+    "title": "Baby Spark! ✨",
+    "subtitle": "Let the baby tap the screen\nand see colorful magic! ✨",
+    "startFullscreen": "🚀 Start Fullscreen",
+    "exitHint": "To exit: hold top-left corner for 2 seconds",
+    "privacyPolicy": "Privacy Policy",
+    "ultra": "👑 ULTRA ×",
+    "fire": "🔥 HOT ×"
+  },
+  "menu": {
+    "title": "Settings",
+    "close": "Close",
+    "tabGames": "🎮 Games",
+    "tabLearning": "📚 Learning",
+    "tabAudio": "🔊 Audio",
+    "tabDisplay": "🎨 Display",
+    "settingsHint": "Settings & modes →"
+  },
+  "games": {
+    "label": "Choose Game Mode",
+    "classic": "Classic",
+    "balloons": "Balloons",
+    "drums": "Drums",
+    "targets": "Targets",
+    "sleep": "Sleep",
+    "piano": "Piano",
+    "memory": "Memory",
+    "shapes": "Shapes"
+  },
+  "learning": {
+    "label": "Learning Modes",
+    "description": "Educational games for kids"
+  },
+  "audio": {
+    "label": "Audio Settings",
+    "sound": "Sound",
+    "vibrate": "Vibrate",
+    "soundOn": "On",
+    "soundOff": "Off"
+  },
+  "display": {
+    "label": "Display & Language",
+    "language": "Language",
+    "theme": "Theme",
+    "themes": {
+      "space": "Space",
+      "animals": "Animals",
+      "ocean": "Ocean",
+      "farm": "Farm"
+    }
+  },
+  "balloons": {
+    "counter": "🎈 {{pops}} | 💨 {{missed}}",
+    "level": "Lv {{level}}",
+    "levelUp": "🚀 Level {{level}}!",
+    "hint": "tap the balloons!"
+  },
+  "targets": {
+    "score": "🎯 {{score}} | 💨 {{missed}}"
+  },
+  "sleep": {
+    "title": "Sleep mode",
+    "subtitle": "Gentle night ambience for baby",
+    "open": "Open 🌙",
+    "hide": "Hide 🌙",
+    "pause": "⏸ Pause",
+    "play": "▶️ Play",
+    "off": "⏹ Off",
+    "whiteNoise": "White noise",
+    "melodies": "Melodies",
+    "melodiesOpen": "Melodies - Open ✅",
+    "volume": "Volume",
+    "sounds": {
+      "rain": "Soft rain",
+      "ocean": "Ocean waves",
+      "wind": "Night wind",
+      "white": "Soft white",
+      "pink": "Pink soft",
+      "brown": "Deep brown",
+      "heartbeat": "Heartbeat",
+      "lullaby": "Melody 1",
+      "lullaby2": "Melody 2",
+      "lullaby3": "Melody 3"
+    }
+  },
+  "piano": {
+    "rotate": "Rotate device to landscape",
+    "solfege": {
+      "C": "Do",
+      "D": "Re",
+      "E": "Mi",
+      "F": "Fa",
+      "G": "Sol",
+      "A": "La",
+      "B": "Si"
+    }
+  },
+  "memory": {
+    "title": "Memory Game",
+    "level": "Level {{level}}",
+    "score": "Matches: {{matches}}",
+    "attempts": "Tries: {{attempts}}",
+    "won": "Well done! 🎉",
+    "nextLevel": "Next Level ➡️",
+    "restart": "Play again 🔄",
+    "newGame": "New Game"
+  },
+  "shapes": {
+    "title": "Shapes Game",
+    "instruction": "Tap the {{color}} {{shape}}!",
+    "score": "Score: {{score}}",
+    "level": "Level {{level}}",
+    "levelUp": "Great! Level {{level}} 🎉",
+    "correct": "Correct! ✅",
+    "wrong": "Oops! ❌",
+    "colors": {
+      "red": "red",
+      "blue": "blue",
+      "green": "green",
+      "yellow": "yellow",
+      "purple": "purple",
+      "orange": "orange",
+      "pink": "pink"
+    },
+    "shapeNames": {
+      "circle": "circle",
+      "square": "square",
+      "triangle": "triangle",
+      "star": "star",
+      "heart": "heart"
+    }
+  }
+}

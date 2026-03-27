@@ -1,0 +1,231 @@
+/* ═══════════════════════════════════════════════════════
+   Settings Menu Panel  (sm-*)
+   ═══════════════════════════════════════════════════════ */
+
+.sm-panel {
+  position: absolute;
+  top: 56px;
+  inset-inline-end: 8px;        /* RTL-aware right/left */
+  width: min(380px, calc(100vw - 16px));
+  max-height: min(82vh, 560px);
+  background: rgba(10, 4, 30, 0.97);
+  backdrop-filter: blur(22px);
+  -webkit-backdrop-filter: blur(22px);
+  border-radius: 20px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  box-shadow: 0 8px 40px rgba(0, 0, 0, 0.6), 0 0 0 1px rgba(120, 80, 255, 0.2);
+  display: flex;
+  flex-direction: column;
+  z-index: 36;
+  overflow: hidden;
+}
+
+/* ── Header ── */
+.sm-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 16px 10px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  flex-shrink: 0;
+}
+
+.sm-title {
+  font-size: 16px;
+  font-weight: 700;
+  color: #fff;
+  letter-spacing: 0.02em;
+}
+
+.sm-close {
+  background: rgba(255, 255, 255, 0.08);
+  border: none;
+  color: rgba(255, 255, 255, 0.7);
+  border-radius: 50%;
+  width: 30px;
+  height: 30px;
+  font-size: 14px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.2s, color 0.2s;
+}
+.sm-close:hover { background: rgba(255,255,255,0.16); color: #fff; }
+
+/* ── Tab bar ── */
+.sm-tabs {
+  display: flex;
+  gap: 4px;
+  padding: 8px 10px 4px;
+  overflow-x: auto;
+  flex-shrink: 0;
+  scrollbar-width: none;
+}
+.sm-tabs::-webkit-scrollbar { display: none; }
+
+.sm-tab {
+  flex: 0 0 auto;
+  padding: 7px 13px;
+  border-radius: 12px;
+  font-size: clamp(11px, 3vw, 13px);
+  font-weight: 600;
+  white-space: nowrap;
+  background: transparent;
+  color: rgba(255, 255, 255, 0.5);
+  border: 1px solid transparent;
+  cursor: pointer;
+  transition: all 0.18s ease;
+}
+.sm-tab:hover {
+  background: rgba(255,255,255,0.07);
+  color: rgba(255,255,255,0.8);
+}
+.sm-tab--active {
+  background: rgba(120, 60, 255, 0.3);
+  border-color: rgba(140, 90, 255, 0.4);
+  color: #fff;
+}
+
+/* ── Scrollable body ── */
+.sm-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 4px 12px 14px;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(120,60,255,0.4) transparent;
+}
+.sm-body::-webkit-scrollbar { width: 4px; }
+.sm-body::-webkit-scrollbar-track { background: transparent; }
+.sm-body::-webkit-scrollbar-thumb {
+  background: rgba(120,60,255,0.4);
+  border-radius: 2px;
+}
+
+/* ── Section ── */
+.sm-section {
+  padding-top: 10px;
+}
+
+.sm-section-label {
+  font-size: clamp(11px, 3vw, 12px);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: rgba(180, 140, 255, 0.85);
+  margin: 0 0 10px;
+}
+
+.sm-section-desc {
+  font-size: 12px;
+  color: rgba(255,255,255,0.45);
+  margin: -6px 0 10px;
+}
+
+/* ── Mode grid ── */
+.sm-mode-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(80px, 1fr));
+  gap: 8px;
+  margin-bottom: 16px;
+}
+.sm-mode-grid--2 {
+  grid-template-columns: repeat(2, 1fr);
+}
+.sm-mode-grid--4 {
+  grid-template-columns: repeat(4, 1fr);
+}
+
+/* On very small screens, collapse to 3-col */
+@media (max-width: 320px) {
+  .sm-mode-grid { grid-template-columns: repeat(3, 1fr); }
+  .sm-mode-grid--4 { grid-template-columns: repeat(3, 1fr); }
+}
+
+.sm-mode-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 5px;
+  padding: 10px 6px;
+  border-radius: 14px;
+  border: 1.5px solid rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.05);
+  color: rgba(255, 255, 255, 0.7);
+  cursor: pointer;
+  transition: all 0.18s ease;
+  min-height: 64px;
+}
+.sm-mode-btn:hover {
+  background: rgba(255, 255, 255, 0.1);
+  border-color: rgba(255,255,255,0.2);
+  color: #fff;
+}
+.sm-mode-btn--active {
+  background: linear-gradient(135deg, rgba(120,60,255,0.4), rgba(60,120,255,0.3));
+  border-color: rgba(140, 100, 255, 0.7);
+  color: #fff;
+  box-shadow: 0 0 12px rgba(120,60,255,0.25);
+}
+
+.sm-mode-emoji {
+  font-size: clamp(22px, 6vw, 28px);
+  line-height: 1;
+}
+.sm-mode-label {
+  font-size: clamp(10px, 2.8vw, 12px);
+  font-weight: 600;
+  text-align: center;
+  line-height: 1.2;
+}
+
+/* ── Toggle rows ── */
+.sm-toggle-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 4px;
+  border-bottom: 1px solid rgba(255,255,255,0.06);
+}
+.sm-toggle-row:last-child { border-bottom: none; }
+
+.sm-toggle-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  color: rgba(255,255,255,0.85);
+  font-weight: 500;
+}
+.sm-toggle-icon { font-size: 18px; }
+
+/* Toggle switch */
+.sm-toggle {
+  position: relative;
+  width: 48px;
+  height: 26px;
+  border-radius: 13px;
+  border: none;
+  background: rgba(255,255,255,0.15);
+  cursor: pointer;
+  transition: background 0.25s ease;
+  flex-shrink: 0;
+}
+.sm-toggle::after {
+  content: "";
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: rgba(255,255,255,0.5);
+  transition: transform 0.25s ease, background 0.25s ease;
+}
+.sm-toggle--on {
+  background: linear-gradient(135deg, #7B2FF7, #3A86FF);
+}
+.sm-toggle--on::after {
+  transform: translateX(22px);
+  background: #fff;
+}

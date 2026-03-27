@@ -1935,9 +1935,9 @@ export default function App() {
                       label: isHebrewUI ? "שינה" : "Sleep",
                     },
                     {
-                      id: "shapes",
+                      id: "shapematch",
                       emoji: "🔵",
-                      label: isHebrewUI ? "צורות" : "Shapes",
+                      label: isHebrewUI ? "התאמה" : "Match",
                     },
                     {
                       id: "colormix",
@@ -1950,9 +1950,9 @@ export default function App() {
                       label: isHebrewUI ? "מיון" : "Size Sort",
                     },
                     {
-                      id: "memory",
-                      emoji: "🧠",
-                      label: isHebrewUI ? "זיכרון" : "Memory",
+                      id: "shapememory",
+                      emoji: "🃏",
+                      label: isHebrewUI ? "סדרה" : "Sequence",
                     },
                     {
                       id: "pattern",
@@ -2697,7 +2697,7 @@ export default function App() {
       )}
 
       {/* ── Shape Match mode ── */}
-      {isFullscreen && gameMode === "shapes" && (
+      {isFullscreen && gameMode === "shapematch" && (
         <ShapeMatch
           onExit={() => setGameMode("classic")}
           lang={lang}
@@ -2724,7 +2724,7 @@ export default function App() {
       )}
 
       {/* ── Shape Memory mode ── */}
-      {isFullscreen && gameMode === "memory" && (
+      {isFullscreen && gameMode === "shapememory" && (
         <ShapeMemory
           onExit={() => setGameMode("classic")}
           lang={lang}

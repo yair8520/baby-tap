@@ -10,9 +10,14 @@ const GAME_MODES = [
 ];
 
 const LEARNING_MODES = [
-  { id: "piano",  emoji: "🎹", he: "פסנתר",  en: "Piano" },
-  { id: "memory", emoji: "🧠", he: "זיכרון", en: "Memory" },
-  { id: "shapes", emoji: "🎨", he: "צורות",  en: "Shapes" },
+  { id: "piano",       emoji: "🎹", he: "פסנתר",        en: "Piano" },
+  { id: "memory",      emoji: "🧠", he: "זיכרון",       en: "Memory" },
+  { id: "shapes",      emoji: "🎨", he: "צורות",        en: "Shapes" },
+  { id: "shapematch",  emoji: "🔵", he: "התאמת צורות",  en: "Shape Match" },
+  { id: "colormix",    emoji: "🧪", he: "ערבוב צבעים",  en: "Mix Colors" },
+  { id: "sizesort",    emoji: "📏", he: "מיון גדלים",   en: "Size Sort" },
+  { id: "shapememory", emoji: "🃏", he: "זכור סדרה",    en: "Sequence" },
+  { id: "pattern",     emoji: "🔷", he: "דפוס",         en: "Pattern" },
 ];
 
 const TABS = [

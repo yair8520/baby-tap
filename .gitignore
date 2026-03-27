@@ -12,6 +12,12 @@ dist
 dist-ssr
 *.local
 
+# Stray build artifacts in root
+assets/
+favicon.svg
+icon-192.png
+icons.svg
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json

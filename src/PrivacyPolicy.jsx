@@ -32,6 +32,12 @@ export default function PrivacyPolicy() {
   return (
     <main className="privacy-page">
       <header className="privacy-header">
+        <button
+          className="privacy-back-btn"
+          onClick={() => { window.location.hash = ''; window.location.reload(); }}
+        >
+          ← חזרה / Back
+        </button>
         <h1 className="privacy-title">Privacy Policy / מדיניות פרטיות</h1>
         <p className="privacy-updated">Last updated: March 23, 2026</p>
       </header>

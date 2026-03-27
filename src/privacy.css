@@ -13,6 +13,21 @@
   margin: 0 auto 16px;
 }
 
+.privacy-back-btn {
+  display: inline-block;
+  margin-bottom: 14px;
+  padding: 8px 16px;
+  background: rgba(255,255,255,0.1);
+  border: 1px solid rgba(255,255,255,0.2);
+  border-radius: 20px;
+  color: rgba(255,255,255,0.85);
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+.privacy-back-btn:hover { background: rgba(255,255,255,0.18); }
+
 .privacy-title {
   font-size: clamp(26px, 6vw, 40px);
   margin: 0 0 8px;

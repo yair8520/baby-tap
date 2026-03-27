@@ -1797,7 +1797,7 @@ export default function App() {
             <p className="start-hint">{ui.hint}</p>
             <a
               className="start-privacy-link"
-              href="privacy-policy"
+              href="#privacy-policy"
               rel="noopener noreferrer"
             >
               {isHebrewUI ? 'פרטיות' : 'Privacy Policy'}

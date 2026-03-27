@@ -32,6 +32,11 @@ import {
   nextMelodyTime,
 } from "./audio.js";
 
+import { useLocalStorage } from "./hooks/useLocalStorage.js";
+import SettingsMenu from "./components/SettingsMenu/index.jsx";
+import MemoryGame from "./games/memory/MemoryGame.jsx";
+import ShapesGame from "./games/shapes/ShapesGame.jsx";
+
 const UI_TEXT = {
   he: {
     emojiRow: "👶🏻 🎉 🌈",
@@ -216,10 +221,10 @@ const getBalloonInterval = (lvl) => Math.max(600, 1200 - (lvl - 1) * 70); // 120
 
 // ── Main component ─────────────────────────────────────────────────────────────
 export default function App() {
-  const [lang, setLang] = useState(defaultHebrew ? "he" : "en");
+  const [lang, setLang] = useLocalStorage("lang", defaultHebrew ? "he" : "en");
   const isHebrewUI = lang === "he";
   const ui = UI_TEXT[lang];
-  const [theme, setTheme] = useState("space");
+  const [theme, setTheme] = useLocalStorage("theme", "space");
   const activeTheme = THEME_PRESETS[theme] || THEME_PRESETS.space;
   const activeEmojis = activeTheme.emojis;
   const activeColors = activeTheme.colors;
@@ -233,9 +238,9 @@ export default function App() {
     () => Math.min(window.innerWidth, window.innerHeight) <= 900,
   );
   const [holdProgress, setHoldProgress] = useState(0);
-  const [vibrateOn, setVibrateOn] = useState(true);
-  const [muteOn, setMuteOn] = useState(false);
-  const [gameMode, setGameMode] = useState("classic"); // 'classic' | 'balloons' | 'drums' | 'targets' | 'autoshow'
+  const [vibrateOn, setVibrateOn] = useLocalStorage("vibrateOn", true);
+  const [muteOn, setMuteOn] = useLocalStorage("muteOn", false);
+  const [gameMode, setGameMode] = useLocalStorage("gameMode", "classic"); // 'classic' | 'balloons' | 'drums' | 'targets' | 'piano' | 'autoshow' | 'memory' | 'shapes'
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [showSettingsHint, setShowSettingsHint] = useState(false);
   const [sleepSoundMode, setSleepSoundMode] = useState("rain");
@@ -265,6 +270,10 @@ export default function App() {
   const [balloonLevelUp, setBalloonLevelUp] = useState(null); // { level } when flashing
   const balloonLevelRef = useRef(1);
   const balloonsRef = useRef([]);
+  // Persist balloon level progress across sessions
+  const [balloonSavedLevel, setBalloonSavedLevel] = useLocalStorage("balloonLevel", 1);
+  // Persist target high score across sessions
+  const [targetHighScore, setTargetHighScore] = useLocalStorage("targetHighScore", 0);
 
   // ── Drum mode state ──────────────────────────────────────────────────────────
   const [drumRipples, setDrumRipples] = useState([]);
@@ -1176,11 +1185,21 @@ export default function App() {
     if (!isFullscreen || gameMode !== "balloons") {
       clearInterval(balloonTimerRef.current);
       setBalloons([]);
-      setPopCount(0);
       setBalloonMissed(0);
+      // Save current level before resetting, so next session starts there
+      const savedLvl = balloonLevelRef.current;
+      if (savedLvl > 1) setBalloonSavedLevel(savedLvl);
+      setPopCount(0);
       setBalloonLevel(1);
       balloonLevelRef.current = 1;
       return;
+    }
+    // Restore saved level on first entry (popCount==0 means fresh start)
+    if (balloonLevel === 1 && balloonSavedLevel > 1) {
+      const restoredPops = (balloonSavedLevel - 1) * BALLOON_LEVEL_STEP;
+      setPopCount(restoredPops);
+      setBalloonLevel(balloonSavedLevel);
+      balloonLevelRef.current = balloonSavedLevel;
     }
     const speed = getBalloonSpeed(balloonLevel);
     const interval = getBalloonInterval(balloonLevel);
@@ -1306,8 +1325,12 @@ export default function App() {
         prev.map((t) => (t.id === target.id ? { ...t, popped: true } : t)),
       );
 
-      // Score increment
-      setTargetScore((s) => s + 1);
+      // Score increment + track high score
+      setTargetScore((s) => {
+        const next = s + 1;
+        setTargetHighScore((hs) => Math.max(hs, next));
+        return next;
+      });
 
       // Play sound
       playSound("number");
@@ -1849,6 +1872,23 @@ export default function App() {
             )}
 
             {settingsOpen && (
+              <SettingsMenu
+                lang={lang}
+                gameMode={gameMode}
+                theme={theme}
+                muteOn={muteOn}
+                vibrateOn={vibrateOn}
+                themePresets={THEME_PRESETS}
+                onGameModeChange={setGameMode}
+                onLangChange={setLang}
+                onThemeChange={setTheme}
+                onMuteChange={setMuteOn}
+                onVibrateChange={setVibrateOn}
+                onClose={() => setSettingsOpen(false)}
+              />
+            )}
+            {/* ── UNUSED OLD PANEL START (kept for reference – remove block below) ── */}
+            {false && (
               <div className="settings-panel" dir={isHebrewUI ? "rtl" : "ltr"}>
                 {/* Mode row */}
                 {/* Mode label */}
@@ -2163,6 +2203,9 @@ export default function App() {
             <>
               <div className="target-score">
                 🎯 {targetScore} &nbsp;|&nbsp; 💨 {targetMissed}
+                {targetHighScore > 0 && (
+                  <span className="target-highscore"> &nbsp;|&nbsp; 🏆 {targetHighScore}</span>
+                )}
               </div>
 
               {targets.map((target) => {
@@ -2559,6 +2602,30 @@ export default function App() {
                 })}
               </div>
             </div>
+          )}
+
+          {/* ── Memory mode content ── */}
+          {gameMode === "memory" && (
+            <MemoryGame
+              lang={lang}
+              onSound={(type) => {
+                if (muteRef.current) return;
+                if (type === "match") playSound("match");
+                else playSound("miss");
+              }}
+            />
+          )}
+
+          {/* ── Shapes mode content ── */}
+          {gameMode === "shapes" && (
+            <ShapesGame
+              lang={lang}
+              onSound={(type) => {
+                if (muteRef.current) return;
+                if (type === "match") playSound("match");
+                else playSound("miss");
+              }}
+            />
           )}
 
           {/* ── Shared: emojis (classic sparkles + balloon pops) ── */}

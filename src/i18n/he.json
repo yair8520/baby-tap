@@ -1,0 +1,135 @@
+{
+  "common": {
+    "emojiRow": "👶🏻 🎉 🌈",
+    "title": "Baby Spark! ✨",
+    "subtitle": "תנו לתינוק ללחוץ על המסך\nולראות קסם צבעוני! ✨",
+    "startFullscreen": "🚀 התחל מסך מלא",
+    "exitHint": "לצאת: החזק פינה שמאלית-עליונה 2 שניות",
+    "privacyPolicy": "פרטיות",
+    "ultra": "👑 עוצמה ×",
+    "fire": "🔥 לוהט ×"
+  },
+  "menu": {
+    "title": "הגדרות",
+    "close": "סגור",
+    "tabGames": "🎮 משחקים",
+    "tabLearning": "📚 למידה",
+    "tabAudio": "🔊 שמע",
+    "tabDisplay": "🎨 תצוגה",
+    "settingsHint": "← הגדרות ומצבים"
+  },
+  "games": {
+    "label": "בחר מצב משחק",
+    "classic": "קלאסי",
+    "balloons": "בלונים",
+    "drums": "תופים",
+    "targets": "מטרות",
+    "sleep": "שינה",
+    "piano": "פסנתר",
+    "memory": "זיכרון",
+    "shapes": "צורות"
+  },
+  "learning": {
+    "label": "מצבי למידה",
+    "description": "משחקי חשיבה ולמידה לילדים"
+  },
+  "audio": {
+    "label": "הגדרות שמע",
+    "sound": "צליל",
+    "vibrate": "רטט",
+    "soundOn": "פועל",
+    "soundOff": "כבוי"
+  },
+  "display": {
+    "label": "תצוגה ושפה",
+    "language": "שפה",
+    "theme": "ערכת נושא",
+    "themes": {
+      "space": "חלל",
+      "animals": "חיות",
+      "ocean": "ים",
+      "farm": "חווה"
+    }
+  },
+  "balloons": {
+    "counter": "🎈 {{pops}} | 💨 {{missed}}",
+    "level": "רמה {{level}}",
+    "levelUp": "🚀 רמה {{level}}!",
+    "hint": "! פוצצו את הבלונים"
+  },
+  "targets": {
+    "score": "🎯 {{score}} | 💨 {{missed}}"
+  },
+  "sleep": {
+    "title": "מצב שינה",
+    "subtitle": "רקע עדין להרגעת תינוק",
+    "open": "פתח 🌙",
+    "hide": "סגור 🌙",
+    "pause": "⏸ עצור",
+    "play": "▶️ נגן",
+    "off": "⏹ כבה",
+    "whiteNoise": "רעש לבן",
+    "melodies": "מנגינות",
+    "melodiesOpen": "מנגינות - פתוח ✅",
+    "volume": "עוצמה",
+    "sounds": {
+      "rain": "גשם עדין",
+      "ocean": "גלי ים",
+      "wind": "רוח לילה",
+      "white": "לבן רך",
+      "pink": "ורוד רך",
+      "brown": "חום עמוק",
+      "heartbeat": "דופק רגוע",
+      "lullaby": "מנגינה 1",
+      "lullaby2": "מנגינה 2",
+      "lullaby3": "מנגינה 3"
+    }
+  },
+  "piano": {
+    "rotate": "סובב את המכשיר לרוחב",
+    "solfege": {
+      "C": "דו",
+      "D": "רה",
+      "E": "מי",
+      "F": "פה",
+      "G": "סול",
+      "A": "לה",
+      "B": "סי"
+    }
+  },
+  "memory": {
+    "title": "משחק זיכרון",
+    "level": "רמה {{level}}",
+    "score": "התאמות: {{matches}}",
+    "attempts": "ניסיונות: {{attempts}}",
+    "won": "כל הכבוד! 🎉",
+    "nextLevel": "רמה הבאה ➡️",
+    "restart": "שחק שוב 🔄",
+    "newGame": "משחק חדש"
+  },
+  "shapes": {
+    "title": "משחק צורות",
+    "instruction": "גע ב{{color}} {{shape}}!",
+    "score": "ניקוד: {{score}}",
+    "level": "רמה {{level}}",
+    "levelUp": "כל הכבוד! רמה {{level}} 🎉",
+    "correct": "נכון! ✅",
+    "wrong": "טעות ❌",
+    "colors": {
+      "red": "אדום",
+      "blue": "כחול",
+      "green": "ירוק",
+      "yellow": "צהוב",
+      "purple": "סגול",
+      "orange": "כתום",
+      "pink": "ורוד"
+    },
+    "shapeNames": {
+      "circle": "עיגול",
+      "square": "ריבוע",
+      "triangle": "משולש",
+      "star": "כוכב",
+      "heart": "לב"
+    }
+  }
+}

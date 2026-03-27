@@ -134,7 +134,7 @@ function SparkBurst({ x, y, color }) {
         return (
           <div
             key={i}
-            className="sm-spark"
+            className="shm-spark"
             style={{
               left:       x,
               top:        y,
@@ -306,22 +306,22 @@ export default function ShapeMatch({ onExit, lang = 'he', vibrateOn = true }) {
 
   return (
     <div
-      className="sm-root"
+      className="shm-root"
       ref={containerRef}
       onPointerMove={onPointerMove}
       onPointerUp={onPointerUp}
       onPointerLeave={onPointerUp}
     >
       {/* animated background */}
-      <div className="sm-bg" />
+      <div className="shm-bg" />
 
       {/* header */}
-      <div className="sm-header">
-        <button className="sm-btn-exit" onClick={onExit}>✕</button>
-        <span className="sm-level-label">
+      <div className="shm-header">
+        <button className="shm-btn-exit" onClick={onExit}>✕</button>
+        <span className="shm-level-label">
           {lang === 'he' ? `שלב ${levelNum}` : `Level ${levelNum}`}
         </span>
-        <span className="sm-hdr-stars">
+        <span className="shm-hdr-stars">
           {[0, 1, 2].map(i => (
             <span key={i} style={{ opacity: i < starCount ? 1 : 0.22 }}>⭐</span>
           ))}
@@ -332,7 +332,7 @@ export default function ShapeMatch({ onExit, lang = 'he', vibrateOn = true }) {
       {slots.map(sl => (
         <div
           key={sl.id}
-          className={`sm-slot${matchId === sl.id ? ' sm-slot-pop' : ''}`}
+          className={`shm-slot${matchId === sl.id ? ' sm-slot-pop' : ''}`}
           style={{
             width:  SLOT_R * 2,
             height: SLOT_R * 2,
@@ -361,10 +361,10 @@ export default function ShapeMatch({ onExit, lang = 'he', vibrateOn = true }) {
           <div
             key={pc.id}
             className={[
-              'sm-piece',
-              isDrag     ? 'sm-piece-drag'    : '',
-              isWrong    ? 'sm-piece-wrong'   : '',
-              pc.matched ? 'sm-piece-matched' : '',
+              'shm-piece',
+              isDrag     ? 'shm-piece-drag'    : '',
+              isWrong    ? 'shm-piece-wrong'   : '',
+              pc.matched ? 'shm-piece-matched' : '',
             ].join(' ')}
             style={{
               width:      PIECE_R * 2,
@@ -400,27 +400,27 @@ export default function ShapeMatch({ onExit, lang = 'he', vibrateOn = true }) {
       {/* level complete overlay */}
       {levelDone && (
         <div
-          className="sm-complete"
+          className="shm-complete"
           onPointerDown={e => e.stopPropagation()}
           onPointerUp={e => e.stopPropagation()}
         >
-          <div className="sm-complete-card">
-            <span className="sm-complete-emoji">🎉</span>
-            <div className="sm-complete-title">
+          <div className="shm-complete-card">
+            <span className="shm-complete-emoji">🎉</span>
+            <div className="shm-complete-title">
               {lang === 'he' ? 'כל הכבוד!' : 'Great job!'}
             </div>
-            <div className="sm-complete-stars">
+            <div className="shm-complete-stars">
               {[0, 1, 2].map(i => (
-                <span key={i} className={`sm-cstar${i < starCount ? ' on' : ''}`}>⭐</span>
+                <span key={i} className={`shm-cstar${i < starCount ? ' on' : ''}`}>⭐</span>
               ))}
             </div>
-            <div className="sm-total-score">
+            <div className="shm-total-score">
               {lang === 'he'
                 ? `סה"כ ⭐ ${totalStars}`
                 : `Total ⭐ ${totalStars}`}
             </div>
             <button
-              className="sm-btn-next"
+              className="shm-btn-next"
               onClick={() => setLevelIdx(p => p + 1)}
             >
               {lang === 'he' ? 'שלב הבא ➜' : 'Next Level ➜'}

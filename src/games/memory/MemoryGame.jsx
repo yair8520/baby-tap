@@ -2,20 +2,53 @@ import { useState, useEffect, useCallback } from "react";
 import { MEMORY_LEVELS, buildDeck } from "./levels.js";
 import "./MemoryGame.css";
 
+/** Compute the largest square card that fits both screen width & height */
+function useCardSize(cols, rows) {
+  const [size, setSize] = useState(80);
+
+  useEffect(() => {
+    function compute() {
+      const vw = window.innerWidth;
+      const vh = window.innerHeight;
+
+      // Header (badge+stats) ~40px, dots bar ~26px, top padding ~56px, bottom ~8px, gaps
+      const verticalChrome = 56 + 40 + 10 + 26 + 8;
+      const horizontalPad = 24; // 12px each side
+      const gapH = Math.min(10, Math.max(5, vw * 0.018));
+      const gapV = Math.min(10, Math.max(5, vh * 0.012));
+
+      const availW = vw - horizontalPad - gapH * (cols - 1);
+      const availH = vh - verticalChrome - gapV * (rows - 1);
+
+      const byWidth  = Math.floor(availW / cols);
+      const byHeight = Math.floor(availH / rows);
+
+      setSize(Math.min(byWidth, byHeight, 120));
+    }
+
+    compute();
+    window.addEventListener("resize", compute);
+    return () => window.removeEventListener("resize", compute);
+  }, [cols, rows]);
+
+  return size;
+}
+
 export default function MemoryGame({ lang, onSound }) {
   const isHe = lang === "he";
   const L = (he, en) => (isHe ? he : en);
 
   const [levelIdx, setLevelIdx] = useState(0);
   const [cards, setCards] = useState([]);
-  const [flipped, setFlipped] = useState([]); // ids of face-up, unmatched
+  const [flipped, setFlipped] = useState([]);
   const [matched, setMatched] = useState(new Set());
   const [attempts, setAttempts] = useState(0);
   const [won, setWon] = useState(false);
   const [locked, setLocked] = useState(false);
-  const [feedback, setFeedback] = useState(null); // "correct" | "wrong"
+  const [feedback, setFeedback] = useState(null);
 
   const currentLevel = MEMORY_LEVELS[levelIdx];
+  const cardSize = useCardSize(currentLevel.cols, currentLevel.rows);
 
   const startLevel = useCallback((idx) => {
     const lvl = MEMORY_LEVELS[idx];
@@ -28,9 +61,7 @@ export default function MemoryGame({ lang, onSound }) {
     setFeedback(null);
   }, []);
 
-  useEffect(() => {
-    startLevel(levelIdx);
-  }, [levelIdx, startLevel]);
+  useEffect(() => { startLevel(levelIdx); }, [levelIdx, startLevel]);
 
   const handleCardTap = useCallback((cardId) => {
     if (locked) return;
@@ -47,7 +78,6 @@ export default function MemoryGame({ lang, onSound }) {
 
       const [a, b] = newFlipped.map((id) => cards.find((c) => c.id === id));
       if (a.pairId === b.pairId) {
-        // Match!
         setTimeout(() => {
           setFeedback("correct");
           onSound?.("match");
@@ -56,21 +86,13 @@ export default function MemoryGame({ lang, onSound }) {
           setFlipped([]);
           setLocked(false);
           setTimeout(() => setFeedback(null), 700);
-
-          if (newMatched.size === cards.length) {
-            setWon(true);
-          }
+          if (newMatched.size === cards.length) setWon(true);
         }, 400);
       } else {
-        // No match — flip back after delay
         setTimeout(() => {
           setFeedback("wrong");
           onSound?.("miss");
-          setTimeout(() => {
-            setFlipped([]);
-            setLocked(false);
-            setFeedback(null);
-          }, 400);
+          setTimeout(() => { setFlipped([]); setLocked(false); setFeedback(null); }, 400);
         }, 700);
       }
     }
@@ -78,9 +100,13 @@ export default function MemoryGame({ lang, onSound }) {
 
   const isFlipped = (id) => flipped.includes(id) || matched.has(id);
 
+  // Emoji font size ~55% of card size
+  const emojiFontSize = Math.max(16, Math.floor(cardSize * 0.52));
+  const gapPx = Math.min(10, Math.max(5, cardSize * 0.08));
+
   return (
     <div className="mg-root" dir={isHe ? "rtl" : "ltr"}>
-      {/* Header bar */}
+      {/* Header */}
       <div className="mg-header">
         <span className="mg-level-badge">
           {L(`רמה ${currentLevel.id}`, `Level ${currentLevel.id}`)}
@@ -98,9 +124,7 @@ export default function MemoryGame({ lang, onSound }) {
           <div className="mg-win-box">
             <div className="mg-win-emoji">🎉</div>
             <div className="mg-win-title">{L("כל הכבוד!", "Well done!")}</div>
-            <div className="mg-win-sub">
-              {L(`${attempts} ניסיונות`, `${attempts} tries`)}
-            </div>
+            <div className="mg-win-sub">{L(`${attempts} ניסיונות`, `${attempts} tries`)}</div>
             <div className="mg-win-actions">
               {levelIdx < MEMORY_LEVELS.length - 1 && (
                 <button
@@ -130,11 +154,13 @@ export default function MemoryGame({ lang, onSound }) {
         </div>
       )}
 
-      {/* Card grid */}
+      {/* Card grid — explicit pixel size so it never overflows */}
       <div
         className="mg-grid"
         style={{
-          gridTemplateColumns: `repeat(${currentLevel.cols}, 1fr)`,
+          gridTemplateColumns: `repeat(${currentLevel.cols}, ${cardSize}px)`,
+          gridTemplateRows:    `repeat(${currentLevel.rows}, ${cardSize}px)`,
+          gap: `${gapPx}px`,
         }}
       >
         {cards.map((card) => {
@@ -143,6 +169,7 @@ export default function MemoryGame({ lang, onSound }) {
             <button
               key={card.id}
               className={`mg-card${face ? " mg-card--flipped" : ""}${matched.has(card.id) ? " mg-card--matched" : ""}`}
+              style={{ width: cardSize, height: cardSize, fontSize: emojiFontSize }}
               onTouchEnd={(e) => { e.preventDefault(); handleCardTap(card.id); }}
               onMouseUp={() => handleCardTap(card.id)}
               aria-label={face ? card.emoji : "card"}
@@ -156,7 +183,7 @@ export default function MemoryGame({ lang, onSound }) {
         })}
       </div>
 
-      {/* Level selector dots */}
+      {/* Level dots */}
       <div className="mg-level-dots">
         {MEMORY_LEVELS.map((lvl, i) => (
           <button

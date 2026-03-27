@@ -1,5 +1,5 @@
-import { useState } from "react";
 import "./SettingsMenu.css";
+import { useLocalStorage } from "../../hooks/useLocalStorage.js";
 
 const GAME_MODES = [
   { id: "classic",  emoji: "🎮", he: "קלאסי",   en: "Classic" },
@@ -42,7 +42,7 @@ export default function SettingsMenu({
   onClose,
 }) {
   const isHe = lang === "he";
-  const [activeTab, setActiveTab] = useState("games");
+  const [activeTab, setActiveTab] = useLocalStorage("settingsTab", "games");
 
   const L = (he, en) => (isHe ? he : en);
 

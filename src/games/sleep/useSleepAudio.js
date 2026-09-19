@@ -3,33 +3,20 @@ import { getAudioCtx } from "../../audio.js";
 import { useLocalStorage } from "../../hooks/useLocalStorage.js";
 import { STORAGE_KEYS } from "../../storage/keys.js";
 import { isBoolean } from "../../storage/validation.js";
+import {
+  LULLABIES,
+  MELODY_SOUNDS,
+  NOISE_SOUNDS,
+  SLEEP_OPUS_URLS,
+  SLEEP_SOUND_MODES,
+} from "./sleepCatalog.js";
 
-export const SLEEP_OPUS_URLS = {
-  rain: new URL("../../assets/sounds/small_42-Rain-10min.opus", import.meta.url).href,
-  ocean: new URL("../../assets/sounds/small_47-Waves-10min.opus", import.meta.url).href,
-  wind: new URL("../../assets/sounds/small_24-Storm-10min.opus", import.meta.url).href,
+export {
+  MELODY_SOUNDS,
+  NOISE_SOUNDS,
+  SLEEP_OPUS_URLS,
+  SLEEP_SOUND_MODES,
 };
-
-export const SLEEP_SOUND_MODES = [
-  "rain", "ocean", "wind", "white", "pink", "brown", "heartbeat",
-  "lullaby", "lullaby2", "lullaby3",
-];
-
-export const NOISE_SOUNDS = [
-  { id: "rain", emoji: "🌧️", i18nKey: "sleep.sounds.rain" },
-  { id: "ocean", emoji: "🌊", i18nKey: "sleep.sounds.ocean" },
-  { id: "wind", emoji: "🍃", i18nKey: "sleep.sounds.wind" },
-  { id: "white", emoji: "🌫️", i18nKey: "sleep.sounds.white" },
-  { id: "pink", emoji: "🩵", i18nKey: "sleep.sounds.pink" },
-  { id: "brown", emoji: "🌲", i18nKey: "sleep.sounds.brown" },
-  { id: "heartbeat", emoji: "💗", i18nKey: "sleep.sounds.heartbeat" },
-];
-
-export const MELODY_SOUNDS = [
-  { id: "lullaby", emoji: "🎵", i18nKey: "sleep.sounds.lullaby" },
-  { id: "lullaby2", emoji: "🎶", i18nKey: "sleep.sounds.lullaby2" },
-  { id: "lullaby3", emoji: "🎼", i18nKey: "sleep.sounds.lullaby3" },
-];
 
 const isSleepVolume = (value) =>
   Number.isFinite(value) && value >= 0 && value <= 0.9;
@@ -52,7 +39,84 @@ async function getSleepOpusBuffer(ctx, url) {
   return sleepOpusBufferCache.get(url);
 }
 
+function makeNoiseBuffer(ctx, kind = "white") {
+  const length = ctx.sampleRate * 2;
+  const buffer = ctx.createBuffer(1, length, ctx.sampleRate);
+  const data = buffer.getChannelData(0);
+  let lastOut = 0;
+  let b0 = 0;
+  let b1 = 0;
+  let b2 = 0;
+  for (let i = 0; i < length; i++) {
+    const white = Math.random() * 2 - 1;
+    if (kind === "brown") {
+      const brown = (lastOut + 0.02 * white) / 1.02;
+      lastOut = brown;
+      data[i] = brown * 3.5;
+    } else if (kind === "pink") {
+      b0 = 0.99886 * b0 + white * 0.0555179;
+      b1 = 0.99586 * b1 + white * 0.0750759;
+      b2 = 0.99332 * b2 + white * 0.153852;
+      const pink = b0 + b1 + b2 + white * 0.3104856;
+      data[i] = pink * 3.5;
+    } else {
+      data[i] = white;
+    }
+  }
+  return buffer;
+}
 
+function startLullaby(ctx, master, mode) {
+  const song = LULLABIES[mode];
+  if (!song) return null;
+
+  const osc = ctx.createOscillator();
+  osc.type = "sine";
+  const gain = ctx.createGain();
+  gain.gain.value = 0.0001;
+  const toneLP = ctx.createBiquadFilter();
+  toneLP.type = "lowpass";
+  toneLP.frequency.value = 1400;
+  toneLP.Q.value = 0.7;
+  const lfo = ctx.createOscillator();
+  lfo.type = "sine";
+  lfo.frequency.value = 4.5;
+  const lfoGain = ctx.createGain();
+  lfoGain.gain.value = 2.2;
+  lfo.connect(lfoGain);
+  lfoGain.connect(osc.frequency);
+  osc.connect(gain);
+  gain.connect(toneLP);
+  toneLP.connect(master);
+
+  let idx = 0;
+  const scheduleNote = () => {
+    const t = ctx.currentTime;
+    const f = song.notes[idx % song.notes.length];
+    idx += 1;
+    osc.frequency.cancelScheduledValues(t);
+    osc.frequency.setValueAtTime(f, t);
+    gain.gain.cancelScheduledValues(t);
+    gain.gain.setValueAtTime(0.0001, t);
+    gain.gain.linearRampToValueAtTime(song.peakGain, t + 0.03);
+    gain.gain.exponentialRampToValueAtTime(0.001, t + song.noteDur * 0.88);
+  };
+
+  osc.start();
+  lfo.start();
+  scheduleNote();
+  const iv = window.setInterval(
+    scheduleNote,
+    Math.max(280, Math.round(song.noteDur * 1000)),
+  );
+
+  return {
+    master,
+    oscillators: [osc, lfo],
+    extra: [gain, toneLP, lfoGain],
+    intervalId: iv,
+  };
+}
 
 /** Persisted sleep prefs + Web Audio engine for ambient modes. */
 export function useSleepAudio(muteOn = false) {
@@ -119,112 +183,52 @@ export function useSleepAudio(muteOn = false) {
       stopSleepAudio();
 
       const myVersion = sleepAudioVersionRef.current;
+      const stillCurrent = () =>
+        myVersion === sleepAudioVersionRef.current && !muteRef.current;
 
       const master = ctx.createGain();
-      master.gain.value = Math.max(0, Math.min(0.45, volume));
+      master.gain.value = Math.max(0, Math.min(0.55, volume));
       master.connect(ctx.destination);
+
+      const abandonMaster = () => {
+        try {
+          master.disconnect();
+        } catch {
+          // ignore
+        }
+      };
 
       const sleepOpusUrl = SLEEP_OPUS_URLS[mode];
       if (sleepOpusUrl) {
         try {
           const buffer = await getSleepOpusBuffer(ctx, sleepOpusUrl);
-          if (!buffer) return;
-          if (myVersion !== sleepAudioVersionRef.current) return;
-          if (muteRef.current) return;
-
-          const src = ctx.createBufferSource();
-          src.buffer = buffer;
-          src.loop = true;
-          src.connect(master);
-          src.start();
-
-          sleepAudioRef.current = { master, sources: [src] };
-          return;
+          if (!stillCurrent()) {
+            abandonMaster();
+            return;
+          }
+          if (buffer) {
+            const src = ctx.createBufferSource();
+            src.buffer = buffer;
+            src.loop = true;
+            src.connect(master);
+            src.start();
+            sleepAudioRef.current = { master, sources: [src] };
+            return;
+          }
         } catch {
           // Fall back to generated ambience when the recording cannot load.
         }
       }
 
-      const makeNoiseBuffer = (kind = "white") => {
-        const length = ctx.sampleRate * 2;
-        const buffer = ctx.createBuffer(1, length, ctx.sampleRate);
-        const data = buffer.getChannelData(0);
-        let lastOut = 0;
-        let b0 = 0,
-          b1 = 0,
-          b2 = 0;
-        for (let i = 0; i < length; i++) {
-          const white = Math.random() * 2 - 1;
-          if (kind === "brown") {
-            const brown = (lastOut + 0.02 * white) / 1.02;
-            lastOut = brown;
-            data[i] = brown * 3.5;
-          } else if (kind === "pink") {
-            b0 = 0.99886 * b0 + white * 0.0555179;
-            b1 = 0.99586 * b1 + white * 0.0750759;
-            b2 = 0.99332 * b2 + white * 0.153852;
-            const pink = b0 + b1 + b2 + white * 0.3104856;
-            data[i] = pink * 3.5;
-          } else {
-            data[i] = white;
-          }
-        }
-        return buffer;
-      };
+      if (!stillCurrent()) {
+        abandonMaster();
+        return;
+      }
 
-      if (mode === "lullaby" || mode === "lullaby2" || mode === "lullaby3") {
-        const sequences = {
-          lullaby: [261.63, 293.66, 329.63, 349.23, 329.63, 293.66, 261.63],
-          lullaby2: [220.0, 246.94, 261.63, 293.66, 261.63, 246.94, 220.0],
-          lullaby3: [196.0, 220.0, 246.94, 261.63, 246.94, 220.0, 196.0],
-        };
-        const notes = sequences[mode];
-        const noteDur = 0.42;
-
-        const osc = ctx.createOscillator();
-        osc.type = "sine";
-        const gain = ctx.createGain();
-        gain.gain.value = 0.0001;
-        const toneLP = ctx.createBiquadFilter();
-        toneLP.type = "lowpass";
-        toneLP.frequency.value = 850;
-        toneLP.Q.value = 0.7;
-        const lfo = ctx.createOscillator();
-        lfo.type = "sine";
-        lfo.frequency.value = 4.2;
-        const lfoGain = ctx.createGain();
-        lfoGain.gain.value = 1.6;
-        lfo.connect(lfoGain);
-        lfoGain.connect(osc.frequency);
-        osc.connect(gain);
-        gain.connect(toneLP);
-        toneLP.connect(master);
-
-        let idx = 0;
-        const scheduleNote = () => {
-          const t = ctx.currentTime;
-          const f = notes[idx % notes.length];
-          idx++;
-          gain.gain.cancelScheduledValues(t);
-          gain.gain.setValueAtTime(0.0001, t);
-          gain.gain.linearRampToValueAtTime(0.11, t + 0.02);
-          gain.gain.exponentialRampToValueAtTime(0.001, t + noteDur * 0.9);
-          osc.frequency.setTargetAtTime(f, t + 0.02);
-        };
-
-        osc.start();
-        lfo.start();
-        scheduleNote();
-        const iv = window.setInterval(
-          scheduleNote,
-          Math.max(250, Math.round(noteDur * 1000)),
-        );
-        sleepAudioRef.current = {
-          master,
-          oscillators: [osc, lfo],
-          extra: [gain, toneLP, lfoGain],
-          intervalId: iv,
-        };
+      if (LULLABIES[mode]) {
+        const nodes = startLullaby(ctx, master, mode);
+        if (nodes) sleepAudioRef.current = nodes;
+        else abandonMaster();
         return;
       }
 
@@ -244,7 +248,7 @@ export function useSleepAudio(muteOn = false) {
         heartOsc.start();
 
         const breathSrc = ctx.createBufferSource();
-        breathSrc.buffer = makeNoiseBuffer("pink");
+        breathSrc.buffer = makeNoiseBuffer(ctx, "pink");
         breathSrc.loop = true;
         const breathLP = ctx.createBiquadFilter();
         breathLP.type = "lowpass";
@@ -288,7 +292,7 @@ export function useSleepAudio(muteOn = false) {
 
       if (mode === "wind") {
         const src = ctx.createBufferSource();
-        src.buffer = makeNoiseBuffer("white");
+        src.buffer = makeNoiseBuffer(ctx, "white");
         src.loop = true;
         const bp = ctx.createBiquadFilter();
         bp.type = "bandpass";
@@ -322,7 +326,7 @@ export function useSleepAudio(muteOn = false) {
             : "white";
 
       const src = ctx.createBufferSource();
-      src.buffer = makeNoiseBuffer(noiseKind);
+      src.buffer = makeNoiseBuffer(ctx, noiseKind);
       src.loop = true;
       const filter1 = ctx.createBiquadFilter();
       const filter2 = ctx.createBiquadFilter();
@@ -341,6 +345,20 @@ export function useSleepAudio(muteOn = false) {
         filter2.type = "lowpass";
         filter2.frequency.value = 520;
         filter2.Q.value = 0.6;
+      } else if (mode === "storm") {
+        filter1.type = "bandpass";
+        filter1.frequency.value = 900;
+        filter1.Q.value = 0.55;
+        filter2.type = "lowpass";
+        filter2.frequency.value = 1400;
+        filter2.Q.value = 0.5;
+      } else if (mode === "waterfall") {
+        filter1.type = "bandpass";
+        filter1.frequency.value = 1200;
+        filter1.Q.value = 0.45;
+        filter2.type = "lowpass";
+        filter2.frequency.value = 2400;
+        filter2.Q.value = 0.5;
       } else if (mode === "white") {
         filter1.type = "lowpass";
         filter1.frequency.value = 1100;
@@ -375,7 +393,11 @@ export function useSleepAudio(muteOn = false) {
       filter1.connect(filter2);
       filter2.connect(master);
       src.start();
-      sleepAudioRef.current = { master, sources: [src], extra: [filter1, filter2] };
+      sleepAudioRef.current = {
+        master,
+        sources: [src],
+        extra: [filter1, filter2],
+      };
     },
     [stopSleepAudio],
   );
@@ -383,10 +405,20 @@ export function useSleepAudio(muteOn = false) {
   useEffect(() => {
     if (muteOn || !sleepEnabled) {
       stopSleepAudio();
-      return;
+      return undefined;
     }
-    startSleepAudio(sleepSoundMode, sleepVolume);
-    return () => stopSleepAudio();
+    let cancelled = false;
+    (async () => {
+      try {
+        await startSleepAudio(sleepSoundMode, sleepVolume);
+      } catch {
+        if (!cancelled) stopSleepAudio();
+      }
+    })();
+    return () => {
+      cancelled = true;
+      stopSleepAudio();
+    };
   }, [
     muteOn,
     sleepEnabled,

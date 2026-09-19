@@ -16,9 +16,9 @@ const FALLING_SHEEP = [
 ];
 
 /** Decorative night sky for sleep mode. */
-export function SleepScene() {
+export function SleepScene({ soundMode = "rain" }) {
   return (
-    <>
+    <div className={`sleep-scene-layers sleep-scene-layers--${soundMode}`}>
       <div className="sleep-gradient" />
       <div className="sleep-moon" />
       <div className="sleep-stars" />
@@ -66,6 +66,6 @@ export function SleepScene() {
           </div>
         ))}
       </div>
-    </>
+    </div>
   );
 }

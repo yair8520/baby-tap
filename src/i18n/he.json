@@ -123,13 +123,15 @@
       "rain": "גשם עדין",
       "ocean": "גלי ים",
       "wind": "רוח לילה",
+      "storm": "סערה רכה",
+      "waterfall": "מפל מים",
       "white": "לבן רך",
       "pink": "ורוד רך",
       "brown": "חום עמוק",
       "heartbeat": "דופק רגוע",
-      "lullaby": "מנגינה 1",
-      "lullaby2": "מנגינה 2",
-      "lullaby3": "מנגינה 3"
+      "lullaby": "כוכב קטן",
+      "lullaby2": "שיר ערש",
+      "lullaby3": "אח יקירי"
     }
   },
   "piano": {

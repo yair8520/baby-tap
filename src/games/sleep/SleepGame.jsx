@@ -37,9 +37,17 @@ export default function SleepGame({ muteOn = false }) {
     };
   }, [sleepMenuOpen]);
 
+  const sceneClass = [
+    "sleep-scene",
+    `sleep-mode-${sleepSoundMode}`,
+    sleepSoundMode === "heartbeat" ? "heartbeat-mode" : "",
+  ]
+    .filter(Boolean)
+    .join(" ");
+
   return (
-    <div className="sleep-scene">
-      <SleepScene />
+    <div className={sceneClass}>
+      <SleepScene soundMode={sleepSoundMode} />
 
       <button
         type="button"
@@ -60,7 +68,10 @@ export default function SleepGame({ muteOn = false }) {
         sleepVolume={sleepVolume}
         sleepEnabled={sleepEnabled}
         melodiesOpen={sleepMelodiesOpen}
-        onSoundModeChange={setSleepSoundMode}
+        onSoundModeChange={(id) => {
+          setSleepSoundMode(id);
+          if (id.startsWith("lullaby")) setSleepMelodiesOpen(true);
+        }}
         onVolumeChange={setSleepVolume}
         onEnabledChange={setSleepEnabled}
         onMelodiesOpenChange={setSleepMelodiesOpen}

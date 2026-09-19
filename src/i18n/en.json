@@ -123,13 +123,15 @@
       "rain": "Soft rain",
       "ocean": "Ocean waves",
       "wind": "Night wind",
+      "storm": "Soft storm",
+      "waterfall": "Waterfall",
       "white": "Soft white",
       "pink": "Pink soft",
       "brown": "Deep brown",
       "heartbeat": "Heartbeat",
-      "lullaby": "Melody 1",
-      "lullaby2": "Melody 2",
-      "lullaby3": "Melody 3"
+      "lullaby": "Twinkle star",
+      "lullaby2": "Brahms lullaby",
+      "lullaby3": "Frère Jacques"
     }
   },
   "piano": {

@@ -5,6 +5,49 @@
   pointer-events: auto;
 }
 
+.sleep-scene-layers {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.sleep-scene-layers--rain .sleep-cloud {
+  opacity: 0.95;
+  filter: brightness(0.85);
+}
+
+.sleep-scene-layers--storm .sleep-gradient {
+  animation: sleepStormFlash 7s ease-in-out infinite;
+}
+
+.sleep-scene-layers--ocean .sleep-gradient {
+  background:
+    radial-gradient(circle at 50% 120%, rgba(30, 90, 130, 0.35), transparent 45%),
+    radial-gradient(circle at 75% 10%, rgba(124, 108, 255, 0.16), transparent 35%),
+    linear-gradient(180deg, #070a18 0%, #081426 45%, #040714 100%);
+}
+
+.sleep-scene-layers--waterfall .sleep-stars {
+  opacity: 0.55;
+}
+
+.sleep-scene-layers--wind .sleep-cloud-1 { animation-duration: 18s; }
+.sleep-scene-layers--wind .sleep-cloud-2 { animation-duration: 24s; }
+.sleep-scene-layers--wind .sleep-cloud-3 { animation-duration: 20s; }
+
+.sleep-scene-layers--lullaby .sleep-moon,
+.sleep-scene-layers--lullaby2 .sleep-moon,
+.sleep-scene-layers--lullaby3 .sleep-moon {
+  box-shadow: 0 0 48px rgba(255, 236, 180, 0.55);
+}
+
+@keyframes sleepStormFlash {
+  0%, 86%, 100% { filter: brightness(1); }
+  88% { filter: brightness(1.35); }
+  90% { filter: brightness(1.05); }
+  92% { filter: brightness(1.4); }
+}
+
 .sleep-gradient {
   position: absolute;
   inset: 0;
@@ -279,6 +322,19 @@
 .heartbeat-mode .sleep-sheep-1::after { animation-duration: 2.15s; }
 .heartbeat-mode .sleep-sheep-2::after { animation-duration: 2.45s; animation-delay: -0.6s; }
 .heartbeat-mode .sleep-sheep-3::after { animation-duration: 2.3s; animation-delay: -1.0s; }
+
+.heartbeat-mode .sleep-falling-sheep-emoji {
+  animation-name: sleepFallingSheepHeartbeat;
+  animation-timing-function: ease-in-out;
+}
+
+@keyframes sleepFallingSheepHeartbeat {
+  0% { transform: translate3d(0, -12%, 0) scale(1); }
+  12% { transform: translate3d(var(--dx-mid), 8%, 0) scale(1.12); }
+  24% { transform: translate3d(var(--dx-mid), 18%, 0) scale(0.96); }
+  50% { transform: translate3d(calc(var(--dx-end) * 0.55), 48%, 0) scale(1.08); }
+  100% { transform: translate3d(var(--dx-end), 112%, 0) scale(1); }
+}
 
 @keyframes sheepJumpHeartbeat {
   0%   { transform: translate(-50%, -50%) translateY(0) rotate(-6deg); }

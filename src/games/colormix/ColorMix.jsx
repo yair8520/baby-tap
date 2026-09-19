@@ -5,6 +5,7 @@ import {
   MINI_R,
   MIX_TABLE,
   mixKey,
+  COLORMIX_LEVELS,
   buildLevel,
 } from './levels.js';
 import { useGameLevel, useGameStars } from '../../hooks/useGameProgress.js';
@@ -46,7 +47,9 @@ export default function ColorMix({ onExit, lang = 'he', vibrateOn = true }) {
   const [W, setW]    = useState(window.innerWidth);
   const [H, setH]    = useState(window.innerHeight);
 
-  const [levelIdx,    setLevelIdx]    = useGameLevel('colormix', 0);
+  const [levelIdx,    setLevelIdx]    = useGameLevel('colormix', 0, {
+    maxLevels: COLORMIX_LEVELS.length,
+  });
   const [targets,     setTargets]     = useState([]);
   const [bowls,       setBowls]       = useState([]);
   const [sources,     setSources]     = useState([]);

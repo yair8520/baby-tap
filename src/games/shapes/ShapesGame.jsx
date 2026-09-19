@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from "react";
 import { SHAPES_LEVELS, SHAPE_COLORS, SHAPE_TYPES, generateChallenge } from "./levels.js";
 import { useLocalStorage } from "../../hooks/useLocalStorage.js";
 import { STORAGE_KEYS } from "../../storage/keys.js";
+import { useGameLevel } from "../../hooks/useGameProgress.js";
 import "./ShapesGame.css";
 
 function ShapeIcon({ shape, color, size = 80 }) {
@@ -55,7 +56,9 @@ export default function ShapesGame({ lang, onSound }) {
   const L = (he, en) => (isHe ? he : en);
 
   const [score, setScore] = useLocalStorage(STORAGE_KEYS.shapesScore, 0);
-  const [levelIdx, setLevelIdx] = useLocalStorage(STORAGE_KEYS.shapesLevel, 0);
+  const [levelIdx, setLevelIdx] = useGameLevel("shapes", 0, {
+    maxLevels: SHAPES_LEVELS.length,
+  });
   const [challenge, setChallenge] = useState(null);
   const [feedback, setFeedback] = useState(null); // { correct: bool, shapeId }
   const [locked, setLocked] = useState(false);

@@ -1,13 +1,15 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { ShapeGeom } from '../../components/ShapeGeom';
-import { buildLevel } from './levels.js';
+import { PATTERN_LEVELS, buildLevel } from './levels.js';
 import { useGameLevel } from '../../hooks/useGameProgress.js';
 import './PatternGame.css';
 
 // ─── Main Component ───────────────────────────────────────────────────────────
 
 export default function PatternGame({ onExit, lang = 'he', vibrateOn = true }) {
-  const [levelIdx, setLevelIdx]   = useGameLevel('pattern', 0);
+  const [levelIdx, setLevelIdx]   = useGameLevel('pattern', 0, {
+    maxLevels: PATTERN_LEVELS.length,
+  });
   const [pattern, setPattern]     = useState(null);
   const [selectedId, setSelectedId] = useState(null);
   const [isCorrect, setIsCorrect] = useState(null);

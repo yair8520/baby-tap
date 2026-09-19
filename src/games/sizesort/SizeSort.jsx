@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
-import { buildLevel } from './levels.js';
+import { SIZESORT_LEVELS, buildLevel } from './levels.js';
 import { useGameLevel, useGameStars } from '../../hooks/useGameProgress.js';
 import './SizeSort.css';
 
@@ -39,7 +39,9 @@ export default function SizeSort({ onExit, lang = 'he', vibrateOn = true }) {
   const [W, setW]    = useState(window.innerWidth);
   const [H, setH]    = useState(window.innerHeight);
 
-  const [levelIdx,  setLevelIdx]  = useGameLevel('sizesort', 0);
+  const [levelIdx,  setLevelIdx]  = useGameLevel('sizesort', 0, {
+    maxLevels: SIZESORT_LEVELS.length,
+  });
   const [slots,     setSlots]     = useState([]);
   const [pieces,    setPieces]    = useState([]);
   const [dragging,  setDragging]  = useState(null);

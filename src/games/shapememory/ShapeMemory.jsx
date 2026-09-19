@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { ShapeGeom } from '../../components/ShapeGeom';
 import {
+  SHAPEMEMORY_LEVELS,
   getShapeMemoryLevel,
   buildSequence,
   buildPalette,
@@ -40,7 +41,9 @@ function CountdownRing({ remaining, total }) {
 // ─── Main Component ───────────────────────────────────────────────────────────
 
 export default function ShapeMemory({ onExit, lang = 'he', vibrateOn = true }) {
-  const [levelIdx, setLevelIdx]     = useGameLevel('shapememory', 0);
+  const [levelIdx, setLevelIdx]     = useGameLevel('shapememory', 0, {
+    maxLevels: SHAPEMEMORY_LEVELS.length,
+  });
   const [phase, setPhase]           = useState('show'); // 'show' | 'recall'
   const [sequence, setSequence]     = useState([]);
   const [userAnswers, setUserAnswers] = useState([]);

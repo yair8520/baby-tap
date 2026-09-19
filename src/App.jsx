@@ -49,6 +49,7 @@ import { STORAGE_KEYS } from "./storage/keys.js";
 import SettingsMenu from "./components/SettingsMenu/index.jsx";
 import MemoryGame from "./games/memory/MemoryGame.jsx";
 import ShapesGame from "./games/shapes/ShapesGame.jsx";
+import { rand, randInt, nextId } from "./utils/random.js";
 
 const UI_TEXT = {
   he: {
@@ -191,17 +192,6 @@ function findPianoKeyAtPoint(clientX, clientY, containerEl, rect) {
   // Fallback for edge-cases where elementFromPoint returns null/overlay
   return findPianoKey(clientX, clientY, rect);
 }
-
-// ── Utilities ──────────────────────────────────────────────────────────────────
-function rand(a, b) {
-  return a + Math.random() * (b - a);
-}
-function randInt(a, b) {
-  return Math.floor(rand(a, b));
-}
-
-let uid = 0;
-const nextId = () => ++uid;
 
 // ── Balloon helpers ────────────────────────────────────────────────────────────
 // speedFactor: 1 = normal, 2 = twice as fast, etc.

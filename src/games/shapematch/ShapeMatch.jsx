@@ -4,6 +4,7 @@ import {
   PIECE_R,
   SLOT_R,
   SNAP,
+  SHAPEMATCH_LEVELS,
   buildLevel,
 } from './levels.js';
 import { useGameLevel, useGameStars } from '../../hooks/useGameProgress.js';
@@ -45,7 +46,9 @@ export default function ShapeMatch({ onExit, lang = 'he', vibrateOn = true }) {
   const [w, setW]     = useState(window.innerWidth);
   const [h, setH]     = useState(window.innerHeight);
 
-  const [levelIdx,   setLevelIdx]   = useGameLevel('shapematch', 0);
+  const [levelIdx,   setLevelIdx]   = useGameLevel('shapematch', 0, {
+    maxLevels: SHAPEMATCH_LEVELS.length,
+  });
   const [slots,      setSlots]      = useState([]);
   const [pieces,     setPieces]     = useState([]);
   const [dragging,   setDragging]   = useState(null); // {pieceId, offX, offY, cx, cy}

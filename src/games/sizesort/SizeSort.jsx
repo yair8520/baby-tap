@@ -1,5 +1,11 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
-import { SIZESORT_LEVELS, buildLevel } from './levels.js';
+import {
+  SIZESORT_LEVELS,
+  buildLevel,
+  clampPieceCenter,
+  DRAG_SCALE,
+  TOP_CHROME,
+} from './levels.js';
 import { LearningGameShell, starsFromMistakes } from '../../components/LearningGameShell';
 import { useGameBestStars, useGameLevel } from '../../hooks/useGameProgress.js';
 import { useResponsiveGameViewport } from '../../hooks/useResponsiveGameViewport.js';
@@ -124,11 +130,18 @@ export default function SizeSort({ onExit, vibrateOn = true }) {
   const onPointerMove = useCallback((e) => {
     if (!draggingRef.current) return;
     const rect = containerRef.current.getBoundingClientRect();
-    const cx = e.clientX - rect.left - draggingRef.current.offX;
-    const cy = e.clientY - rect.top  - draggingRef.current.offY;
+    const piece = piecesRef.current.find(
+      (p) => p.id === draggingRef.current.pieceId,
+    );
+    const rawCx = e.clientX - rect.left - draggingRef.current.offX;
+    const rawCy = e.clientY - rect.top - draggingRef.current.offY;
+    const size = piece?.size ?? 40;
+    const { cx, cy } = clampPieceCenter(rawCx, rawCy, size, W, H, {
+      visualScale: DRAG_SCALE,
+    });
     draggingRef.current = { ...draggingRef.current, cx, cy };
-    setDragging(prev => prev ? { ...prev, cx, cy } : null);
-  }, []);
+    setDragging((prev) => (prev ? { ...prev, cx, cy } : null));
+  }, [W, H]);
 
   const onPointerUp = useCallback(() => {
     const d = draggingRef.current;
@@ -168,7 +181,7 @@ export default function SizeSort({ onExit, vibrateOn = true }) {
         setTimeout(() => setMatchId(null), 700);
 
         const sparkId = Date.now() + Math.random();
-        setSparks(prev => [...prev, { id: sparkId, x: nearest.cx, y: nearest.cy, color: piece.color }]);
+        setSparks(prev => [...prev, { id: sparkId, x: nearest.cx, y: nearest.cy, color: piece.fill }]);
         setTimeout(() => setSparks(prev => prev.filter(s => s.id !== sparkId)), 950);
 
         const matched = piecesRef.current.filter(p => p.matched).length + 1;
@@ -223,8 +236,8 @@ export default function SizeSort({ onExit, vibrateOn = true }) {
         isLastLevel={levelIdx === SIZESORT_LEVELS.length - 1}
       >
 
-      {/* Direction label */}
-      <div className="ss-direction-label" style={{ top: 66 }}>
+      {/* Direction label — keep below LearningGameShell header */}
+      <div className="ss-direction-label" style={{ top: Math.min(66, TOP_CHROME - 22) }}>
         {t("sizesort.instruction")}
       </div>
 
@@ -286,7 +299,7 @@ export default function SizeSort({ onExit, vibrateOn = true }) {
               height:     pc.size,
               left:       cx - r,
               top:        cy - r,
-              background: pc.color,
+              background: pc.fill,
               '--glow':   pc.glow,
               transition: isDrag
                 ? 'none'

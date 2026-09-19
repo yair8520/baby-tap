@@ -19,6 +19,23 @@ body, html, #root {
   cursor: crosshair;
 }
 
+/* Pause continuous GPU animations while the tab is backgrounded. */
+html.app-visibility-paused *,
+html.app-visibility-paused *::before,
+html.app-visibility-paused *::after {
+  animation-play-state: paused !important;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .aurora-blob,
+  .bg-stars,
+  .bubble,
+  .theme-symbol,
+  .start-emoji-row {
+    animation: none !important;
+  }
+}
+
 /* ===================== BACKGROUND ===================== */
 
 /* 1 — deep space base */

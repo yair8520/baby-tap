@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { playBalloonPop } from "../../audio.js";
 import { IS_TOUCH } from "../../constants.js";
 import { useLocalStorage } from "../../hooks/useLocalStorage.js";
+import { usePageVisibility } from "../../hooks/usePageVisibility.js";
 import { STORAGE_KEYS } from "../../storage/keys.js";
 import { nextId, rand, randInt } from "../../utils/random.js";
 import {
@@ -62,6 +63,7 @@ export function Balloons({ t, vibrate }) {
   const balloonTimerRef = useRef(null);
   const lastBalloonPopRef = useRef(0);
   const timeoutIdsRef = useRef(new Set());
+  const pageVisible = usePageVisibility();
 
   const scheduleTimeout = useCallback((callback, delay) => {
     const id = setTimeout(() => {
@@ -89,29 +91,44 @@ export function Balloons({ t, vibrate }) {
   }, [popCount, scheduleTimeout, setBalloonSavedLevel, vibrate]);
 
   useEffect(() => {
+    if (!pageVisible) {
+      clearInterval(balloonTimerRef.current);
+      balloonTimerRef.current = null;
+      return;
+    }
+
     const initializeTimer = scheduleTimeout(() => {
       const config = getBalloonConfigByLevel(balloonLevel);
-      setBalloons([
-        makeBalloon(config.speedFactor),
-        makeBalloon(config.speedFactor),
-        makeBalloon(config.speedFactor),
-      ]);
+      setBalloons((previous) =>
+        previous.length
+          ? previous
+          : [
+              makeBalloon(config.speedFactor),
+              makeBalloon(config.speedFactor),
+              makeBalloon(config.speedFactor),
+            ],
+      );
       clearInterval(balloonTimerRef.current);
+      // Throttle spawn loop slightly when many balloons are already on screen.
+      const spawnMs = Math.max(config.spawnIntervalMs, 700);
       balloonTimerRef.current = setInterval(() => {
         setBalloons((previous) => {
           if (previous.length >= config.maxOnScreen) return previous;
           return [...previous, makeBalloon(config.speedFactor)];
         });
-      }, config.spawnIntervalMs);
+      }, spawnMs);
     }, 0);
 
     return () => {
       clearTimeout(initializeTimer);
       clearInterval(balloonTimerRef.current);
+      balloonTimerRef.current = null;
     };
-  }, [balloonLevel, scheduleTimeout]);
+  }, [balloonLevel, pageVisible, scheduleTimeout]);
 
   useEffect(() => {
+    if (!pageVisible) return undefined;
+
     const tick = setInterval(() => {
       const now = Date.now();
       setBalloons((previous) => {
@@ -125,19 +142,21 @@ export function Balloons({ t, vibrate }) {
           (balloon) => now - balloon.born < balloon.rise + 200,
         );
       });
-    }, 500);
+    }, 1000);
 
     return () => clearInterval(tick);
-  }, []);
+  }, [pageVisible]);
 
   useEffect(() => {
+    if (!pageVisible) return undefined;
+
     lastBalloonPopRef.current = Date.now();
     const check = setInterval(() => {
       setBalloonHint(Date.now() - lastBalloonPopRef.current > 5000);
-    }, 500);
+    }, 1500);
 
     return () => clearInterval(check);
-  }, []);
+  }, [pageVisible]);
 
   useEffect(() => {
     const timeoutIds = timeoutIdsRef.current;

@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from "react";
-import { getAudioCtx } from "../../audio.js";
+import { getAudioCtx, resumeAudioCtx } from "../../audio.js";
 import { useLocalStorage } from "../../hooks/useLocalStorage.js";
+import { usePageVisibility } from "../../hooks/usePageVisibility.js";
 import { STORAGE_KEYS } from "../../storage/keys.js";
 import { isBoolean } from "../../storage/validation.js";
 import "./SleepGame.css";
@@ -79,6 +80,7 @@ export default function SleepGame({ lang = "he", muteOn = false }) {
   const sleepAudioRef = useRef(null);
   const sleepAudioVersionRef = useRef(0);
   const muteRef = useRef(muteOn);
+  const pageVisible = usePageVisibility();
 
   useEffect(() => {
     muteRef.current = muteOn;
@@ -385,17 +387,26 @@ export default function SleepGame({ lang = "he", muteOn = false }) {
   );
 
   useEffect(() => {
-    if (muteOn || !sleepEnabled) {
+    if (muteOn || !sleepEnabled || !pageVisible) {
       stopSleepAudio();
       return;
     }
-    startSleepAudio(sleepSoundMode, sleepVolume);
-    return () => stopSleepAudio();
+    let cancelled = false;
+    (async () => {
+      await resumeAudioCtx();
+      if (cancelled) return;
+      startSleepAudio(sleepSoundMode, sleepVolume);
+    })();
+    return () => {
+      cancelled = true;
+      stopSleepAudio();
+    };
   }, [
     muteOn,
     sleepEnabled,
     sleepSoundMode,
     sleepVolume,
+    pageVisible,
     startSleepAudio,
     stopSleepAudio,
   ]);

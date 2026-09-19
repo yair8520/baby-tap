@@ -14,6 +14,7 @@ import {
   playMelodyNote,
   nextMelodyTime,
 } from "../../audio.js";
+import { usePageVisibility } from "../../hooks/usePageVisibility.js";
 import { getClassicLevelConfig } from "./levels.js";
 import { PIANO_SONGS } from "../piano/levels.js";
 import { rand, randInt, nextId } from "../../utils/random.js";
@@ -71,6 +72,7 @@ export default function ClassicGame({
   const activeColorsRef = useRef(activeColors);
   const timeoutIdsRef = useRef(new Set());
   const intervalIdsRef = useRef(new Set());
+  const pageVisible = usePageVisibility();
 
   const scheduleTimeout = useCallback((callback, delay) => {
     const id = setTimeout(() => {
@@ -231,8 +233,10 @@ export default function ClassicGame({
     return c;
   }, [spawnAt, doVibrate, scheduleTimeout]);
 
-  // Shake detection
+  // Shake detection (paused while the tab is hidden to stop sensor wakeups)
   useEffect(() => {
+    if (!pageVisible) return undefined;
+
     let lastShake = 0;
     const onMotion = (e) => {
       const acc = e.accelerationIncludingGravity;
@@ -259,10 +263,12 @@ export default function ClassicGame({
     };
     window.addEventListener("devicemotion", onMotion);
     return () => window.removeEventListener("devicemotion", onMotion);
-  }, [spawnAt, doVibrate, scheduleTimeout]);
+  }, [pageVisible, spawnAt, doVibrate, scheduleTimeout]);
 
-  // Mouse/touch trail
+  // Mouse/touch trail (skip while backgrounded)
   useEffect(() => {
+    if (!pageVisible) return undefined;
+
     const onTouchMove = (e) => {
       Array.from(e.touches).forEach((t) => {
         activeTouchPosRef.current[t.identifier] = {
@@ -319,10 +325,12 @@ export default function ClassicGame({
       window.removeEventListener("mousemove", onMove);
       window.removeEventListener("touchmove", onTouchMove);
     };
-  }, [scheduleTimeout]);
+  }, [pageVisible, scheduleTimeout]);
 
   // Keyboard
   useEffect(() => {
+    if (!pageVisible) return undefined;
+
     const onKey = (e) => {
       if (e.repeat) return;
 
@@ -379,7 +387,7 @@ export default function ClassicGame({
     window.addEventListener("keydown", onKey, { capture: true });
     return () =>
       window.removeEventListener("keydown", onKey, { capture: true });
-  }, [spawnAt, scheduleTimeout]);
+  }, [pageVisible, spawnAt, scheduleTimeout]);
 
   const isChromeTarget = (target) =>
     target?.closest?.(".corner-hold") ||

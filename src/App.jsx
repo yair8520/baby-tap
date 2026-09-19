@@ -23,6 +23,10 @@ import {
 } from "./audio.js";
 
 import { useLocalStorage } from "./hooks/useLocalStorage.js";
+import {
+  syncVisibilityPauseClass,
+  usePageVisibility,
+} from "./hooks/usePageVisibility.js";
 import { STORAGE_KEYS } from "./storage/keys.js";
 import { clearStoredProgress } from "./storage/progress.js";
 import { isBoolean } from "./storage/validation.js";
@@ -158,6 +162,11 @@ export default function App() {
     document.title = t("common.title");
   }, [isHebrewUI, lang, t]);
 
+  const pageVisible = usePageVisibility();
+  useEffect(() => {
+    syncVisibilityPauseClass();
+  }, [pageVisible]);
+
   const vibrate = useCallback((pattern) => {
     buzz(pattern, vibrateRef.current);
   }, []);
@@ -271,50 +280,60 @@ export default function App() {
   const C = 2 * Math.PI * 22;
   const learningModeActive = LEARNING_MODE_IDS.has(gameMode);
 
+  // Sleep mode paints its own scene; keep shared décor from burning GPU underneath.
+  const hideSharedDecor = isFullscreen && gameMode === "autoshow";
+
   return (
-    <div ref={containerRef} className={`app theme-${theme}`}>
+    <div
+      ref={containerRef}
+      className={`app theme-${theme}${hideSharedDecor ? " app-sleep-mode" : ""}`}
+    >
       <div className="bg-base" />
-      <div className="bg-aurora">
-        <div className="aurora-blob aurora-blob-1" />
-        <div className="aurora-blob aurora-blob-2" />
-        <div className="aurora-blob aurora-blob-3" />
-        <div className="aurora-blob aurora-blob-4" />
-      </div>
-      <div className="bg-stars" />
-      <div className="bg-bubbles">
-        {Array.from({ length: 20 }).map((_, i) => (
-          <div
-            key={i}
-            className={`bubble bubble-${(i % 4) + 1}`}
-            style={{
-              left: `${(i * 5.2 + 2) % 100}%`,
-              width: `${20 + ((i * 19) % 70)}px`,
-              height: `${20 + ((i * 19) % 70)}px`,
-              animationDuration: `${13 + ((i * 1.9) % 10)}s`,
-              animationDelay: `-${(i * 2.8) % 16}s`,
-            }}
-          />
-        ))}
-      </div>
-      <div className="theme-symbols">
-        {Array.from({ length: 14 }).map((_, i) => {
-          const sym = activeEmojis[i % activeEmojis.length];
-          return (
-            <span
-              key={`${theme}-${i}-${sym}`}
-              className="theme-symbol"
-              style={{
-                left: `${(i * 7.1 + 3) % 100}%`,
-                animationDuration: `${11 + ((i * 1.7) % 10)}s`,
-                animationDelay: `-${(i * 2.1) % 12}s`,
-                fontSize: `${20 + ((i * 7) % 22)}px`,
-              }}
-            >
-              {sym}
-            </span>
-          );
-        })}
-      </div>
+      {!hideSharedDecor && (
+        <>
+          <div className="bg-aurora">
+            <div className="aurora-blob aurora-blob-1" />
+            <div className="aurora-blob aurora-blob-2" />
+            <div className="aurora-blob aurora-blob-3" />
+            <div className="aurora-blob aurora-blob-4" />
+          </div>
+          <div className="bg-stars" />
+          <div className="bg-bubbles">
+            {Array.from({ length: 20 }).map((_, i) => (
+              <div
+                key={i}
+                className={`bubble bubble-${(i % 4) + 1}`}
+                style={{
+                  left: `${(i * 5.2 + 2) % 100}%`,
+                  width: `${20 + ((i * 19) % 70)}px`,
+                  height: `${20 + ((i * 19) % 70)}px`,
+                  animationDuration: `${13 + ((i * 1.9) % 10)}s`,
+                  animationDelay: `-${(i * 2.8) % 16}s`,
+                }}
+              />
+            ))}
+          </div>
+          <div className="theme-symbols">
+            {Array.from({ length: 14 }).map((_, i) => {
+              const sym = activeEmojis[i % activeEmojis.length];
+              return (
+                <span
+                  key={`${theme}-${i}-${sym}`}
+                  className="theme-symbol"
+                  style={{
+                    left: `${(i * 7.1 + 3) % 100}%`,
+                    animationDuration: `${11 + ((i * 1.7) % 10)}s`,
+                    animationDelay: `-${(i * 2.1) % 12}s`,
+                    fontSize: `${20 + ((i * 7) % 22)}px`,
+                  }}
+                >
+                  {sym}
+                </span>
+              );
+            })}
+          </div>
+        </>
+      )}
 
       {!isFullscreen && (
         <div className="start-screen">

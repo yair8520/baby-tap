@@ -8,6 +8,7 @@ import {
   buildPalette,
 } from './levels.js';
 import { useGameBestStars, useGameLevel } from '../../hooks/useGameProgress.js';
+import { usePageVisibility } from '../../hooks/usePageVisibility.js';
 import { buzz } from '../../components/LearningGameShell/vibrate.js';
 import './ShapeMemory.css';
 
@@ -65,6 +66,7 @@ export default function ShapeMemory({ onExit, lang = 'he', vibrateOn = true }) {
   const levelDoneRef  = useRef(false);
   const intervalRef   = useRef(null);
   const wrongTimerRef = useRef(null);
+  const pageVisible   = usePageVisibility();
 
   const cfg = getShapeMemoryLevel(levelIdx);
   const totalShowSec = cfg.showMs / 1000;
@@ -91,11 +93,12 @@ export default function ShapeMemory({ onExit, lang = 'he', vibrateOn = true }) {
   // ── Countdown interval (SHOW phase) ──────────────────────────────────────
 
   useEffect(() => {
-    if (phase !== 'show') return;
+    if (phase !== 'show' || !pageVisible) return undefined;
 
+    const tickSec = 0.25;
     intervalRef.current = setInterval(() => {
       setCountdown(prev => {
-        const next = prev - 0.1;
+        const next = prev - tickSec;
         if (next <= 0) {
           clearInterval(intervalRef.current);
           setFading(true);
@@ -107,10 +110,10 @@ export default function ShapeMemory({ onExit, lang = 'he', vibrateOn = true }) {
         }
         return next;
       });
-    }, 100);
+    }, tickSec * 1000);
 
     return () => clearInterval(intervalRef.current);
-  }, [phase]);
+  }, [phase, pageVisible]);
 
   // ── Tap palette item ──────────────────────────────────────────────────────
 

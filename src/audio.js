@@ -9,14 +9,46 @@ function songDisplayName(song, lang = 'he') {
 
 // ── Audio context (lazy singleton) ────────────────────────────────────────────
 let audioCtx = null
+let visibilityPauseWired = false
 export let globalMute = false
 
 export function setGlobalMute(val) {
   globalMute = val
 }
 
+function wireAudioVisibilityPause() {
+  if (visibilityPauseWired || typeof document === 'undefined') return
+  visibilityPauseWired = true
+  document.addEventListener('visibilitychange', () => {
+    if (document.hidden) suspendAudioCtx()
+  })
+}
+
+/** Suspend the shared AudioContext to stop DSP work while backgrounded. */
+export function suspendAudioCtx() {
+  if (!audioCtx || audioCtx.state !== 'running') return
+  try {
+    const result = audioCtx.suspend()
+    if (result?.catch) result.catch(() => {})
+  } catch {
+    // AudioContext may already be closed or unavailable.
+  }
+}
+
+/** Resume the shared AudioContext after a visibility pause (best-effort). */
+export async function resumeAudioCtx() {
+  if (!audioCtx || audioCtx.state !== 'suspended') return audioCtx
+  try {
+    await audioCtx.resume()
+  } catch {
+    // Resume may be blocked until a user gesture.
+  }
+  return audioCtx
+}
+
 export function getAudioCtx() {
   if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)()
+  wireAudioVisibilityPause()
   return audioCtx
 }
 

@@ -2,11 +2,11 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import "./App.css";
 import appIcon from "./assets/icon-192.png";
 import appIconLarge from "./assets/icon-512.png";
-import ShapeMatch from "./ShapeMatch.jsx";
-import ColorMix from "./ColorMix.jsx";
-import SizeSort from "./SizeSort.jsx";
-import ShapeMemory from "./ShapeMemory.jsx";
-import PatternGame from "./PatternGame.jsx";
+import ShapeMatch from "./games/shapematch";
+import ColorMix from "./games/colormix";
+import SizeSort from "./games/sizesort";
+import ShapeMemory from "./games/shapememory";
+import PatternGame from "./games/pattern";
 
 import {
   IS_TOUCH,
@@ -15,16 +15,23 @@ import {
   canVibrate,
   EMOJIS,
   COLORS,
-  SONGS,
   NUMBER_EMOJIS,
   LETTER_EMOJIS,
   HEBREW_LETTER_EMOJIS,
   SPECIAL_KEY_EMOJIS,
   COMBO_HOT_EMOJIS,
   COMBO_ULTRA_EMOJIS,
-  DRUM_PADS,
   PIANO_KEYS,
 } from "./constants.js";
+import {
+  BALLOON_LEVEL_STEP,
+  getBalloonLevelNumber,
+  getBalloonConfigByLevel,
+} from "./games/balloons/levels.js";
+import { getTargetLevelConfig } from "./games/targets/levels.js";
+import { getClassicLevelConfig } from "./games/classic/levels.js";
+import { DRUM_PADS } from "./games/drums/levels.js";
+import { PIANO_SONGS } from "./games/piano/levels.js";
 
 import {
   getAudioCtx,
@@ -217,12 +224,17 @@ function makeBalloon(speedFactor = 1) {
   };
 }
 
-// Every LEVEL_STEP pops = one level up; speedFactor grows by 0.3 per level
-const BALLOON_LEVEL_STEP = 5;
-const getBalloonLevel = (pops) =>
-  Math.min(Math.floor(pops / BALLOON_LEVEL_STEP) + 1, 10);
-const getBalloonSpeed = (lvl) => 1 + (lvl - 1) * 0.3; // 1.0 → 1.3 → 1.6 …
-const getBalloonInterval = (lvl) => Math.max(600, 1200 - (lvl - 1) * 70); // 1200 → 1130 → …
+function songDisplayName(song, lang = "he") {
+  if (!song?.name) return "";
+  if (typeof song.name === "string") return song.name;
+  return song.name[lang] || song.name.he || song.name.en || "";
+}
+
+function drumPadLabel(pad, lang = "he") {
+  if (!pad?.label) return "";
+  if (typeof pad.label === "string") return pad.label;
+  return pad.label[lang] || pad.label.he || pad.label.en || "";
+}
 
 // ── Main component ─────────────────────────────────────────────────────────────
 export default function App() {
@@ -263,7 +275,9 @@ export default function App() {
   const [combo, setCombo] = useState(0);
   const [showCombo, setShowCombo] = useState(false);
   const [ultraFlash, setUltraFlash] = useState(false);
-  const [songName, setSongName] = useState(SONGS[0].name);
+  const [songName, setSongName] = useState(() =>
+    songDisplayName(PIANO_SONGS[0], defaultHebrew ? "he" : "en"),
+  );
   const [showSongName, setShowSongName] = useState(false);
 
   // ── Balloon mode state ───────────────────────────────────────────────────────
@@ -818,8 +832,9 @@ export default function App() {
       setSongName,
       setShowSongName,
       songNameTimerRef,
+      lang,
     );
-  }, []);
+  }, [lang]);
 
   // ── Classic: spawnAt ─────────────────────────────────────────────────────────
   const spawnAt = useCallback(
@@ -1175,7 +1190,7 @@ export default function App() {
   // Level-up detection: each BALLOON_LEVEL_STEP pops → new level
   useEffect(() => {
     if (gameMode !== "balloons") return;
-    const newLevel = getBalloonLevel(popCount);
+    const newLevel = getBalloonLevelNumber(popCount);
     if (newLevel > balloonLevelRef.current) {
       balloonLevelRef.current = newLevel;
       setBalloonLevel(newLevel);
@@ -1206,9 +1221,10 @@ export default function App() {
       setBalloonLevel(balloonSavedLevel);
       balloonLevelRef.current = balloonSavedLevel;
     }
-    const speed = getBalloonSpeed(balloonLevel);
-    const interval = getBalloonInterval(balloonLevel);
-    const maxOnScreen = 6 + balloonLevel; // more balloons at higher levels
+    const cfg = getBalloonConfigByLevel(balloonLevel);
+    const speed = cfg.speedFactor;
+    const interval = cfg.spawnIntervalMs;
+    const maxOnScreen = cfg.maxOnScreen;
 
     // Spawn 3 balloons immediately so screen isn't empty on entry
     setBalloons([makeBalloon(speed), makeBalloon(speed), makeBalloon(speed)]);
@@ -1252,20 +1268,15 @@ export default function App() {
     return () => clearInterval(check);
   }, [gameMode, isFullscreen]);
 
-  // ── Target mode: difficulty helper ──────────────────────────────────────────
-  const getTargetDifficulty = (score) => {
-    if (score >= 16) return { duration: 1600, maxTargets: 4 };
-    if (score >= 6) return { duration: 2200, maxTargets: 3 };
-    return { duration: 3000, maxTargets: 2 };
-  };
-
   // ── Target mode: spawn a single target ──────────────────────────────────────
   const spawnTarget = useCallback(() => {
     const score = targetScoreRef.current;
-    const { duration, maxTargets } = getTargetDifficulty(score);
+    const cfg = getTargetLevelConfig(score);
+    const duration = cfg.durationMs;
+    const maxTargets = cfg.maxTargets;
     if (targetsRef.current.length >= maxTargets) return;
 
-    const size = randInt(100, 141);
+    const size = randInt(cfg.minSize, cfg.maxSize + 1);
     const x = rand(80 + size / 2, window.innerWidth - 80 - size / 2);
     const y = rand(80 + size / 2, window.innerHeight - 80 - size / 2);
     const emoji = activeEmojis[randInt(0, activeEmojis.length)];
@@ -1554,7 +1565,11 @@ export default function App() {
           const c = trackCombo();
           vibrate(c >= 5 ? [60, 20, 40] : c >= 3 ? [40] : [22]);
           const pool =
-            c >= 10 ? COMBO_ULTRA_EMOJIS : c >= 5 ? COMBO_HOT_EMOJIS : null;
+            c >= getClassicLevelConfig(c).comboThresholds.ultra
+              ? COMBO_ULTRA_EMOJIS
+              : c >= getClassicLevelConfig(c).comboThresholds.hot
+                ? COMBO_HOT_EMOJIS
+                : null;
           spawnAt(t.clientX, t.clientY, pool, "normal", false, c);
         }
       }
@@ -1633,7 +1648,11 @@ export default function App() {
         const c = trackCombo();
         vibrate(c >= 5 ? [60, 20, 40] : c >= 3 ? [40] : [22]);
         const pool =
-          c >= 10 ? COMBO_ULTRA_EMOJIS : c >= 5 ? COMBO_HOT_EMOJIS : null;
+          c >= getClassicLevelConfig(c).comboThresholds.ultra
+            ? COMBO_ULTRA_EMOJIS
+            : c >= getClassicLevelConfig(c).comboThresholds.hot
+              ? COMBO_HOT_EMOJIS
+              : null;
         spawnAt(e.clientX, e.clientY, pool, "normal", false, c);
       }
     }
@@ -1892,194 +1911,6 @@ export default function App() {
                 onClose={() => setSettingsOpen(false)}
               />
             )}
-            {/* ── UNUSED OLD PANEL START (kept for reference – remove block below) ── */}
-            {false && (
-              <div className="settings-panel" dir={isHebrewUI ? "rtl" : "ltr"}>
-                {/* Mode row */}
-                {/* Mode label */}
-                <span className="settings-label">
-                  {isHebrewUI ? "בחר מצב" : "Select mode"}
-                </span>
-
-                {/* Mode grid 3×2 */}
-                {(() => {
-                  const modes = [
-                    {
-                      id: "classic",
-                      emoji: "🎮",
-                      label: isHebrewUI ? "קלאסי" : "Classic",
-                    },
-                    {
-                      id: "balloons",
-                      emoji: "🎈",
-                      label: isHebrewUI ? "בלונים" : "Balloons",
-                    },
-                    {
-                      id: "drums",
-                      emoji: "🥁",
-                      label: isHebrewUI ? "תופים" : "Drums",
-                    },
-                    {
-                      id: "targets",
-                      emoji: "🎯",
-                      label: isHebrewUI ? "מטרות" : "Targets",
-                    },
-                    {
-                      id: "piano",
-                      emoji: "🎹",
-                      label: isHebrewUI ? "פסנתר" : "Piano",
-                    },
-                    {
-                      id: "autoshow",
-                      emoji: "🌟",
-                      label: isHebrewUI ? "שינה" : "Sleep",
-                    },
-                    {
-                      id: "shapematch",
-                      emoji: "🔵",
-                      label: isHebrewUI ? "התאמה" : "Match",
-                    },
-                    {
-                      id: "colormix",
-                      emoji: "🎨",
-                      label: isHebrewUI ? "ערבוב" : "Mix Colors",
-                    },
-                    {
-                      id: "sizesort",
-                      emoji: "📏",
-                      label: isHebrewUI ? "מיון" : "Size Sort",
-                    },
-                    {
-                      id: "shapememory",
-                      emoji: "🃏",
-                      label: isHebrewUI ? "סדרה" : "Sequence",
-                    },
-                    {
-                      id: "pattern",
-                      emoji: "🔷",
-                      label: isHebrewUI ? "דפוס" : "Pattern",
-                    },
-                  ];
-                  return (
-                    <div className="settings-mode-grid">
-                      {modes.map((m) => (
-                        <button
-                          key={m.id}
-                          className={`settings-mode-btn${gameMode === m.id ? " active" : ""}`}
-                          onTouchEnd={(e) => {
-                            e.preventDefault();
-                            e.stopPropagation();
-                            setGameMode(m.id);
-                            setSettingsOpen(false);
-                          }}
-                          onMouseUp={(e) => {
-                            e.stopPropagation();
-                            setGameMode(m.id);
-                            setSettingsOpen(false);
-                          }}
-                        >
-                          <span className="mode-emoji">{m.emoji}</span>
-                          <span className="mode-label">{m.label}</span>
-                        </button>
-                      ))}
-                    </div>
-                  );
-                })()}
-
-                <div className="settings-divider" />
-
-                <span className="settings-label">
-                  {isHebrewUI ? "שפה" : "Language"}
-                </span>
-                <div className="settings-mode-grid">
-                  {[
-                    { id: "he", emoji: "🇮🇱", label: "עברית" },
-                    { id: "en", emoji: "🇬🇧", label: "English" },
-                  ].map((l) => (
-                    <button
-                      key={l.id}
-                      className={`settings-mode-btn${lang === l.id ? " active" : ""}`}
-                      onTouchEnd={(e) => {
-                        e.preventDefault();
-                        e.stopPropagation();
-                        setLang(l.id);
-                      }}
-                      onMouseUp={(e) => {
-                        e.stopPropagation();
-                        setLang(l.id);
-                      }}
-                    >
-                      <span className="mode-emoji">{l.emoji}</span>
-                      <span className="mode-label">{l.label}</span>
-                    </button>
-                  ))}
-                </div>
-
-                <span className="settings-label">
-                  {isHebrewUI ? "ערכת נושא" : "Theme"}
-                </span>
-                <div className="settings-mode-grid">
-                  {Object.values(THEME_PRESETS).map((t) => (
-                    <button
-                      key={t.id}
-                      className={`settings-mode-btn${theme === t.id ? " active" : ""}`}
-                      onTouchEnd={(e) => {
-                        e.preventDefault();
-                        e.stopPropagation();
-                        setTheme(t.id);
-                      }}
-                      onMouseUp={(e) => {
-                        e.stopPropagation();
-                        setTheme(t.id);
-                      }}
-                    >
-                      <span className="mode-emoji">{t.emoji}</span>
-                      <span className="mode-label">{t.label[lang]}</span>
-                    </button>
-                  ))}
-                </div>
-
-                {/* Sound toggle */}
-                <div className="settings-toggle-row">
-                  <span className="settings-toggle-label">
-                    <span className="tl-icon">{muteOn ? "🔇" : "🔊"}</span>
-                    {isHebrewUI ? "צליל" : "Sound"}
-                  </span>
-                  <button
-                    className={`settings-toggle-btn${muteOn ? "" : " on"}`}
-                    onTouchEnd={(e) => {
-                      e.preventDefault();
-                      e.stopPropagation();
-                      setMuteOn((m) => !m);
-                    }}
-                    onMouseUp={(e) => {
-                      e.stopPropagation();
-                      setMuteOn((m) => !m);
-                    }}
-                  />
-                </div>
-
-                {/* Vibrate toggle */}
-                <div className="settings-toggle-row">
-                  <span className="settings-toggle-label">
-                    <span className="tl-icon">{vibrateOn ? "📳" : "🔕"}</span>
-                    {isHebrewUI ? "רטט" : "Vibrate"}
-                  </span>
-                  <button
-                    className={`settings-toggle-btn${vibrateOn ? " on" : ""}`}
-                    onTouchEnd={(e) => {
-                      e.preventDefault();
-                      e.stopPropagation();
-                      setVibrateOn((v) => !v);
-                    }}
-                    onMouseUp={(e) => {
-                      e.stopPropagation();
-                      setVibrateOn((v) => !v);
-                    }}
-                  />
-                </div>
-              </div>
-            )}
           </div>
 
           {/* ── Classic mode content ── */}
@@ -2089,21 +1920,33 @@ export default function App() {
                 <div className="ultra-flash" />
               )}
 
-              {gameMode === "classic" && showCombo && combo >= 2 && (
+              {gameMode === "classic" && showCombo && combo >= 2 && (() => {
+                const { hot, fire, ultra } =
+                  getClassicLevelConfig(combo).comboThresholds;
+                const tier =
+                  combo >= ultra
+                    ? "ultra"
+                    : combo >= fire
+                      ? "fire"
+                      : combo >= hot
+                        ? "hot"
+                        : "base";
+                return (
                 <div
                   key={combo}
-                  className={`combo-display ${combo >= 10 ? "combo-ultra" : combo >= 7 ? "combo-fire" : combo >= 4 ? "combo-hot" : ""}`}
+                  className={`combo-display ${tier === "ultra" ? "combo-ultra" : tier === "fire" ? "combo-fire" : tier === "hot" ? "combo-hot" : ""}`}
                 >
-                  {combo >= 10
+                  {tier === "ultra"
                     ? ui.ultra
-                    : combo >= 7
+                    : tier === "fire"
                       ? ui.fire
-                      : combo >= 4
+                      : tier === "hot"
                         ? "⚡ ×"
                         : "✨ ×"}
                   {combo}
                 </div>
-              )}
+                );
+              })()}
 
               {showSongName && <div className="song-banner">{songName}</div>}
 

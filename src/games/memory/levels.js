@@ -1,7 +1,10 @@
 /**
  * Memory card game – level definitions.
  * Each level defines grid size and emoji pool.
+ * Add rows to MEMORY_LEVELS to create more stages.
  */
+import { clampLevelIndex } from "../levelUtils.js";
+
 export const MEMORY_LEVELS = [
   {
     id: 1,
@@ -79,4 +82,8 @@ export function buildDeck(level) {
     { id: `${i}-b`, pairId: i, emoji, flipped: false, matched: false },
   ]);
   return shuffle(doubled);
+}
+
+export function getMemoryLevel(levelIdx) {
+  return MEMORY_LEVELS[clampLevelIndex(levelIdx, MEMORY_LEVELS.length)];
 }

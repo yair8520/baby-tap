@@ -1,4 +1,11 @@
-import { NOTES, NUMBER_NOTES, SONGS } from './constants.js'
+import { NOTES, NUMBER_NOTES } from './constants.js'
+import { PIANO_SONGS } from './games/piano/levels.js'
+
+function songDisplayName(song, lang = 'he') {
+  if (!song?.name) return ''
+  if (typeof song.name === 'string') return song.name
+  return song.name[lang] || song.name.he || song.name.en || ''
+}
 
 // ── Audio context (lazy singleton) ────────────────────────────────────────────
 let audioCtx = null
@@ -70,9 +77,9 @@ export async function playSound(type = 'normal') {
 }
 
 // ── Melody note player ────────────────────────────────────────────────────────
-export async function playMelodyNote(noteIdxRef, songIdxRef, setSongName, setShowSongName, songNameTimerRef) {
+export async function playMelodyNote(noteIdxRef, songIdxRef, setSongName, setShowSongName, songNameTimerRef, lang = 'he') {
   if (globalMute) return
-  const song = SONGS[songIdxRef.current]
+  const song = PIANO_SONGS[songIdxRef.current]
   const [freq, beats] = song.notes[noteIdxRef.current]
   const beat  = 60 / song.bpm
   const dur   = beats * beat * 0.88
@@ -108,9 +115,9 @@ export async function playMelodyNote(noteIdxRef, songIdxRef, setSongName, setSho
   noteIdxRef.current++
   if (noteIdxRef.current >= song.notes.length) {
     noteIdxRef.current = 0
-    songIdxRef.current = (songIdxRef.current + 1) % SONGS.length
-    const next = SONGS[songIdxRef.current]
-    setSongName(next.name)
+    songIdxRef.current = (songIdxRef.current + 1) % PIANO_SONGS.length
+    const next = PIANO_SONGS[songIdxRef.current]
+    setSongName(songDisplayName(next, lang))
     setShowSongName(true)
     clearTimeout(songNameTimerRef.current)
     songNameTimerRef.current = setTimeout(() => setShowSongName(false), 2200)

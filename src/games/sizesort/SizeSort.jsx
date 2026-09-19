@@ -1,94 +1,6 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
+import { buildLevel } from './levels.js';
 import './SizeSort.css';
-
-// ─── Constants ────────────────────────────────────────────────────────────────
-
-const PALETTE = [
-  { id: 'coral',   fill: '#FF6B6B', glow: 'rgba(255,107,107,0.6)' },
-  { id: 'sky',     fill: '#38BDF8', glow: 'rgba(56,189,248,0.6)'  },
-  { id: 'lime',    fill: '#84CC16', glow: 'rgba(132,204,22,0.6)'  },
-  { id: 'amber',   fill: '#FBBF24', glow: 'rgba(251,191,36,0.6)'  },
-  { id: 'violet',  fill: '#A78BFA', glow: 'rgba(167,139,250,0.6)' },
-  { id: 'rose',    fill: '#FB7185', glow: 'rgba(251,113,133,0.6)' },
-  { id: 'cyan',    fill: '#22D3EE', glow: 'rgba(34,211,238,0.6)'  },
-  { id: 'emerald', fill: '#34D399', glow: 'rgba(52,211,153,0.6)'  },
-  { id: 'orange',  fill: '#FF9500', glow: 'rgba(255,149,0,0.6)'   },
-  { id: 'pink',    fill: '#EC4899', glow: 'rgba(236,72,153,0.6)'  },
-];
-
-// Sizes per count
-const SIZES = {
-  3: [50, 80, 110],
-  4: [45, 68, 90, 112],
-  5: [40, 60, 80, 100, 120],
-};
-
-// Level definitions: count of circles
-const LEVEL_COUNTS = [3, 3, 3, 4, 4, 4, 5, 5, 5, 5];
-
-const SLOT_PAD = 20; // extra px on each side of slot
-
-// ─── Build level ──────────────────────────────────────────────────────────────
-
-function buildLevel(levelIdx, W, H) {
-  const count = LEVEL_COUNTS[Math.min(levelIdx, LEVEL_COUNTS.length - 1)];
-  const sizes = SIZES[count];
-  const color = PALETTE[levelIdx % PALETTE.length];
-
-  // Slot area: top 55% of screen, below header
-  const slotAreaTop    = 80;
-  const slotAreaBottom = H * 0.55;
-  const slotAreaCy     = (slotAreaTop + slotAreaBottom) / 2;
-
-  // Total width needed for slots
-  const maxSlotD = sizes[sizes.length - 1] + SLOT_PAD * 2;
-  const gap      = 14;
-  const totalW   = count * maxSlotD + (count - 1) * gap;
-  const startX   = (W - totalW) / 2 + maxSlotD / 2;
-
-  const slots = sizes.map((sz, i) => ({
-    id:           `sl-${i}`,
-    rank:         i,           // 0 = smallest
-    cx:           startX + i * (maxSlotD + gap),
-    cy:           slotAreaCy,
-    expectedSize: sz,
-    slotD:        sz + SLOT_PAD * 2,
-    filled:       false,
-    color:        color.fill,
-    glow:         color.glow,
-  }));
-
-  // Pieces — shuffled in bottom area
-  const pieceAreaY = H * 0.78;
-  const pieceTotalW = sizes.reduce((a, s) => a + s, 0) + (count - 1) * 24;
-  const pieceStartX = (W - pieceTotalW) / 2;
-
-  // Calculate piece x positions (left-align within their size)
-  const pieceXPositions = [];
-  let xCursor = pieceStartX;
-  for (let i = 0; i < count; i++) {
-    pieceXPositions.push(xCursor + sizes[i] / 2);
-    xCursor += sizes[i] + 24;
-  }
-
-  // Shuffle piece order
-  const shuffledRanks = [...Array(count).keys()].sort(() => Math.random() - 0.5);
-
-  const pieces = shuffledRanks.map((rank, posIdx) => ({
-    id:     `pc-${rank}`,
-    rank,
-    size:   sizes[rank],
-    fill:   color.fill,
-    glow:   color.glow,
-    homeCx: pieceXPositions[posIdx],
-    homeCy: pieceAreaY,
-    cx:     pieceXPositions[posIdx],
-    cy:     pieceAreaY,
-    matched: false,
-  }));
-
-  return { slots, pieces };
-}
 
 // ─── SparkBurst ───────────────────────────────────────────────────────────────
 
@@ -238,7 +150,7 @@ export default function SizeSort({ onExit, lang = 'he', vibrateOn = true }) {
         setTimeout(() => setMatchId(null), 700);
 
         const sparkId = Date.now() + Math.random();
-        setSparks(prev => [...prev, { id: sparkId, x: nearest.cx, y: nearest.cy, color: piece.fill }]);
+        setSparks(prev => [...prev, { id: sparkId, x: nearest.cx, y: nearest.cy, color: piece.color }]);
         setTimeout(() => setSparks(prev => prev.filter(s => s.id !== sparkId)), 950);
 
         const matched = piecesRef.current.filter(p => p.matched).length + 1;
@@ -360,7 +272,7 @@ export default function SizeSort({ onExit, lang = 'he', vibrateOn = true }) {
               height:     pc.size,
               left:       cx - r,
               top:        cy - r,
-              background: pc.fill,
+              background: pc.color,
               '--glow':   pc.glow,
               transition: isDrag
                 ? 'none'

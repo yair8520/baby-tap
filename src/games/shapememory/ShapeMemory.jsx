@@ -1,111 +1,11 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
+import { ShapeGeom } from '../../components/ShapeGeom';
+import {
+  getShapeMemoryLevel,
+  buildSequence,
+  buildPalette,
+} from './levels.js';
 import './ShapeMemory.css';
-
-// ─── Constants ────────────────────────────────────────────────────────────────
-
-const PALETTE = [
-  { id: 'red',    fill: '#FF3B3B' },
-  { id: 'blue',   fill: '#2979FF' },
-  { id: 'yellow', fill: '#FFD600' },
-  { id: 'green',  fill: '#00C853' },
-  { id: 'purple', fill: '#BB44FF' },
-  { id: 'orange', fill: '#FF7700' },
-];
-
-const ALL_SHAPES = ['circle', 'square', 'triangle', 'star'];
-
-const LEVELS = [
-  { seqLen: 2, showMs: 3000, shapes: 1, colors: 2 },  // L1
-  { seqLen: 2, showMs: 3000, shapes: 2, colors: 3 },  // L2
-  { seqLen: 3, showMs: 2500, shapes: 3, colors: 3 },  // L3
-  { seqLen: 3, showMs: 2500, shapes: 4, colors: 4 },  // L4
-  { seqLen: 4, showMs: 2000, shapes: 4, colors: 5 },  // L5
-  { seqLen: 4, showMs: 2000, shapes: 4, colors: 6 },  // L6+
-];
-
-function getLevelCfg(levelIdx) {
-  return LEVELS[Math.min(levelIdx, LEVELS.length - 1)];
-}
-
-// ─── Helpers ─────────────────────────────────────────────────────────────────
-
-function shuffle(arr) {
-  const a = [...arr];
-  for (let i = a.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [a[i], a[j]] = [a[j], a[i]];
-  }
-  return a;
-}
-
-function buildSequence(cfg) {
-  const shapes = ALL_SHAPES.slice(0, cfg.shapes);
-  const colors = shuffle(PALETTE).slice(0, cfg.colors);
-  const seq = [];
-  for (let i = 0; i < cfg.seqLen; i++) {
-    const shape = shapes[Math.floor(Math.random() * shapes.length)];
-    const color = colors[Math.floor(Math.random() * colors.length)];
-    seq.push({ shape, colorId: color.id, fill: color.fill });
-  }
-  return seq;
-}
-
-function buildPalette(sequence, cfg) {
-  // collect all combos already in sequence as Set strings
-  const inSeq = new Set(sequence.map(s => `${s.shape}|${s.colorId}`));
-
-  const shapes = ALL_SHAPES.slice(0, cfg.shapes);
-  const colors = shuffle(PALETTE).slice(0, cfg.colors);
-
-  // all unique items from sequence (deduplicated)
-  const uniqueItems = [];
-  const seen = new Set();
-  for (const item of sequence) {
-    const key = `${item.shape}|${item.colorId}`;
-    if (!seen.has(key)) {
-      seen.add(key);
-      uniqueItems.push({ ...item, id: key });
-    }
-  }
-
-  // distractors: combos not in sequence
-  const distractors = [];
-  for (const shape of shapes) {
-    for (const color of colors) {
-      const key = `${shape}|${color.id}`;
-      if (!inSeq.has(key)) {
-        distractors.push({ shape, colorId: color.id, fill: color.fill, id: key });
-      }
-    }
-  }
-
-  const numDistractors = Math.min(shuffle(distractors).length, 2 + Math.floor(Math.random() * 3));
-  const extras = shuffle(distractors).slice(0, numDistractors);
-
-  return shuffle([...uniqueItems, ...extras]);
-}
-
-// ─── SVG Shape ───────────────────────────────────────────────────────────────
-
-function ShapeGeom({ shape, size, fill, stroke, strokeWidth, strokeDash, opacity }) {
-  const p = {
-    fill: fill ?? 'none',
-    stroke: stroke ?? 'none',
-    strokeWidth: strokeWidth ?? 0,
-    strokeLinejoin: 'round',
-    strokeLinecap: 'round',
-    opacity: opacity ?? 1,
-    ...(strokeDash ? { strokeDasharray: strokeDash } : {}),
-  };
-  return (
-    <svg width={size} height={size} viewBox="0 0 100 100" style={{ display: 'block', overflow: 'visible' }}>
-      {shape === 'circle'   && <circle cx="50" cy="50" r="43" {...p} />}
-      {shape === 'square'   && <rect x="8" y="8" width="84" height="84" rx="12" {...p} />}
-      {shape === 'triangle' && <polygon points="50,7 93,89 7,89" {...p} />}
-      {shape === 'star'     && <polygon points="50,5 61,35 95,35 68,57 79,91 50,70 21,91 32,57 5,35 39,35" {...p} />}
-    </svg>
-  );
-}
 
 // ─── Countdown Ring ──────────────────────────────────────────────────────────
 
@@ -155,7 +55,7 @@ export default function ShapeMemory({ onExit, lang = 'he', vibrateOn = true }) {
   const intervalRef   = useRef(null);
   const wrongTimerRef = useRef(null);
 
-  const cfg = getLevelCfg(levelIdx);
+  const cfg = getShapeMemoryLevel(levelIdx);
   const totalShowSec = cfg.showMs / 1000;
 
   // ── Build level ──────────────────────────────────────────────────────────

@@ -10,6 +10,7 @@ import {
 } from './levels.js';
 import { useGameBestStars, useGameLevel } from '../../hooks/useGameProgress.js';
 import { useResponsiveGameViewport } from '../../hooks/useResponsiveGameViewport.js';
+import { buzz } from '../../components/LearningGameShell/vibrate.js';
 import './ShapeMatch.css';
 
 // ─── Spark burst on correct match ─────────────────────────────────────────────
@@ -67,6 +68,21 @@ export default function ShapeMatch({ onExit, lang = 'he', vibrateOn = true }) {
   const slotsRef     = useRef([]);
   const mistakesRef  = useRef(0);
   const completeTimerRef = useRef(null);
+  const timeoutIdsRef = useRef(new Set());
+
+  const scheduleTimeout = useCallback((callback, delay) => {
+    const id = setTimeout(() => {
+      timeoutIdsRef.current.delete(id);
+      callback();
+    }, delay);
+    timeoutIdsRef.current.add(id);
+    return id;
+  }, []);
+
+  const clearScheduledTimeouts = useCallback(() => {
+    timeoutIdsRef.current.forEach(clearTimeout);
+    timeoutIdsRef.current.clear();
+  }, []);
 
   const [wrongId,    setWrongId]    = useState(null);  // piece shake
   const [matchId,    setMatchId]    = useState(null);  // slot pop
@@ -86,7 +102,7 @@ export default function ShapeMatch({ onExit, lang = 'he', vibrateOn = true }) {
   // build level whenever levelIdx or dimensions change
   useEffect(() => {
     if (!w || !h) return;
-    const initializeTimer = setTimeout(() => {
+    const initializeTimer = scheduleTimeout(() => {
       const { slots: s, pieces: p } = buildLevel(levelIdx, w, h);
       setSlots(s);
       setPieces(p);
@@ -99,9 +115,17 @@ export default function ShapeMatch({ onExit, lang = 'he', vibrateOn = true }) {
     }, 0);
     return () => {
       clearTimeout(initializeTimer);
-      clearTimeout(completeTimerRef.current);
+      clearScheduledTimeouts();
     };
-  }, [levelIdx, roundKey, w, h]);
+  }, [clearScheduledTimeouts, levelIdx, roundKey, w, h, scheduleTimeout]);
+
+  useEffect(() => {
+    const timeoutIds = timeoutIdsRef.current;
+    return () => {
+      timeoutIds.forEach(clearTimeout);
+      timeoutIds.clear();
+    };
+  }, []);
 
   // ── drag handlers ──────────────────────────────────────────────────────────
 
@@ -153,7 +177,7 @@ export default function ShapeMatch({ onExit, lang = 'he', vibrateOn = true }) {
     if (nearest && minDist < SNAP) {
       if (nearest.colorId === piece.colorId && nearest.shape === piece.shape) {
         // ✅ correct match
-        if (vibrateOn) navigator.vibrate?.([40, 25, 90]);
+        buzz([40, 25, 90], vibrateOn);
 
         setSlots(prev => prev.map(sl =>
           sl.id === nearest.id ? { ...sl, filled: true } : sl
@@ -165,24 +189,24 @@ export default function ShapeMatch({ onExit, lang = 'he', vibrateOn = true }) {
         ));
 
         setMatchId(nearest.id);
-        setTimeout(() => setMatchId(null), 700);
+        scheduleTimeout(() => setMatchId(null), 700);
 
         // sparkles
         const sparkId = Date.now() + Math.random();
         setSparks(prev => [...prev, { id: sparkId, x: nearest.cx, y: nearest.cy, color: piece.fill }]);
-        setTimeout(() => setSparks(prev => prev.filter(s => s.id !== sparkId)), 900);
+        scheduleTimeout(() => setSparks(prev => prev.filter(s => s.id !== sparkId)), 900);
 
         // level complete?
         const matched = piecesRef.current.filter(p => p.matched).length + 1;
         if (matched >= piecesRef.current.length) {
           recordStars(levelIdx, starsFromMistakes(mistakesRef.current));
-          completeTimerRef.current = setTimeout(() => setLevelDone(true), 650);
+          completeTimerRef.current = scheduleTimeout(() => setLevelDone(true), 650);
         }
       } else {
         // ❌ wrong match — shake and return home
-        if (vibrateOn) navigator.vibrate?.([80, 40, 80]);
+        buzz([80, 40, 80], vibrateOn);
         setWrongId(pieceId);
-        setTimeout(() => setWrongId(null), 520);
+        scheduleTimeout(() => setWrongId(null), 520);
         setMistakes(m => m + 1);
         setPieces(prev => prev.map(pc =>
           pc.id === pieceId ? { ...pc, cx: pc.homeCx, cy: pc.homeCy } : pc
@@ -194,7 +218,7 @@ export default function ShapeMatch({ onExit, lang = 'he', vibrateOn = true }) {
         pc.id === pieceId ? { ...pc, cx: pc.homeCx, cy: pc.homeCy } : pc
       ));
     }
-  }, [levelIdx, recordStars, vibrateOn]);
+  }, [levelIdx, recordStars, scheduleTimeout, vibrateOn]);
 
   // ── derived ────────────────────────────────────────────────────────────────
 

@@ -14,7 +14,9 @@ test("star scoring reflects mistakes", () => {
 });
 
 test("legacy and malformed star progress migrate safely", () => {
-  assert.deepEqual(normalizeBestStars(14, 5), []);
+  assert.deepEqual(normalizeBestStars(0, 5), []);
+  assert.deepEqual(normalizeBestStars(8, 5), [3, 3, 2]);
+  assert.deepEqual(normalizeBestStars(14, 3), [3, 3, 3]);
   assert.deepEqual(normalizeBestStars([3, 9, 2, -1], 3), [3, 0, 2]);
   assert.deepEqual(normalizeBestStars([3, 2, 1], 2), [3, 2]);
 });

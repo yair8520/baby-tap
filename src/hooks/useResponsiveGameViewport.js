@@ -40,12 +40,16 @@ export function useResponsiveGameViewport(containerRef) {
     observer?.observe(element);
     window.addEventListener("resize", measure);
     window.addEventListener("orientationchange", measure);
+    window.addEventListener("pageshow", measure);
+    window.visualViewport?.addEventListener("resize", measure);
 
     return () => {
       cancelAnimationFrame(frame);
       observer?.disconnect();
       window.removeEventListener("resize", measure);
       window.removeEventListener("orientationchange", measure);
+      window.removeEventListener("pageshow", measure);
+      window.visualViewport?.removeEventListener("resize", measure);
     };
   }, [containerRef]);
 

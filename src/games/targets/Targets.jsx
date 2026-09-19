@@ -39,6 +39,11 @@ export function Targets({ activeEmojis, t, vibrate }) {
     return id;
   }, []);
 
+  const clearScheduledTimeouts = useCallback(() => {
+    timeoutIdsRef.current.forEach(clearTimeout);
+    timeoutIdsRef.current.clear();
+  }, []);
+
   useEffect(() => {
     targetsRef.current = targets;
   }, [targets]);
@@ -90,11 +95,12 @@ export function Targets({ activeEmojis, t, vibrate }) {
   }, [spawnTarget]);
 
   useEffect(() => {
+    const timeoutIds = timeoutIdsRef.current;
+    clearScheduledTimeouts();
+    targetsRef.current.forEach((target) => clearTimeout(target.removeTimer));
+    targetsRef.current = [];
+
     const initializeTimer = scheduleTimeout(() => {
-      targetsRef.current.forEach((target) =>
-        clearTimeout(target.removeTimer),
-      );
-      targetsRef.current = [];
       setTargets([]);
       spawnTarget();
       spawnTarget();
@@ -102,11 +108,11 @@ export function Targets({ activeEmojis, t, vibrate }) {
 
     return () => {
       clearTimeout(initializeTimer);
-      targetsRef.current.forEach((target) =>
-        clearTimeout(target.removeTimer),
-      );
+      timeoutIds.delete(initializeTimer);
+      clearScheduledTimeouts();
+      targetsRef.current.forEach((target) => clearTimeout(target.removeTimer));
     };
-  }, [scheduleTimeout, spawnTarget]);
+  }, [clearScheduledTimeouts, scheduleTimeout, spawnTarget]);
 
   useEffect(() => {
     const timeoutIds = timeoutIdsRef.current;

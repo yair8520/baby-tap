@@ -8,6 +8,7 @@ import {
   buildPalette,
 } from './levels.js';
 import { useGameBestStars, useGameLevel } from '../../hooks/useGameProgress.js';
+import { buzz } from '../../components/LearningGameShell/vibrate.js';
 import './ShapeMemory.css';
 
 // ─── Countdown Ring ──────────────────────────────────────────────────────────
@@ -123,7 +124,7 @@ export default function ShapeMemory({ onExit, lang = 'he', vibrateOn = true }) {
 
     if (item.shape === correct.shape && item.colorId === correct.colorId) {
       // Correct
-      if (vibrateOn) navigator.vibrate?.([30, 20, 60]);
+      buzz([30, 20, 60], vibrateOn);
 
       const nextAnswers = [...userAnswers, item];
       setSlotGlow(currentIdx);
@@ -134,14 +135,14 @@ export default function ShapeMemory({ onExit, lang = 'he', vibrateOn = true }) {
         levelDoneRef.current = true;
         setUserAnswers(nextAnswers);
         recordStars(levelIdx, starsFromMistakes(mistakes));
-        if (vibrateOn) navigator.vibrate?.([40, 30, 80, 30, 120]);
+        buzz([40, 30, 80, 30, 120], vibrateOn);
         setTimeout(() => setLevelDone(true), 600);
       } else {
         setUserAnswers(nextAnswers);
       }
     } else {
       // Wrong
-      if (vibrateOn) navigator.vibrate?.([80, 40, 80]);
+      buzz([80, 40, 80], vibrateOn);
 
       setWrongSlot(currentIdx);
       setMistakes(m => m + 1);

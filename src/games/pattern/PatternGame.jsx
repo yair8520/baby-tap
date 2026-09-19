@@ -3,6 +3,7 @@ import { ShapeGeom } from '../../components/ShapeGeom';
 import { LearningGameShell, starsFromMistakes } from '../../components/LearningGameShell';
 import { PATTERN_LEVELS, buildLevel } from './levels.js';
 import { useGameBestStars, useGameLevel } from '../../hooks/useGameProgress.js';
+import { buzz } from '../../components/LearningGameShell/vibrate.js';
 import './PatternGame.css';
 
 // ─── Main Component ───────────────────────────────────────────────────────────
@@ -69,7 +70,7 @@ export default function PatternGame({ onExit, lang = 'he', vibrateOn = true }) {
     setIsCorrect(correct);
 
     if (correct) {
-      if (vibrateOn) navigator.vibrate?.([40, 30, 80, 30, 120]);
+      buzz([40, 30, 80, 30, 120], vibrateOn);
       setAnswered(true);
       setRevealed(true);
       levelDoneRef.current = true;
@@ -79,7 +80,7 @@ export default function PatternGame({ onExit, lang = 'he', vibrateOn = true }) {
         setLevelDone(true);
       }, 1200);
     } else {
-      if (vibrateOn) navigator.vibrate?.([80, 40, 80]);
+      buzz([80, 40, 80], vibrateOn);
       setMistakes(m => m + 1);
 
       // disable wrong choice for 1s

@@ -43,20 +43,22 @@ function makeBalloon(speedFactor = 1) {
  * @param {BalloonsProps} props
  */
 export function Balloons({ t, vibrate }) {
-  const [balloons, setBalloons] = useState([]);
-  const [balloonHint, setBalloonHint] = useState(false);
-  const [popCount, setPopCount] = useState(0);
-  const [balloonMissed, setBalloonMissed] = useState(0);
-  const [balloonLevel, setBalloonLevel] = useState(1);
-  const [balloonLevelUp, setBalloonLevelUp] = useState(null);
-  const [emojis, setEmojis] = useState([]);
   const [balloonSavedLevel, setBalloonSavedLevel] = useLocalStorage(
     STORAGE_KEYS.balloonLevel,
     1,
     isBalloonLevel,
   );
+  const [balloons, setBalloons] = useState([]);
+  const [balloonHint, setBalloonHint] = useState(false);
+  const [popCount, setPopCount] = useState(
+    () => (balloonSavedLevel - 1) * BALLOON_LEVEL_STEP,
+  );
+  const [balloonMissed, setBalloonMissed] = useState(0);
+  const [balloonLevel, setBalloonLevel] = useState(balloonSavedLevel);
+  const [balloonLevelUp, setBalloonLevelUp] = useState(null);
+  const [emojis, setEmojis] = useState([]);
 
-  const balloonLevelRef = useRef(1);
+  const balloonLevelRef = useRef(balloonSavedLevel);
   const balloonTimerRef = useRef(null);
   const lastBalloonPopRef = useRef(0);
   const timeoutIdsRef = useRef(new Set());
@@ -88,13 +90,6 @@ export function Balloons({ t, vibrate }) {
 
   useEffect(() => {
     const initializeTimer = scheduleTimeout(() => {
-      if (balloonLevel === 1 && balloonSavedLevel > 1) {
-        const restoredPops = (balloonSavedLevel - 1) * BALLOON_LEVEL_STEP;
-        setPopCount(restoredPops);
-        setBalloonLevel(balloonSavedLevel);
-        balloonLevelRef.current = balloonSavedLevel;
-      }
-
       const config = getBalloonConfigByLevel(balloonLevel);
       setBalloons([
         makeBalloon(config.speedFactor),
@@ -114,7 +109,7 @@ export function Balloons({ t, vibrate }) {
       clearTimeout(initializeTimer);
       clearInterval(balloonTimerRef.current);
     };
-  }, [balloonLevel, balloonSavedLevel, scheduleTimeout]);
+  }, [balloonLevel, scheduleTimeout]);
 
   useEffect(() => {
     const tick = setInterval(() => {

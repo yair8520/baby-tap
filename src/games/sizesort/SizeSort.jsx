@@ -3,6 +3,7 @@ import { SIZESORT_LEVELS, buildLevel } from './levels.js';
 import { LearningGameShell, starsFromMistakes } from '../../components/LearningGameShell';
 import { useGameBestStars, useGameLevel } from '../../hooks/useGameProgress.js';
 import { useResponsiveGameViewport } from '../../hooks/useResponsiveGameViewport.js';
+import { buzz } from '../../components/LearningGameShell/vibrate.js';
 import './SizeSort.css';
 
 // ─── SparkBurst ───────────────────────────────────────────────────────────────
@@ -150,7 +151,7 @@ export default function SizeSort({ onExit, lang = 'he', vibrateOn = true }) {
     if (nearest && minDist < SNAP) {
       if (nearest.rank === piece.rank) {
         // Correct!
-        if (vibrateOn) navigator.vibrate?.([40, 25, 90]);
+        buzz([40, 25, 90], vibrateOn);
 
         setSlots(prev => prev.map(sl =>
           sl.id === nearest.id ? { ...sl, filled: true } : sl
@@ -175,7 +176,7 @@ export default function SizeSort({ onExit, lang = 'he', vibrateOn = true }) {
         }
       } else {
         // Wrong slot
-        if (vibrateOn) navigator.vibrate?.([80, 40, 80]);
+        buzz([80, 40, 80], vibrateOn);
         setWrongId(pieceId);
         setMistakes(m => m + 1);
         setTimeout(() => setWrongId(null), 520);

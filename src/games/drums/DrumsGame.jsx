@@ -1,42 +1,52 @@
-import { useState, useCallback } from "react";
-import { canVibrate } from "../../constants.js";
+import { useState, useCallback, useEffect, useRef } from "react";
 import { playDrum } from "../../audio.js";
+import { buzz } from "../../components/LearningGameShell/vibrate.js";
 import { DRUM_PADS } from "./levels.js";
 import { nextId } from "../../utils/random.js";
 import "./DrumsGame.css";
-
-function vibrate(pattern, vibrateOn) {
-  if (!vibrateOn) return;
-  if (canVibrate) navigator.vibrate(pattern);
-  window.ReactNativeWebView?.postMessage(
-    JSON.stringify({ type: "vibrate", pattern }),
-  );
-}
 
 /**
  * Drum pad grid mode.
  */
 export default function DrumsGame({ vibrateOn = true }) {
   const [drumRipples, setDrumRipples] = useState([]);
+  const timeoutIdsRef = useRef(new Set());
+
+  const scheduleTimeout = useCallback((callback, delay) => {
+    const id = setTimeout(() => {
+      timeoutIdsRef.current.delete(id);
+      callback();
+    }, delay);
+    timeoutIdsRef.current.add(id);
+    return id;
+  }, []);
+
+  useEffect(() => {
+    const timeoutIds = timeoutIdsRef.current;
+    return () => {
+      timeoutIds.forEach(clearTimeout);
+      timeoutIds.clear();
+    };
+  }, []);
 
   const handleDrumTap = useCallback(
     (padType, e) => {
       e.preventDefault();
       e.stopPropagation();
       playDrum(padType);
-      vibrate([15], vibrateOn);
+      buzz([15], vibrateOn);
 
       const rect = e.currentTarget.getBoundingClientRect();
-      const x = (e.touches ? e.touches[0].clientX : e.clientX) - rect.left;
-      const y = (e.touches ? e.touches[0].clientY : e.clientY) - rect.top;
+      const x = e.clientX - rect.left;
+      const y = e.clientY - rect.top;
       const rippleId = nextId();
       setDrumRipples((prev) => [...prev, { id: rippleId, padType, x, y }]);
-      setTimeout(
+      scheduleTimeout(
         () => setDrumRipples((prev) => prev.filter((r) => r.id !== rippleId)),
         400,
       );
     },
-    [vibrateOn],
+    [scheduleTimeout, vibrateOn],
   );
 
   return (
@@ -46,8 +56,7 @@ export default function DrumsGame({ vibrateOn = true }) {
           key={pad.type}
           className="drum-pad"
           style={{ background: pad.bg }}
-          onTouchStart={(e) => handleDrumTap(pad.type, e)}
-          onMouseDown={(e) => handleDrumTap(pad.type, e)}
+          onPointerDown={(e) => handleDrumTap(pad.type, e)}
         >
           <span className="drum-pad-emoji">{pad.emoji}</span>
           {drumRipples

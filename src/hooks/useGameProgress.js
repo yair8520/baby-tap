@@ -68,7 +68,7 @@ const isBestStarsStorageValue = (value) =>
 
 /**
  * Persist the best star score for each level. Numeric cumulative values from
- * older releases are accepted long enough to migrate safely to an empty list.
+ * older releases are accepted long enough to migrate to capped per-level scores.
  */
 export function useGameBestStars(modeId, maxLevels) {
   const key = MODE_STARS_KEYS[modeId] ?? `${modeId}Stars`;

@@ -1,7 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import {
   IS_TOUCH,
-  canVibrate,
   NUMBER_EMOJIS,
   LETTER_EMOJIS,
   HEBREW_LETTER_EMOJIS,
@@ -9,6 +8,7 @@ import {
   COMBO_HOT_EMOJIS,
   COMBO_ULTRA_EMOJIS,
 } from "../../constants.js";
+import { buzz } from "../../components/LearningGameShell/vibrate.js";
 import {
   getAudioCtx,
   playMelodyNote,
@@ -23,14 +23,6 @@ function songDisplayName(song, lang = "he") {
   if (!song?.name) return "";
   if (typeof song.name === "string") return song.name;
   return song.name[lang] || song.name.he || song.name.en || "";
-}
-
-function vibrate(pattern, vibrateOn) {
-  if (!vibrateOn) return;
-  if (canVibrate) navigator.vibrate(pattern);
-  window.ReactNativeWebView?.postMessage(
-    JSON.stringify({ type: "vibrate", pattern }),
-  );
 }
 
 /**
@@ -106,7 +98,7 @@ export default function ClassicGame({
   }, [activeColors]);
 
   const doVibrate = useCallback((pattern) => {
-    vibrate(pattern, vibrateOnRef.current);
+    buzz(pattern, vibrateOnRef.current);
   }, []);
 
   const resetIdle = useCallback(() => {

@@ -410,11 +410,9 @@ export default function SleepGame({ lang = "he", muteOn = false }) {
         setSleepMenuOpen(false);
       }
     };
-    document.addEventListener("mousedown", handler);
-    document.addEventListener("touchstart", handler);
+    document.addEventListener("pointerdown", handler);
     return () => {
-      document.removeEventListener("mousedown", handler);
-      document.removeEventListener("touchstart", handler);
+      document.removeEventListener("pointerdown", handler);
     };
   }, [sleepMenuOpen]);
 
@@ -514,12 +512,8 @@ export default function SleepGame({ lang = "he", muteOn = false }) {
 
       <button
         className="sleep-menu-toggle"
-        onTouchEnd={(e) => {
+        onPointerUp={(e) => {
           e.preventDefault();
-          e.stopPropagation();
-          setSleepMenuOpen((v) => !v);
-        }}
-        onMouseUp={(e) => {
           e.stopPropagation();
           setSleepMenuOpen((v) => !v);
         }}
@@ -551,12 +545,8 @@ export default function SleepGame({ lang = "he", muteOn = false }) {
           <div className="sleep-control-row">
             <button
               className={`sleep-action-btn${sleepEnabled ? " active" : ""}`}
-              onTouchEnd={(e) => {
+              onPointerUp={(e) => {
                 e.preventDefault();
-                e.stopPropagation();
-                setSleepEnabled((v) => !v);
-              }}
-              onMouseUp={(e) => {
                 e.stopPropagation();
                 setSleepEnabled((v) => !v);
               }}
@@ -571,13 +561,8 @@ export default function SleepGame({ lang = "he", muteOn = false }) {
             </button>
             <button
               className="sleep-action-btn"
-              onTouchEnd={(e) => {
+              onPointerUp={(e) => {
                 e.preventDefault();
-                e.stopPropagation();
-                setSleepEnabled(false);
-                setSleepMenuOpen(false);
-              }}
-              onMouseUp={(e) => {
                 e.stopPropagation();
                 setSleepEnabled(false);
                 setSleepMenuOpen(false);
@@ -631,13 +616,8 @@ export default function SleepGame({ lang = "he", muteOn = false }) {
               <button
                 key={s.id}
                 className={`sleep-noise-btn${sleepSoundMode === s.id ? " active" : ""}`}
-                onTouchEnd={(e) => {
+                onPointerUp={(e) => {
                   e.preventDefault();
-                  e.stopPropagation();
-                  setSleepSoundMode(s.id);
-                  setSleepEnabled(true);
-                }}
-                onMouseUp={(e) => {
                   e.stopPropagation();
                   setSleepSoundMode(s.id);
                   setSleepEnabled(true);
@@ -652,12 +632,8 @@ export default function SleepGame({ lang = "he", muteOn = false }) {
           <div className="sleep-melodies-toggle-row">
             <button
               className="sleep-melodies-toggle"
-              onTouchEnd={(e) => {
+              onPointerUp={(e) => {
                 e.preventDefault();
-                e.stopPropagation();
-                setSleepMelodiesOpen((v) => !v);
-              }}
-              onMouseUp={(e) => {
                 e.stopPropagation();
                 setSleepMelodiesOpen((v) => !v);
               }}
@@ -694,13 +670,8 @@ export default function SleepGame({ lang = "he", muteOn = false }) {
                 <button
                   key={s.id}
                   className={`sleep-noise-btn${sleepSoundMode === s.id ? " active" : ""}`}
-                  onTouchEnd={(e) => {
+                  onPointerUp={(e) => {
                     e.preventDefault();
-                    e.stopPropagation();
-                    setSleepSoundMode(s.id);
-                    setSleepEnabled(true);
-                  }}
-                  onMouseUp={(e) => {
                     e.stopPropagation();
                     setSleepSoundMode(s.id);
                     setSleepEnabled(true);

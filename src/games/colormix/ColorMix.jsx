@@ -11,6 +11,7 @@ import {
 import { LearningGameShell, starsFromMistakes } from '../../components/LearningGameShell';
 import { useGameBestStars, useGameLevel } from '../../hooks/useGameProgress.js';
 import { useResponsiveGameViewport } from '../../hooks/useResponsiveGameViewport.js';
+import { buzz } from '../../components/LearningGameShell/vibrate.js';
 import './ColorMix.css';
 
 // ─── SparkBurst ───────────────────────────────────────────────────────────────
@@ -81,6 +82,21 @@ export default function ColorMix({ onExit, lang = 'he', vibrateOn = true }) {
   const targetsRef   = useRef([]);
   const mistakesRef  = useRef(0);
   const completeTimerRef = useRef(null);
+  const timeoutIdsRef = useRef(new Set());
+
+  const scheduleTimeout = useCallback((callback, delay) => {
+    const id = setTimeout(() => {
+      timeoutIdsRef.current.delete(id);
+      callback();
+    }, delay);
+    timeoutIdsRef.current.add(id);
+    return id;
+  }, []);
+
+  const clearScheduledTimeouts = useCallback(() => {
+    timeoutIdsRef.current.forEach(clearTimeout);
+    timeoutIdsRef.current.clear();
+  }, []);
 
   useEffect(() => { bowlsRef.current   = bowls;    }, [bowls]);
   useEffect(() => { targetsRef.current = targets;  }, [targets]);
@@ -89,7 +105,7 @@ export default function ColorMix({ onExit, lang = 'he', vibrateOn = true }) {
   // Build level
   useEffect(() => {
     if (!W || !H) return;
-    const initializeTimer = setTimeout(() => {
+    const initializeTimer = scheduleTimeout(() => {
       const { targets: t, bowls: b, sources: s } = buildLevel(levelIdx, W, H);
       setTargets(t);
       setBowls(b);
@@ -105,9 +121,17 @@ export default function ColorMix({ onExit, lang = 'he', vibrateOn = true }) {
     }, 0);
     return () => {
       clearTimeout(initializeTimer);
-      clearTimeout(completeTimerRef.current);
+      clearScheduledTimeouts();
     };
-  }, [levelIdx, roundKey, W, H]);
+  }, [clearScheduledTimeouts, levelIdx, roundKey, W, H, scheduleTimeout]);
+
+  useEffect(() => {
+    const timeoutIds = timeoutIdsRef.current;
+    return () => {
+      timeoutIds.forEach(clearTimeout);
+      timeoutIds.clear();
+    };
+  }, []);
 
   // ── Bowl logic ──────────────────────────────────────────────────────────────
 
@@ -123,17 +147,17 @@ export default function ColorMix({ onExit, lang = 'he', vibrateOn = true }) {
 
     if (tgt) {
       // Correct!
-      if (vibrateOn) navigator.vibrate?.([40, 25, 90]);
+      buzz([40, 25, 90], vibrateOn);
 
       // Flash match on target
       setMatchedTgtId(tgt.id);
-      setTimeout(() => setMatchedTgtId(null), 700);
+      scheduleTimeout(() => setMatchedTgtId(null), 700);
 
       // Sparks
       const sparkId = Date.now() + Math.random();
       const mix = MIX_TABLE[key];
       setSparks(prev => [...prev, { id: sparkId, x: tgt.cx, y: tgt.cy, color: mix.resultFill }]);
-      setTimeout(() => setSparks(prev => prev.filter(s => s.id !== sparkId)), 950);
+      scheduleTimeout(() => setSparks(prev => prev.filter(s => s.id !== sparkId)), 950);
 
       // Mark target matched, clear bowl
       setTargets(prev => prev.map(t => t.id === tgt.id ? { ...t, matched: true } : t));
@@ -143,19 +167,19 @@ export default function ColorMix({ onExit, lang = 'he', vibrateOn = true }) {
       const newMatched = targets.filter(t => t.matched).length + 1;
       if (newMatched >= targets.length) {
         recordStars(levelIdx, starsFromMistakes(mistakesRef.current));
-        completeTimerRef.current = setTimeout(() => setLevelDone(true), 700);
+        completeTimerRef.current = scheduleTimeout(() => setLevelDone(true), 700);
       }
     } else {
       // Wrong combo — shake bowl, return circles
-      if (vibrateOn) navigator.vibrate?.([80, 40, 80]);
+      buzz([80, 40, 80], vibrateOn);
       setWrongBowlId(bowlId);
       setMistakes(m => m + 1);
-      setTimeout(() => {
+      scheduleTimeout(() => {
         setWrongBowlId(null);
         setBowls(prev => prev.map(b => b.id === bowlId ? { ...b, slot1: null, slot2: null } : b));
       }, 500);
     }
-  }, [levelIdx, recordStars, vibrateOn]);
+  }, [levelIdx, recordStars, scheduleTimeout, vibrateOn]);
 
   // ── Pointer handlers ────────────────────────────────────────────────────────
 
@@ -215,7 +239,7 @@ export default function ColorMix({ onExit, lang = 'he', vibrateOn = true }) {
       }));
 
       // Check after state update
-      setTimeout(() => {
+      scheduleTimeout(() => {
         const updated = bowlsRef.current.find(b => b.id === nearest.id);
         if (updated && updated.slot1 && updated.slot2) {
           checkBowl(nearest.id);
@@ -223,7 +247,7 @@ export default function ColorMix({ onExit, lang = 'he', vibrateOn = true }) {
       }, 50);
     }
     // else: just drop nowhere — circle vanishes (source respawns immediately anyway)
-  }, [checkBowl]);
+  }, [checkBowl, scheduleTimeout]);
 
   // ── Derived ─────────────────────────────────────────────────────────────────
 

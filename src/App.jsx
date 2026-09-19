@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import "./App.css";
 import ShapeMatch from "./games/shapematch";
 import ColorMix from "./games/colormix";
@@ -15,7 +15,6 @@ import { Targets } from "./games/targets";
 import {
   isHebrew as defaultHebrew,
   isWebView,
-  canVibrate,
 } from "./constants.js";
 
 import {
@@ -31,6 +30,7 @@ import SettingsMenu from "./components/SettingsMenu/index.jsx";
 import MemoryGame from "./games/memory/MemoryGame.jsx";
 import ShapesGame from "./games/shapes/ShapesGame.jsx";
 import { getT } from "./i18n/index.js";
+import { buzz } from "./components/LearningGameShell/vibrate.js";
 
 const THEME_PRESETS = {
   space: {
@@ -84,6 +84,13 @@ const GAME_MODE_IDS = [
   "shapememory",
   "pattern",
 ];
+const LEARNING_MODE_IDS = new Set([
+  "shapematch",
+  "colormix",
+  "sizesort",
+  "shapememory",
+  "pattern",
+]);
 export default function App() {
   const [lang, setLang] = useLocalStorage(
     STORAGE_KEYS.lang,
@@ -91,7 +98,7 @@ export default function App() {
     LANGUAGE_IDS,
   );
   const isHebrewUI = lang === "he";
-  const t = getT(lang);
+  const t = useMemo(() => getT(lang), [lang]);
   const [theme, setTheme] = useLocalStorage(
     STORAGE_KEYS.theme,
     "space",
@@ -152,11 +159,7 @@ export default function App() {
   }, [isHebrewUI, lang, t]);
 
   const vibrate = useCallback((pattern) => {
-    if (!vibrateRef.current) return;
-    if (canVibrate) navigator.vibrate(pattern);
-    window.ReactNativeWebView?.postMessage(
-      JSON.stringify({ type: "vibrate", pattern }),
-    );
+    buzz(pattern, vibrateRef.current);
   }, []);
 
   useEffect(() => {
@@ -266,6 +269,7 @@ export default function App() {
   }, []);
 
   const C = 2 * Math.PI * 22;
+  const learningModeActive = LEARNING_MODE_IDS.has(gameMode);
 
   return (
     <div ref={containerRef} className={`app theme-${theme}`}>
@@ -343,7 +347,7 @@ export default function App() {
 
       {isFullscreen && (
         <>
-          <button
+          {!learningModeActive && <button
             type="button"
             className="corner-hold"
             aria-label={t("common.exitFullscreen")}
@@ -382,9 +386,9 @@ export default function App() {
                 ✕
               </text>
             </svg>
-          </button>
+          </button>}
 
-          <div className="settings-wrap" ref={settingsRef}>
+          {!learningModeActive && <div className="settings-wrap" ref={settingsRef}>
             <button
               className={`settings-gear-btn${showSettingsHint ? " settings-gear-pulse" : ""}`}
               type="button"
@@ -423,10 +427,11 @@ export default function App() {
                 onClose={() => setSettingsOpen(false)}
               />
             )}
-          </div>
+          </div>}
 
           {gameMode === "classic" && (
             <ClassicGame
+              key={`classic-${progressEpoch}`}
               lang={lang}
               activeEmojis={activeEmojis}
               activeColors={activeTheme.colors}
@@ -443,7 +448,12 @@ export default function App() {
             />
           )}
 
-          {gameMode === "drums" && <DrumsGame vibrateOn={vibrateOn} />}
+          {gameMode === "drums" && (
+            <DrumsGame
+              key={`drums-${progressEpoch}`}
+              vibrateOn={vibrateOn}
+            />
+          )}
 
           {gameMode === "targets" && (
             <Targets
@@ -455,11 +465,19 @@ export default function App() {
           )}
 
           {gameMode === "autoshow" && (
-            <SleepGame lang={lang} muteOn={muteOn} />
+            <SleepGame
+              key={`autoshow-${progressEpoch}`}
+              lang={lang}
+              muteOn={muteOn}
+            />
           )}
 
           {gameMode === "piano" && (
-            <PianoGame lang={lang} vibrateOn={vibrateOn} />
+            <PianoGame
+              key={`piano-${progressEpoch}`}
+              lang={lang}
+              vibrateOn={vibrateOn}
+            />
           )}
 
           {gameMode === "memory" && (
@@ -494,7 +512,7 @@ export default function App() {
           key={`shapematch-${progressEpoch}`}
           onExit={() => setGameMode("classic")}
           lang={lang}
-          vibrateOn={vibrateOn && canVibrate}
+          vibrateOn={vibrateOn}
         />
       )}
 
@@ -503,7 +521,7 @@ export default function App() {
           key={`colormix-${progressEpoch}`}
           onExit={() => setGameMode("classic")}
           lang={lang}
-          vibrateOn={vibrateOn && canVibrate}
+          vibrateOn={vibrateOn}
         />
       )}
 
@@ -512,7 +530,7 @@ export default function App() {
           key={`sizesort-${progressEpoch}`}
           onExit={() => setGameMode("classic")}
           lang={lang}
-          vibrateOn={vibrateOn && canVibrate}
+          vibrateOn={vibrateOn}
         />
       )}
 
@@ -521,7 +539,7 @@ export default function App() {
           key={`shapememory-${progressEpoch}`}
           onExit={() => setGameMode("classic")}
           lang={lang}
-          vibrateOn={vibrateOn && canVibrate}
+          vibrateOn={vibrateOn}
         />
       )}
 
@@ -530,7 +548,7 @@ export default function App() {
           key={`pattern-${progressEpoch}`}
           onExit={() => setGameMode("classic")}
           lang={lang}
-          vibrateOn={vibrateOn && canVibrate}
+          vibrateOn={vibrateOn}
         />
       )}
     </div>

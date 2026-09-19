@@ -7,10 +7,21 @@ const isStarCount = (value) =>
   Number.isInteger(value) && value >= 0 && value <= 3;
 
 /**
- * Normalize persisted best scores. Legacy cumulative numbers intentionally
- * become an empty record because they cannot be assigned to individual levels.
+ * Normalize persisted best scores. Legacy cumulative totals are deterministically
+ * distributed from the first level onward and capped at three stars per level.
  */
 export function normalizeBestStars(value, maxLevels = Infinity) {
+  if (Number.isInteger(value) && value >= 0) {
+    if (!Number.isInteger(maxLevels) || maxLevels < 0) return [];
+    let remaining = Math.min(value, maxLevels * 3);
+    const migrated = [];
+    while (remaining > 0 && migrated.length < maxLevels) {
+      const stars = Math.min(3, remaining);
+      migrated.push(stars);
+      remaining -= stars;
+    }
+    return migrated;
+  }
   if (!Array.isArray(value)) return [];
 
   const limit =

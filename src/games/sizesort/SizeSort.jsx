@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { buildLevel } from './levels.js';
+import { useGameLevel, useGameStars } from '../../hooks/useGameProgress.js';
 import './SizeSort.css';
 
 // ─── SparkBurst ───────────────────────────────────────────────────────────────
@@ -38,7 +39,7 @@ export default function SizeSort({ onExit, lang = 'he', vibrateOn = true }) {
   const [W, setW]    = useState(window.innerWidth);
   const [H, setH]    = useState(window.innerHeight);
 
-  const [levelIdx,  setLevelIdx]  = useState(0);
+  const [levelIdx,  setLevelIdx]  = useGameLevel('sizesort', 0);
   const [slots,     setSlots]     = useState([]);
   const [pieces,    setPieces]    = useState([]);
   const [dragging,  setDragging]  = useState(null);
@@ -49,7 +50,7 @@ export default function SizeSort({ onExit, lang = 'he', vibrateOn = true }) {
   const [sparks,    setSparks]    = useState([]);
   const [mistakes,  setMistakes]  = useState(0);
   const [levelDone, setLevelDone] = useState(false);
-  const [totalStars,setTotalStars]= useState(0);
+  const [totalStars,setTotalStars]= useGameStars('sizesort', 0);
 
   const draggingRef  = useRef(null);
   const piecesRef    = useRef([]);

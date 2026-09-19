@@ -7,6 +7,7 @@ import {
   mixKey,
   buildLevel,
 } from './levels.js';
+import { useGameLevel, useGameStars } from '../../hooks/useGameProgress.js';
 import './ColorMix.css';
 
 // ─── SparkBurst ───────────────────────────────────────────────────────────────
@@ -45,7 +46,7 @@ export default function ColorMix({ onExit, lang = 'he', vibrateOn = true }) {
   const [W, setW]    = useState(window.innerWidth);
   const [H, setH]    = useState(window.innerHeight);
 
-  const [levelIdx,    setLevelIdx]    = useState(0);
+  const [levelIdx,    setLevelIdx]    = useGameLevel('colormix', 0);
   const [targets,     setTargets]     = useState([]);
   const [bowls,       setBowls]       = useState([]);
   const [sources,     setSources]     = useState([]);
@@ -57,7 +58,7 @@ export default function ColorMix({ onExit, lang = 'he', vibrateOn = true }) {
   const [sparks,        setSparks]        = useState([]);
   const [levelDone,     setLevelDone]     = useState(false);
   const [mistakes,      setMistakes]      = useState(0);
-  const [totalStars,    setTotalStars]    = useState(0);
+  const [totalStars,    setTotalStars]    = useGameStars('colormix', 0);
 
   // Refs for pointer handlers
   const draggingRef  = useRef(null);

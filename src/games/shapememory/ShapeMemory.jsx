@@ -5,6 +5,7 @@ import {
   buildSequence,
   buildPalette,
 } from './levels.js';
+import { useGameLevel } from '../../hooks/useGameProgress.js';
 import './ShapeMemory.css';
 
 // ─── Countdown Ring ──────────────────────────────────────────────────────────
@@ -39,7 +40,7 @@ function CountdownRing({ remaining, total }) {
 // ─── Main Component ───────────────────────────────────────────────────────────
 
 export default function ShapeMemory({ onExit, lang = 'he', vibrateOn = true }) {
-  const [levelIdx, setLevelIdx]     = useState(0);
+  const [levelIdx, setLevelIdx]     = useGameLevel('shapememory', 0);
   const [phase, setPhase]           = useState('show'); // 'show' | 'recall'
   const [sequence, setSequence]     = useState([]);
   const [userAnswers, setUserAnswers] = useState([]);

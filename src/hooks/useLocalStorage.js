@@ -20,7 +20,10 @@ export function useLocalStorage(key, defaultValue) {
 
   useEffect(() => {
     try {
-      localStorage.setItem(storageKey, JSON.stringify(value));
+      const serialized = JSON.stringify(value);
+      // Skip no-op writes (avoids thrashing on mount when value matches storage)
+      if (localStorage.getItem(storageKey) === serialized) return;
+      localStorage.setItem(storageKey, serialized);
     } catch {
       // localStorage unavailable (private mode, quota exceeded)
     }

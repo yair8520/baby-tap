@@ -45,6 +45,7 @@ import {
 } from "./audio.js";
 
 import { useLocalStorage } from "./hooks/useLocalStorage.js";
+import { STORAGE_KEYS } from "./storage/keys.js";
 import SettingsMenu from "./components/SettingsMenu/index.jsx";
 import MemoryGame from "./games/memory/MemoryGame.jsx";
 import ShapesGame from "./games/shapes/ShapesGame.jsx";
@@ -232,10 +233,10 @@ function songDisplayName(song, lang = "he") {
 
 // ── Main component ─────────────────────────────────────────────────────────────
 export default function App() {
-  const [lang, setLang] = useLocalStorage("lang", defaultHebrew ? "he" : "en");
+  const [lang, setLang] = useLocalStorage(STORAGE_KEYS.lang, defaultHebrew ? "he" : "en");
   const isHebrewUI = lang === "he";
   const ui = UI_TEXT[lang];
-  const [theme, setTheme] = useLocalStorage("theme", "space");
+  const [theme, setTheme] = useLocalStorage(STORAGE_KEYS.theme, "space");
   const activeTheme = THEME_PRESETS[theme] || THEME_PRESETS.space;
   const activeEmojis = activeTheme.emojis;
   const activeColors = activeTheme.colors;
@@ -249,15 +250,24 @@ export default function App() {
     () => Math.min(window.innerWidth, window.innerHeight) <= 900,
   );
   const [holdProgress, setHoldProgress] = useState(0);
-  const [vibrateOn, setVibrateOn] = useLocalStorage("vibrateOn", true);
-  const [muteOn, setMuteOn] = useLocalStorage("muteOn", false);
-  const [gameMode, setGameMode] = useLocalStorage("gameMode", "classic"); // 'classic' | 'balloons' | 'drums' | 'targets' | 'piano' | 'autoshow' | 'memory' | 'shapes'
+  const [vibrateOn, setVibrateOn] = useLocalStorage(STORAGE_KEYS.vibrateOn, true);
+  const [muteOn, setMuteOn] = useLocalStorage(STORAGE_KEYS.muteOn, false);
+  const [gameMode, setGameMode] = useLocalStorage(STORAGE_KEYS.gameMode, "classic");
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [showSettingsHint, setShowSettingsHint] = useState(false);
-  const [sleepSoundMode, setSleepSoundMode] = useState("rain");
-  const [sleepVolume, setSleepVolume] = useState(0.5);
+  const [sleepSoundMode, setSleepSoundMode] = useLocalStorage(
+    STORAGE_KEYS.sleepSoundMode,
+    "rain",
+  );
+  const [sleepVolume, setSleepVolume] = useLocalStorage(
+    STORAGE_KEYS.sleepVolume,
+    0.5,
+  );
   const [sleepMenuOpen, setSleepMenuOpen] = useState(true);
-  const [sleepEnabled, setSleepEnabled] = useState(true);
+  const [sleepEnabled, setSleepEnabled] = useLocalStorage(
+    STORAGE_KEYS.sleepEnabled,
+    true,
+  );
   const [sleepMelodiesOpen, setSleepMelodiesOpen] = useState(false);
 
   // ── Classic mode state ───────────────────────────────────────────────────────
@@ -284,9 +294,15 @@ export default function App() {
   const balloonLevelRef = useRef(1);
   const balloonsRef = useRef([]);
   // Persist balloon level progress across sessions
-  const [balloonSavedLevel, setBalloonSavedLevel] = useLocalStorage("balloonLevel", 1);
+  const [balloonSavedLevel, setBalloonSavedLevel] = useLocalStorage(
+    STORAGE_KEYS.balloonLevel,
+    1,
+  );
   // Persist target high score across sessions
-  const [targetHighScore, setTargetHighScore] = useLocalStorage("targetHighScore", 0);
+  const [targetHighScore, setTargetHighScore] = useLocalStorage(
+    STORAGE_KEYS.targetHighScore,
+    0,
+  );
 
   // ── Drum mode state ──────────────────────────────────────────────────────────
   const [drumRipples, setDrumRipples] = useState([]);
@@ -1188,6 +1204,7 @@ export default function App() {
     if (newLevel > balloonLevelRef.current) {
       balloonLevelRef.current = newLevel;
       setBalloonLevel(newLevel);
+      setBalloonSavedLevel(newLevel); // persist immediately on level-up
       setBalloonLevelUp({ level: newLevel });
       vibrate([60, 30, 80]);
       setTimeout(() => setBalloonLevelUp(null), 2000);

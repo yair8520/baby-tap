@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { MEMORY_LEVELS, buildDeck } from "./levels.js";
 import { useLocalStorage } from "../../hooks/useLocalStorage.js";
+import { STORAGE_KEYS } from "../../storage/keys.js";
 import "./MemoryGame.css";
 
 /** Compute the largest square card that fits both screen width & height */
@@ -39,7 +40,7 @@ export default function MemoryGame({ lang, onSound }) {
   const isHe = lang === "he";
   const L = (he, en) => (isHe ? he : en);
 
-  const [levelIdx, setLevelIdx] = useLocalStorage("memoryLevel", 0);
+  const [levelIdx, setLevelIdx] = useLocalStorage(STORAGE_KEYS.memoryLevel, 0);
   const [cards, setCards] = useState([]);
   const [flipped, setFlipped] = useState([]);
   const [matched, setMatched] = useState(new Set());

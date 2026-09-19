@@ -6,6 +6,7 @@ import {
   SNAP,
   buildLevel,
 } from './levels.js';
+import { useGameLevel, useGameStars } from '../../hooks/useGameProgress.js';
 import './ShapeMatch.css';
 
 // ─── Spark burst on correct match ─────────────────────────────────────────────
@@ -44,7 +45,7 @@ export default function ShapeMatch({ onExit, lang = 'he', vibrateOn = true }) {
   const [w, setW]     = useState(window.innerWidth);
   const [h, setH]     = useState(window.innerHeight);
 
-  const [levelIdx,   setLevelIdx]   = useState(0);
+  const [levelIdx,   setLevelIdx]   = useGameLevel('shapematch', 0);
   const [slots,      setSlots]      = useState([]);
   const [pieces,     setPieces]     = useState([]);
   const [dragging,   setDragging]   = useState(null); // {pieceId, offX, offY, cx, cy}
@@ -59,7 +60,7 @@ export default function ShapeMatch({ onExit, lang = 'he', vibrateOn = true }) {
   const [sparks,     setSparks]     = useState([]);    // {id, x, y, color}
   const [mistakes,   setMistakes]   = useState(0);
   const [levelDone,  setLevelDone]  = useState(false);
-  const [totalStars, setTotalStars] = useState(0);
+  const [totalStars, setTotalStars] = useGameStars('shapematch', 0);
 
   // keep refs in sync
   useEffect(() => { piecesRef.current  = pieces;   }, [pieces]);

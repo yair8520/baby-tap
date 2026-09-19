@@ -7,21 +7,6 @@ export const IS_TOUCH =
   navigator.maxTouchPoints > 0 ||
   window.matchMedia("(pointer: coarse)").matches;
 
-// ── UI strings ────────────────────────────────────────────────────────────────
-export const UI = {
-  emojiRow: "👶🏻 🎉 🌈",
-  title: isHebrew ? "בייבי ספארק! ✨" : "Baby Spark! ✨",
-  subtitle: isHebrew
-    ? "תנו לתינוק ללחוץ על המסך\nולראות קסם צבעוני! ✨"
-    : "Let the baby tap the screen\nand see colorful magic! ✨",
-  btn: isHebrew ? "🚀 התחל מסך מלא" : "🚀 Start Fullscreen",
-  hint: isHebrew
-    ? "לצאת: החזק פינה שמאלית-עליונה 2 שניות"
-    : "To exit: hold top-left corner for 2 seconds",
-  ultra: isHebrew ? "👑 עוצמה ×" : "👑 ULTRA ×",
-  fire: isHebrew ? "🔥 לוהט ×" : "🔥 ×",
-};
-
 // ── Emoji lists ───────────────────────────────────────────────────────────────
 export const EMOJIS = [
   "🐶",

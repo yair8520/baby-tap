@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef } from "react";
 import { getAudioCtx } from "../../audio.js";
 import { useLocalStorage } from "../../hooks/useLocalStorage.js";
+import { usePageVisible } from "../../hooks/usePageVisible.js";
 import { STORAGE_KEYS } from "../../storage/keys.js";
 import { isBoolean } from "../../storage/validation.js";
 import {
@@ -10,6 +11,11 @@ import {
   SLEEP_OPUS_URLS,
   SLEEP_SOUND_MODES,
 } from "./sleepCatalog.js";
+import {
+  makeNoiseBuffer,
+  startHeartbeat,
+  startLullaby,
+} from "./sleepToneEngine.js";
 
 export {
   MELODY_SOUNDS,
@@ -39,87 +45,9 @@ async function getSleepOpusBuffer(ctx, url) {
   return sleepOpusBufferCache.get(url);
 }
 
-function makeNoiseBuffer(ctx, kind = "white") {
-  const length = ctx.sampleRate * 2;
-  const buffer = ctx.createBuffer(1, length, ctx.sampleRate);
-  const data = buffer.getChannelData(0);
-  let lastOut = 0;
-  let b0 = 0;
-  let b1 = 0;
-  let b2 = 0;
-  for (let i = 0; i < length; i++) {
-    const white = Math.random() * 2 - 1;
-    if (kind === "brown") {
-      const brown = (lastOut + 0.02 * white) / 1.02;
-      lastOut = brown;
-      data[i] = brown * 3.5;
-    } else if (kind === "pink") {
-      b0 = 0.99886 * b0 + white * 0.0555179;
-      b1 = 0.99586 * b1 + white * 0.0750759;
-      b2 = 0.99332 * b2 + white * 0.153852;
-      const pink = b0 + b1 + b2 + white * 0.3104856;
-      data[i] = pink * 3.5;
-    } else {
-      data[i] = white;
-    }
-  }
-  return buffer;
-}
-
-function startLullaby(ctx, master, mode) {
-  const song = LULLABIES[mode];
-  if (!song) return null;
-
-  const osc = ctx.createOscillator();
-  osc.type = "sine";
-  const gain = ctx.createGain();
-  gain.gain.value = 0.0001;
-  const toneLP = ctx.createBiquadFilter();
-  toneLP.type = "lowpass";
-  toneLP.frequency.value = 1400;
-  toneLP.Q.value = 0.7;
-  const lfo = ctx.createOscillator();
-  lfo.type = "sine";
-  lfo.frequency.value = 4.5;
-  const lfoGain = ctx.createGain();
-  lfoGain.gain.value = 2.2;
-  lfo.connect(lfoGain);
-  lfoGain.connect(osc.frequency);
-  osc.connect(gain);
-  gain.connect(toneLP);
-  toneLP.connect(master);
-
-  let idx = 0;
-  const scheduleNote = () => {
-    const t = ctx.currentTime;
-    const f = song.notes[idx % song.notes.length];
-    idx += 1;
-    osc.frequency.cancelScheduledValues(t);
-    osc.frequency.setValueAtTime(f, t);
-    gain.gain.cancelScheduledValues(t);
-    gain.gain.setValueAtTime(0.0001, t);
-    gain.gain.linearRampToValueAtTime(song.peakGain, t + 0.03);
-    gain.gain.exponentialRampToValueAtTime(0.001, t + song.noteDur * 0.88);
-  };
-
-  osc.start();
-  lfo.start();
-  scheduleNote();
-  const iv = window.setInterval(
-    scheduleNote,
-    Math.max(280, Math.round(song.noteDur * 1000)),
-  );
-
-  return {
-    master,
-    oscillators: [osc, lfo],
-    extra: [gain, toneLP, lfoGain],
-    intervalId: iv,
-  };
-}
-
 /** Persisted sleep prefs + Web Audio engine for ambient modes. */
 export function useSleepAudio(muteOn = false) {
+  const pageVisible = usePageVisible();
   const [sleepSoundMode, setSleepSoundMode] = useLocalStorage(
     STORAGE_KEYS.sleepSoundMode,
     "rain",
@@ -150,6 +78,7 @@ export function useSleepAudio(muteOn = false) {
     if (!nodes) return;
     try {
       if (nodes.intervalId) window.clearInterval(nodes.intervalId);
+      nodes.cleanup?.();
       nodes.sources?.forEach((s) => {
         try {
           s.stop?.();
@@ -233,60 +162,9 @@ export function useSleepAudio(muteOn = false) {
       }
 
       if (mode === "heartbeat") {
-        const heartOsc = ctx.createOscillator();
-        const heartGain = ctx.createGain();
-        const heartLP = ctx.createBiquadFilter();
-        heartLP.type = "lowpass";
-        heartLP.frequency.value = 280;
-        heartLP.Q.value = 0.65;
-        heartOsc.type = "sine";
-        heartOsc.frequency.value = 62;
-        heartGain.gain.value = 0.0001;
-        heartOsc.connect(heartGain);
-        heartGain.connect(heartLP);
-        heartLP.connect(master);
-        heartOsc.start();
-
-        const breathSrc = ctx.createBufferSource();
-        breathSrc.buffer = makeNoiseBuffer(ctx, "pink");
-        breathSrc.loop = true;
-        const breathLP = ctx.createBiquadFilter();
-        breathLP.type = "lowpass";
-        breathLP.frequency.value = 520;
-        breathLP.Q.value = 0.3;
-        const breathGain = ctx.createGain();
-        breathGain.gain.value = 0.006;
-        const breathLFO = ctx.createOscillator();
-        breathLFO.type = "sine";
-        breathLFO.frequency.value = 0.09;
-        const breathLFOGain = ctx.createGain();
-        breathLFOGain.gain.value = 0.012;
-        breathLFO.connect(breathLFOGain);
-        breathLFOGain.connect(breathGain.gain);
-        breathSrc.connect(breathLP);
-        breathLP.connect(breathGain);
-        breathGain.connect(master);
-        breathSrc.start();
-        breathLFO.start();
-
-        const pulse = () => {
-          const t = ctx.currentTime;
-          heartGain.gain.cancelScheduledValues(t);
-          heartGain.gain.setValueAtTime(0.001, t);
-          heartGain.gain.linearRampToValueAtTime(0.22, t + 0.04);
-          heartGain.gain.exponentialRampToValueAtTime(0.001, t + 0.19);
-          heartGain.gain.linearRampToValueAtTime(0.12, t + 0.23);
-          heartGain.gain.exponentialRampToValueAtTime(0.001, t + 0.48);
-        };
-        pulse();
-        const iv = window.setInterval(pulse, 980);
-        sleepAudioRef.current = {
-          master,
-          sources: [breathSrc],
-          oscillators: [heartOsc, breathLFO],
-          extra: [heartGain, heartLP, breathLP, breathGain, breathLFOGain],
-          intervalId: iv,
-        };
+        const nodes = startHeartbeat(ctx, master);
+        if (nodes) sleepAudioRef.current = nodes;
+        else abandonMaster();
         return;
       }
 
@@ -403,7 +281,7 @@ export function useSleepAudio(muteOn = false) {
   );
 
   useEffect(() => {
-    if (muteOn || !sleepEnabled) {
+    if (muteOn || !sleepEnabled || !pageVisible) {
       stopSleepAudio();
       return undefined;
     }
@@ -422,6 +300,7 @@ export function useSleepAudio(muteOn = false) {
   }, [
     muteOn,
     sleepEnabled,
+    pageVisible,
     sleepSoundMode,
     sleepVolume,
     startSleepAudio,

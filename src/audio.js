@@ -20,9 +20,38 @@ export function getAudioCtx() {
   return audioCtx
 }
 
+/** Pause the shared AudioContext to save battery when muted/backgrounded. */
+export function suspendAudio() {
+  if (!audioCtx || audioCtx.state !== 'running') return
+  try {
+    const p = audioCtx.suspend()
+    if (p?.catch) p.catch(() => {})
+  } catch {
+    // AudioContext may already be closed.
+  }
+}
+
+export function resumeAudio() {
+  if (!audioCtx || audioCtx.state !== 'suspended' || globalMute) return
+  try {
+    const p = audioCtx.resume()
+    if (p?.catch) p.catch(() => {})
+  } catch {
+    // AudioContext may already be closed.
+  }
+}
+
 // ── Timeline pointers ─────────────────────────────────────────────────────────
 let nextNoteTime   = 0
-export let nextMelodyTime = 0
+let nextMelodyTime = 0
+
+export function getNextMelodyTime() {
+  return nextMelodyTime
+}
+
+export function resetMelodyTimeline(at = 0) {
+  nextMelodyTime = at
+}
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 function scheduleNote(ctx, freq, type, volume, startAt, dur) {
@@ -81,41 +110,19 @@ export async function playSound(type = 'normal') {
 // ── Melody note player ────────────────────────────────────────────────────────
 export async function playMelodyNote(noteIdxRef, songIdxRef, setSongName, setShowSongName, songNameTimerRef, lang = 'he', scheduleTimeout = setTimeout) {
   if (globalMute) return
+
   const song = PIANO_SONGS[songIdxRef.current]
-  const [freq, beats] = song.notes[noteIdxRef.current]
+  if (!song?.notes?.length) return
+  const note = song.notes[noteIdxRef.current]
+  if (!note) return
+
+  const [freq, beats] = note
   const beat  = 60 / song.bpm
-  const dur   = beats * beat * 0.88
-  const slot  = beats * beat
+  const dur   = Math.max(0.05, beats * beat * 0.88)
+  const slot  = Math.max(0.05, beats * beat)
 
-  try {
-    const ctx = getAudioCtx()
-    if (ctx.state === 'suspended') await ctx.resume()
-
-    const now     = ctx.currentTime
-    const startAt = nextMelodyTime > now ? nextMelodyTime : now
-    nextMelodyTime = startAt + slot
-
-    const osc  = ctx.createOscillator()
-    const gain = ctx.createGain()
-    osc.connect(gain); gain.connect(ctx.destination)
-    osc.frequency.value = freq
-    osc.type = 'sine'
-    gain.gain.setValueAtTime(0.28, startAt)
-    gain.gain.exponentialRampToValueAtTime(0.001, startAt + dur)
-    osc.start(startAt); osc.stop(startAt + dur)
-
-    const osc2  = ctx.createOscillator()
-    const gain2 = ctx.createGain()
-    osc2.connect(gain2); gain2.connect(ctx.destination)
-    osc2.frequency.value = freq * 1.5
-    osc2.type = 'triangle'
-    gain2.gain.setValueAtTime(0.07, startAt)
-    gain2.gain.exponentialRampToValueAtTime(0.001, startAt + dur * 0.6)
-    osc2.start(startAt); osc2.stop(startAt + dur * 0.6)
-  } catch {
-    // Keep advancing the melody when audio playback is unavailable.
-  }
-
+  // Advance the score immediately so rapid taps cannot re-read the same note
+  // while we await AudioContext.resume().
   noteIdxRef.current++
   if (noteIdxRef.current >= song.notes.length) {
     noteIdxRef.current = 0
@@ -125,6 +132,40 @@ export async function playMelodyNote(noteIdxRef, songIdxRef, setSongName, setSho
     setShowSongName(true)
     clearTimeout(songNameTimerRef.current)
     songNameTimerRef.current = scheduleTimeout(() => setShowSongName(false), 2200)
+  }
+
+  try {
+    const ctx = getAudioCtx()
+    if (ctx.state === 'suspended') await ctx.resume()
+
+    const now     = ctx.currentTime
+    // If the timeline drifted far ahead (tab backgrounded), snap back.
+    const startAt = nextMelodyTime > now && nextMelodyTime - now < 2.5
+      ? nextMelodyTime
+      : now
+    nextMelodyTime = startAt + slot
+
+    const osc  = ctx.createOscillator()
+    const gain = ctx.createGain()
+    osc.connect(gain); gain.connect(ctx.destination)
+    osc.frequency.value = freq
+    osc.type = 'sine'
+    gain.gain.setValueAtTime(0.0001, startAt)
+    gain.gain.linearRampToValueAtTime(0.32, startAt + 0.012)
+    gain.gain.exponentialRampToValueAtTime(0.001, startAt + dur)
+    osc.start(startAt); osc.stop(startAt + dur + 0.02)
+
+    const osc2  = ctx.createOscillator()
+    const gain2 = ctx.createGain()
+    osc2.connect(gain2); gain2.connect(ctx.destination)
+    osc2.frequency.value = freq * 1.5
+    osc2.type = 'triangle'
+    gain2.gain.setValueAtTime(0.0001, startAt)
+    gain2.gain.linearRampToValueAtTime(0.09, startAt + 0.01)
+    gain2.gain.exponentialRampToValueAtTime(0.001, startAt + dur * 0.6)
+    osc2.start(startAt); osc2.stop(startAt + dur * 0.6 + 0.02)
+  } catch {
+    // Keep advancing the melody when audio playback is unavailable.
   }
 }
 

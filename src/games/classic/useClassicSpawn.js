@@ -9,7 +9,7 @@ import {
 import {
   getAudioCtx,
   playMelodyNote,
-  nextMelodyTime,
+  getNextMelodyTime,
 } from "../../audio.js";
 import { PIANO_SONGS } from "../piano/levels.js";
 import { rand, randInt, nextId } from "../../utils/random.js";
@@ -132,7 +132,7 @@ export function useClassicSpawn({
       setParticles((prev) => [...prev, ...newParticles]);
 
       const ctx = getAudioCtx();
-      if (!ctx || nextMelodyTime - ctx.currentTime < 0.9) {
+      if (!ctx || getNextMelodyTime() - ctx.currentTime < 0.9) {
         playMelody();
       }
     },
@@ -184,6 +184,7 @@ export function useClassicSpawn({
   useEffect(() => {
     let lastShake = 0;
     const onMotion = (e) => {
+      if (document.visibilityState === "hidden") return;
       const acc = e.accelerationIncludingGravity;
       if (!acc) return;
       const mag = Math.sqrt(

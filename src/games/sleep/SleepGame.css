@@ -509,3 +509,19 @@
 .sleep-volume-row input[type="range"] {
   width: 100%;
 }
+
+.app-paused .sleep-scene *,
+.app-paused .sleep-falling-star,
+.app-paused .sleep-falling-sheep-emoji,
+.app-paused .sleep-cloud,
+.app-paused .sleep-sheep,
+.app-paused .sleep-sheep::after {
+  animation-play-state: paused !important;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sleep-scene * {
+    animation: none !important;
+  }
+}
+

@@ -84,6 +84,12 @@ body, html, #root {
   border-radius: 50%;
   filter: blur(70px);
   mix-blend-mode: screen;
+  will-change: transform;
+}
+
+.bg-aurora--lite .aurora-blob {
+  filter: blur(40px);
+  opacity: 0.85;
 }
 
 .aurora-blob-1 {
@@ -460,3 +466,32 @@ body, html, #root {
 @media (max-width: 380px) {
   .start-emoji-row { font-size: clamp(28px, 10vw, 38px); }
 }
+
+/* Pause ambient CSS work when the tab is backgrounded (battery). */
+.app-paused .aurora-blob,
+.app-paused .bg-stars,
+.app-paused .theme-symbol,
+.app-paused .bubble {
+  animation-play-state: paused !important;
+}
+
+/* Phones: fewer / cheaper ambient layers on the start screen. */
+@media (max-width: 900px) {
+  .aurora-blob {
+    filter: blur(40px);
+  }
+  .aurora-blob-3,
+  .aurora-blob-4 {
+    display: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .aurora-blob,
+  .bg-stars,
+  .theme-symbol,
+  .bubble {
+    animation: none !important;
+  }
+}
+

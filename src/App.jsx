@@ -6,14 +6,16 @@ import {
   isWebView,
 } from "./constants";
 
-import { setGlobalMute, playSound } from "./audio.js";
+import { setGlobalMute, playSound, suspendAudio, resumeAudio } from "./audio.js";
 
 import { useLocalStorage } from "./hooks/useLocalStorage.js";
+import { usePageVisible } from "./hooks/usePageVisible.js";
 import { STORAGE_KEYS } from "./storage/keys.js";
 import { clearStoredProgress } from "./storage/progress.js";
 import { isBoolean } from "./storage/validation.js";
 import { SettingsMenu } from "./components/SettingsMenu";
 import { ActiveGame } from "./components/ActiveGame";
+import { AmbientBackground } from "./components/AmbientBackground";
 import { getT } from "./i18n/index.js";
 import { LangProvider } from "./i18n/LangProvider.jsx";
 import { buzz } from "./components/LearningGameShell/vibrate.js";
@@ -62,6 +64,7 @@ const LANGUAGE_IDS = ["he", "en"];
 const THEME_IDS = Object.keys(THEME_PRESETS);
 
 export default function App() {
+  const pageVisible = usePageVisible();
   const [lang, setLang] = useLocalStorage(
     STORAGE_KEYS.lang,
     defaultHebrew ? "he" : "en",
@@ -121,7 +124,12 @@ export default function App() {
   useEffect(() => {
     muteRef.current = muteOn;
     setGlobalMute(muteOn);
-  }, [muteOn]);
+    if (muteOn || !pageVisible) {
+      suspendAudio();
+    } else {
+      resumeAudio();
+    }
+  }, [muteOn, pageVisible]);
   useEffect(() => {
     document.title = t("common.title");
   }, [t]);
@@ -214,7 +222,7 @@ export default function App() {
         setHoldProgress(0);
         exitFullscreen();
       }
-    }, 30);
+    }, 50);
   };
 
   const handleCornerEnd = (e) => {
@@ -261,49 +269,21 @@ export default function App() {
 
   return (
     <LangProvider lang={lang}>
-      <div ref={containerRef} className={`app theme-${theme}`}>
+      <div
+        ref={containerRef}
+        className={`app theme-${theme}${pageVisible ? "" : " app-paused"}`}
+      >
         <div className="bg-base" />
-        <div className="bg-aurora">
-          <div className="aurora-blob aurora-blob-1" />
-          <div className="aurora-blob aurora-blob-2" />
-          <div className="aurora-blob aurora-blob-3" />
-          <div className="aurora-blob aurora-blob-4" />
-        </div>
-        <div className="bg-stars" />
-        <div className="bg-bubbles">
-          {Array.from({ length: 20 }).map((_, i) => (
-            <div
-              key={i}
-              className={`bubble bubble-${(i % 4) + 1}`}
-              style={{
-                left: `${(i * 5.2 + 2) % 100}%`,
-                width: `${20 + ((i * 19) % 70)}px`,
-                height: `${20 + ((i * 19) % 70)}px`,
-                animationDuration: `${13 + ((i * 1.9) % 10)}s`,
-                animationDelay: `-${(i * 2.8) % 16}s`,
-              }}
-            />
-          ))}
-        </div>
-        <div className="theme-symbols">
-          {Array.from({ length: 14 }).map((_, i) => {
-            const sym = activeEmojis[i % activeEmojis.length];
-            return (
-              <span
-                key={`${theme}-${i}-${sym}`}
-                className="theme-symbol"
-                style={{
-                  left: `${(i * 7.1 + 3) % 100}%`,
-                  animationDuration: `${11 + ((i * 1.7) % 10)}s`,
-                  animationDelay: `-${(i * 2.1) % 12}s`,
-                  fontSize: `${20 + ((i * 7) % 22)}px`,
-                }}
-              >
-                {sym}
-              </span>
-            );
-          })}
-        </div>
+        <AmbientBackground
+          mode={
+            !isFullscreen
+              ? "full"
+              : hideAppChrome || gameMode === "autoshow"
+                ? "off"
+                : "lite"
+          }
+          symbols={activeEmojis}
+        />
 
         {!isFullscreen && (
           <div className="start-screen">

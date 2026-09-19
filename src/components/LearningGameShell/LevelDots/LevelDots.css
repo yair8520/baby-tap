@@ -1,0 +1,41 @@
+.lgs-dots {
+  position: absolute;
+  bottom: max(env(safe-area-inset-bottom, 0px) + 8px, 12px);
+  left: 0;
+  right: 0;
+  z-index: 100;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 7px;
+  padding: 0 16px;
+}
+
+.lgs-dot {
+  width: 9px;
+  height: 9px;
+  padding: 0;
+  border: none;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.3);
+  transition: transform 0.2s, background 0.2s;
+}
+
+.lgs-dot--done {
+  background: rgba(255, 255, 255, 0.7);
+  cursor: pointer;
+}
+
+.lgs-dot--locked {
+  background: rgba(255, 255, 255, 0.16);
+}
+
+.lgs-dot--active {
+  background: #ffd76a;
+  transform: scale(1.5);
+  box-shadow: 0 0 10px rgba(255, 215, 106, 0.8);
+}
+
+.lgs-dot:disabled {
+  cursor: default;
+}

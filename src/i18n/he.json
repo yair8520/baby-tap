@@ -9,7 +9,10 @@
     "openSettings": "פתיחת הגדרות",
     "privacyPolicy": "פרטיות",
     "ultra": "👑 עוצמה ×",
-    "fire": "🔥 לוהט ×"
+    "fire": "🔥 לוהט ×",
+    "loading": "טוען…",
+    "exit": "יציאה",
+    "close": "סגור"
   },
   "menu": {
     "title": "הגדרות",
@@ -56,6 +59,15 @@
     "sizesort": "מיון גדלים",
     "shapememory": "זכור סדרה",
     "pattern": "דפוס"
+  },
+  "shell": {
+    "level": "שלב {{level}}",
+    "levelAria": "שלב {{level}}",
+    "wellDone": "כל הכבוד!",
+    "totalStars": "סה\"כ ⭐ {{stars}}",
+    "replay": "שוב ↻",
+    "nextLevel": "שלב הבא ➜",
+    "stars": "{{count}} כוכבים"
   },
   "audio": {
     "label": "הגדרות שמע",
@@ -104,20 +116,22 @@
     "play": "▶️ נגן",
     "off": "⏹ כבה",
     "whiteNoise": "רעש לבן",
-    "melodies": "מנגינות",
+    "melodies": "מנגינות +",
     "melodiesOpen": "מנגינות - פתוח ✅",
     "volume": "עוצמה",
     "sounds": {
       "rain": "גשם עדין",
       "ocean": "גלי ים",
       "wind": "רוח לילה",
+      "storm": "סערה רכה",
+      "waterfall": "מפל מים",
       "white": "לבן רך",
       "pink": "ורוד רך",
       "brown": "חום עמוק",
       "heartbeat": "דופק רגוע",
-      "lullaby": "מנגינה 1",
-      "lullaby2": "מנגינה 2",
-      "lullaby3": "מנגינה 3"
+      "lullaby": "כוכב קטן",
+      "lullaby2": "שיר ערש",
+      "lullaby3": "אח יקירי"
     }
   },
   "piano": {
@@ -137,17 +151,20 @@
     "level": "רמה {{level}}",
     "score": "התאמות: {{matches}}",
     "attempts": "ניסיונות: {{attempts}}",
+    "attemptsShort": "{{attempts}} ניסיונות",
     "won": "כל הכבוד! 🎉",
     "nextLevel": "רמה הבאה ➡️",
     "restart": "שחק שוב 🔄",
-    "newGame": "משחק חדש"
+    "newGame": "משחק חדש",
+    "cardAria": "קלף"
   },
   "shapes": {
     "title": "משחק צורות",
+    "tap": "גע ב",
     "instruction": "גע ב{{color}} {{shape}}!",
     "score": "ניקוד: {{score}}",
     "level": "רמה {{level}}",
-    "levelUp": "כל הכבוד! רמה {{level}} 🎉",
+    "levelUp": "🎉 רמה {{level}}!",
     "correct": "נכון! ✅",
     "wrong": "טעות ❌",
     "colors": {
@@ -166,5 +183,20 @@
       "star": "כוכב",
       "heart": "לב"
     }
+  },
+  "colormix": {
+    "mixTo": "ערבב ל...",
+    "bowl": "קערת הערבוב",
+    "dragColor": "גרור צבע"
+  },
+  "shapememory": {
+    "memorize": "זכור את הסדר!",
+    "recall": "בחר בסדר הנכון!"
+  },
+  "pattern": {
+    "question": "מה הבא בסדרה?"
+  },
+  "sizesort": {
+    "instruction": "מהקטן לגדול →"
   }
 }

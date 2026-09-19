@@ -1,92 +1,60 @@
-import './LearningGameShell.css';
-import { getT } from '../../i18n/index.js';
+import { ShellHeader } from "./ShellHeader";
+import { ShellComplete } from "./ShellComplete";
+import { LevelDots } from "./LevelDots";
+import { DEFAULT_LEARNING_GAME_SHELL_PROPS } from "./LearningGameShell.props.js";
 
 /**
- * Shared chrome for learning games: exit, level badge, stars, complete overlay.
+ * Shared chrome for every learning game: exit, stage badge, stars, stage strip
+ * and the completion overlay. Language comes from `LangProvider`.
  */
 export function LearningGameShell({
-  lang = 'he',
-  levelNum = 1,
+  levelNum = DEFAULT_LEARNING_GAME_SHELL_PROPS.levelNum,
+  showLevel = DEFAULT_LEARNING_GAME_SHELL_PROPS.showLevel,
+  totalLevels,
+  maxUnlocked,
+  onSelectLevel,
   totalStars,
   onExit,
-  levelDone = false,
-  starCount = 3,
+  levelDone = DEFAULT_LEARNING_GAME_SHELL_PROPS.levelDone,
+  starCount = DEFAULT_LEARNING_GAME_SHELL_PROPS.starCount,
+  maxStars = DEFAULT_LEARNING_GAME_SHELL_PROPS.maxStars,
+  headerTrailing,
   onNextLevel,
   onReplay,
-  isLastLevel = false,
+  isLastLevel = DEFAULT_LEARNING_GAME_SHELL_PROPS.isLastLevel,
   children,
 }) {
-  const t = getT(lang);
-
   return (
     <>
-      <div className="lgs-header">
-        <button
-          type="button"
-          className="lgs-btn-exit"
-          onClick={onExit}
-          aria-label={t("learning.exit")}
-        >
-          ✕
-        </button>
-        <span className="lgs-level-label">
-          {t("learning.level", { level: levelNum })}
-        </span>
-        <span className="lgs-hdr-stars" aria-hidden="true">
-          {[0, 1, 2].map((i) => (
-            <span
-              key={i}
-              className={`lgs-hdr-star${i < starCount ? " lgs-hdr-star--on" : ""}`}
-            >
-              ⭐
-            </span>
-          ))}
-        </span>
-      </div>
+      <ShellHeader
+        levelNum={levelNum}
+        showLevel={showLevel}
+        starCount={starCount}
+        maxStars={maxStars}
+        trailing={headerTrailing}
+        onExit={onExit}
+      />
 
       {children}
 
+      {totalLevels > 1 && (
+        <LevelDots
+          total={totalLevels}
+          currentIndex={levelNum - 1}
+          maxUnlocked={maxUnlocked}
+          onSelect={onSelectLevel}
+        />
+      )}
+
       {levelDone && (
-        <div
-          className="lgs-complete"
-          role="dialog"
-          aria-modal="true"
-          aria-labelledby="learning-complete-title"
-          aria-live="polite"
-          onPointerDown={(e) => e.stopPropagation()}
-          onPointerUp={(e) => e.stopPropagation()}
-        >
-          <div className="lgs-complete-card">
-            <span className="lgs-complete-emoji" aria-hidden="true">🎉</span>
-            <div id="learning-complete-title" className="lgs-complete-title">
-              {isLastLevel
-                ? t("learning.allComplete")
-                : t("learning.greatJob")}
-            </div>
-            <div className="lgs-complete-stars" aria-hidden="true">
-              {[0, 1, 2].map((i) => (
-                <span key={i} className={`lgs-cstar${i < starCount ? ' on' : ''}`}>⭐</span>
-              ))}
-            </div>
-            {totalStars != null && (
-              <div className="lgs-total-score">
-                {t("learning.totalStars", { total: totalStars })}
-              </div>
-            )}
-            <div className="lgs-actions">
-              {onReplay && (
-                <button type="button" className="lgs-btn-replay" onClick={onReplay}>
-                  {t("learning.replay")}
-                </button>
-              )}
-              {onNextLevel && !isLastLevel && (
-                <button type="button" className="lgs-btn-next" onClick={onNextLevel}>
-                  {t("learning.nextLevel")}
-                </button>
-              )}
-            </div>
-          </div>
-        </div>
+        <ShellComplete
+          starCount={starCount}
+          maxStars={maxStars}
+          totalStars={totalStars}
+          isLastLevel={isLastLevel}
+          onNextLevel={onNextLevel}
+          onReplay={onReplay}
+        />
       )}
     </>
   );

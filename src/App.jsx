@@ -1,36 +1,27 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import "./App.css";
-import ShapeMatch from "./games/shapematch";
-import ColorMix from "./games/colormix";
-import SizeSort from "./games/sizesort";
-import ShapeMemory from "./games/shapememory";
-import PatternGame from "./games/pattern";
-import ClassicGame from "./games/classic";
-import DrumsGame from "./games/drums";
-import PianoGame from "./games/piano";
-import SleepGame from "./games/sleep";
-import { Balloons } from "./games/balloons";
-import { Targets } from "./games/targets";
 
 import {
   isHebrew as defaultHebrew,
   isWebView,
-} from "./constants.js";
+} from "./constants";
 
-import {
-  setGlobalMute,
-  playSound,
-} from "./audio.js";
+import { setGlobalMute, playSound } from "./audio.js";
 
 import { useLocalStorage } from "./hooks/useLocalStorage.js";
 import { STORAGE_KEYS } from "./storage/keys.js";
 import { clearStoredProgress } from "./storage/progress.js";
 import { isBoolean } from "./storage/validation.js";
-import SettingsMenu from "./components/SettingsMenu/index.jsx";
-import MemoryGame from "./games/memory/MemoryGame.jsx";
-import ShapesGame from "./games/shapes/ShapesGame.jsx";
+import { SettingsMenu } from "./components/SettingsMenu";
+import { ActiveGame } from "./components/ActiveGame";
 import { getT } from "./i18n/index.js";
+import { LangProvider } from "./i18n/LangProvider.jsx";
 import { buzz } from "./components/LearningGameShell/vibrate.js";
+import {
+  DEFAULT_GAME_ID,
+  GAME_MODE_IDS,
+  getGame,
+} from "./games/registry.js";
 
 const THEME_PRESETS = {
   space: {
@@ -69,28 +60,7 @@ const THEME_PRESETS = {
 
 const LANGUAGE_IDS = ["he", "en"];
 const THEME_IDS = Object.keys(THEME_PRESETS);
-const GAME_MODE_IDS = [
-  "classic",
-  "balloons",
-  "drums",
-  "targets",
-  "autoshow",
-  "piano",
-  "memory",
-  "shapes",
-  "shapematch",
-  "colormix",
-  "sizesort",
-  "shapememory",
-  "pattern",
-];
-const LEARNING_MODE_IDS = new Set([
-  "shapematch",
-  "colormix",
-  "sizesort",
-  "shapememory",
-  "pattern",
-]);
+
 export default function App() {
   const [lang, setLang] = useLocalStorage(
     STORAGE_KEYS.lang,
@@ -121,7 +91,7 @@ export default function App() {
   );
   const [gameMode, setGameMode] = useLocalStorage(
     STORAGE_KEYS.gameMode,
-    "classic",
+    DEFAULT_GAME_ID,
     GAME_MODE_IDS,
   );
   const [settingsOpen, setSettingsOpen] = useState(false);
@@ -153,13 +123,17 @@ export default function App() {
     setGlobalMute(muteOn);
   }, [muteOn]);
   useEffect(() => {
-    document.documentElement.lang = lang;
-    document.documentElement.dir = isHebrewUI ? "rtl" : "ltr";
     document.title = t("common.title");
-  }, [isHebrewUI, lang, t]);
+  }, [t]);
 
   const vibrate = useCallback((pattern) => {
     buzz(pattern, vibrateRef.current);
+  }, []);
+
+  const onSound = useCallback((type) => {
+    if (muteRef.current) return;
+    if (type === "match") playSound("match");
+    else playSound("miss");
   }, []);
 
   useEffect(() => {
@@ -269,288 +243,199 @@ export default function App() {
   }, []);
 
   const C = 2 * Math.PI * 22;
-  const learningModeActive = LEARNING_MODE_IDS.has(gameMode);
+  const activeEntry = getGame(gameMode);
+  const hideAppChrome = !!activeEntry.hideAppChrome;
+
+  const gameCtx = {
+    lang,
+    t,
+    activeEmojis,
+    activeColors: activeTheme.colors,
+    vibrateOn,
+    muteOn,
+    vibrate,
+    onSound,
+    comboLabels: { ultra: t("common.ultra"), fire: t("common.fire") },
+    onExit: () => setGameMode(DEFAULT_GAME_ID),
+  };
 
   return (
-    <div ref={containerRef} className={`app theme-${theme}`}>
-      <div className="bg-base" />
-      <div className="bg-aurora">
-        <div className="aurora-blob aurora-blob-1" />
-        <div className="aurora-blob aurora-blob-2" />
-        <div className="aurora-blob aurora-blob-3" />
-        <div className="aurora-blob aurora-blob-4" />
-      </div>
-      <div className="bg-stars" />
-      <div className="bg-bubbles">
-        {Array.from({ length: 20 }).map((_, i) => (
-          <div
-            key={i}
-            className={`bubble bubble-${(i % 4) + 1}`}
-            style={{
-              left: `${(i * 5.2 + 2) % 100}%`,
-              width: `${20 + ((i * 19) % 70)}px`,
-              height: `${20 + ((i * 19) % 70)}px`,
-              animationDuration: `${13 + ((i * 1.9) % 10)}s`,
-              animationDelay: `-${(i * 2.8) % 16}s`,
-            }}
-          />
-        ))}
-      </div>
-      <div className="theme-symbols">
-        {Array.from({ length: 14 }).map((_, i) => {
-          const sym = activeEmojis[i % activeEmojis.length];
-          return (
-            <span
-              key={`${theme}-${i}-${sym}`}
-              className="theme-symbol"
-              style={{
-                left: `${(i * 7.1 + 3) % 100}%`,
-                animationDuration: `${11 + ((i * 1.7) % 10)}s`,
-                animationDelay: `-${(i * 2.1) % 12}s`,
-                fontSize: `${20 + ((i * 7) % 22)}px`,
-              }}
-            >
-              {sym}
-            </span>
-          );
-        })}
-      </div>
-
-      {!isFullscreen && (
-        <div className="start-screen">
-          <div className="start-card" dir={isHebrewUI ? "rtl" : "ltr"}>
-            <div className="start-emoji-row">
-              {activeTheme.heroRow || t("common.emojiRow")}
-            </div>
-            <h1 className="start-title">{t("common.title")}</h1>
-            <p className="start-subtitle">
-              {t("common.subtitle").split("\n").map((line, i) => (
-                <span key={i}>
-                  {line}
-                  {i === 0 && <br />}
-                </span>
-              ))}
-            </p>
-            <button type="button" className="start-btn" onClick={enterFullscreen}>
-              {t("common.startFullscreen")}
-            </button>
-            <p className="start-hint">{t("common.exitHint")}</p>
-            <a
-              className="start-privacy-link"
-              href="#privacy-policy"
-            >
-              {t("common.privacyPolicy")}
-            </a>
-          </div>
+    <LangProvider lang={lang}>
+      <div ref={containerRef} className={`app theme-${theme}`}>
+        <div className="bg-base" />
+        <div className="bg-aurora">
+          <div className="aurora-blob aurora-blob-1" />
+          <div className="aurora-blob aurora-blob-2" />
+          <div className="aurora-blob aurora-blob-3" />
+          <div className="aurora-blob aurora-blob-4" />
         </div>
-      )}
-
-      {isFullscreen && (
-        <>
-          {!learningModeActive && <button
-            type="button"
-            className="corner-hold"
-            aria-label={t("common.exitFullscreen")}
-            onPointerDown={handleCornerStart}
-            onPointerUp={handleCornerEnd}
-            onPointerCancel={handleCornerEnd}
-            onLostPointerCapture={handleCornerEnd}
-          >
-            <svg width="52" height="52" viewBox="0 0 52 52" aria-hidden="true">
-              <circle
-                cx="26"
-                cy="26"
-                r="22"
-                fill="rgba(0,0,0,0.35)"
-                stroke="rgba(255,255,255,0.15)"
-                strokeWidth="2"
-              />
-              <circle
-                cx="26"
-                cy="26"
-                r="22"
-                fill="none"
-                stroke="white"
-                strokeWidth="3"
-                strokeDasharray={`${holdProgress * C} ${C}`}
-                strokeLinecap="round"
-                transform="rotate(-90 26 26)"
-              />
-              <text
-                x="26"
-                y="32"
-                textAnchor="middle"
-                fill="white"
-                fontSize="18"
-              >
-                ✕
-              </text>
-            </svg>
-          </button>}
-
-          {!learningModeActive && <div className="settings-wrap" ref={settingsRef}>
-            <button
-              className={`settings-gear-btn${showSettingsHint ? " settings-gear-pulse" : ""}`}
-              type="button"
-              aria-label={t("common.openSettings")}
-              aria-expanded={settingsOpen}
-              aria-controls="settings-menu"
-              onClick={(e) => {
-                setShowSettingsHint(false);
-                setSettingsOpen((o) => !o);
-                e.stopPropagation();
+        <div className="bg-stars" />
+        <div className="bg-bubbles">
+          {Array.from({ length: 20 }).map((_, i) => (
+            <div
+              key={i}
+              className={`bubble bubble-${(i % 4) + 1}`}
+              style={{
+                left: `${(i * 5.2 + 2) % 100}%`,
+                width: `${20 + ((i * 19) % 70)}px`,
+                height: `${20 + ((i * 19) % 70)}px`,
+                animationDuration: `${13 + ((i * 1.9) % 10)}s`,
+                animationDelay: `-${(i * 2.8) % 16}s`,
               }}
-            >
-              ⚙️
-            </button>
+            />
+          ))}
+        </div>
+        <div className="theme-symbols">
+          {Array.from({ length: 14 }).map((_, i) => {
+            const sym = activeEmojis[i % activeEmojis.length];
+            return (
+              <span
+                key={`${theme}-${i}-${sym}`}
+                className="theme-symbol"
+                style={{
+                  left: `${(i * 7.1 + 3) % 100}%`,
+                  animationDuration: `${11 + ((i * 1.7) % 10)}s`,
+                  animationDelay: `-${(i * 2.1) % 12}s`,
+                  fontSize: `${20 + ((i * 7) % 22)}px`,
+                }}
+              >
+                {sym}
+              </span>
+            );
+          })}
+        </div>
 
-            {showSettingsHint && !settingsOpen && (
-              <div className="settings-hint-bubble" role="status" aria-live="polite">
-                {t("menu.settingsHint")}
+        {!isFullscreen && (
+          <div className="start-screen">
+            <div className="start-card" dir={isHebrewUI ? "rtl" : "ltr"}>
+              <div className="start-emoji-row">
+                {activeTheme.heroRow || t("common.emojiRow")}
+              </div>
+              <h1 className="start-title">{t("common.title")}</h1>
+              <p className="start-subtitle">
+                {t("common.subtitle")
+                  .split("\n")
+                  .map((line, i) => (
+                    <span key={i}>
+                      {line}
+                      {i === 0 && <br />}
+                    </span>
+                  ))}
+              </p>
+              <button
+                type="button"
+                className="start-btn"
+                onClick={enterFullscreen}
+              >
+                {t("common.startFullscreen")}
+              </button>
+              <p className="start-hint">{t("common.exitHint")}</p>
+              <a className="start-privacy-link" href="#privacy-policy">
+                {t("common.privacyPolicy")}
+              </a>
+            </div>
+          </div>
+        )}
+
+        {isFullscreen && (
+          <>
+            {!hideAppChrome && (
+              <button
+                type="button"
+                className="corner-hold"
+                aria-label={t("common.exitFullscreen")}
+                onPointerDown={handleCornerStart}
+                onPointerUp={handleCornerEnd}
+                onPointerCancel={handleCornerEnd}
+                onLostPointerCapture={handleCornerEnd}
+              >
+                <svg width="52" height="52" viewBox="0 0 52 52" aria-hidden="true">
+                  <circle
+                    cx="26"
+                    cy="26"
+                    r="22"
+                    fill="rgba(0,0,0,0.35)"
+                    stroke="rgba(255,255,255,0.15)"
+                    strokeWidth="2"
+                  />
+                  <circle
+                    cx="26"
+                    cy="26"
+                    r="22"
+                    fill="none"
+                    stroke="white"
+                    strokeWidth="3"
+                    strokeDasharray={`${holdProgress * C} ${C}`}
+                    strokeLinecap="round"
+                    transform="rotate(-90 26 26)"
+                  />
+                  <text
+                    x="26"
+                    y="32"
+                    textAnchor="middle"
+                    fill="white"
+                    fontSize="18"
+                  >
+                    ✕
+                  </text>
+                </svg>
+              </button>
+            )}
+
+            {!hideAppChrome && (
+              <div className="settings-wrap" ref={settingsRef}>
+                <button
+                  className={`settings-gear-btn${showSettingsHint ? " settings-gear-pulse" : ""}`}
+                  type="button"
+                  aria-label={t("common.openSettings")}
+                  aria-expanded={settingsOpen}
+                  aria-controls="settings-menu"
+                  onClick={(e) => {
+                    setShowSettingsHint(false);
+                    setSettingsOpen((o) => !o);
+                    e.stopPropagation();
+                  }}
+                >
+                  ⚙️
+                </button>
+
+                {showSettingsHint && !settingsOpen && (
+                  <div
+                    className="settings-hint-bubble"
+                    role="status"
+                    aria-live="polite"
+                  >
+                    {t("menu.settingsHint")}
+                  </div>
+                )}
+
+                {settingsOpen && (
+                  <SettingsMenu
+                    gameMode={gameMode}
+                    theme={theme}
+                    muteOn={muteOn}
+                    vibrateOn={vibrateOn}
+                    themePresets={THEME_PRESETS}
+                    onGameModeChange={setGameMode}
+                    onLangChange={setLang}
+                    onThemeChange={setTheme}
+                    onMuteChange={setMuteOn}
+                    onVibrateChange={setVibrateOn}
+                    onResetProgress={resetProgress}
+                    onClose={() => setSettingsOpen(false)}
+                  />
+                )}
               </div>
             )}
 
-            {settingsOpen && (
-              <SettingsMenu
-                lang={lang}
-                gameMode={gameMode}
-                theme={theme}
-                muteOn={muteOn}
-                vibrateOn={vibrateOn}
-                themePresets={THEME_PRESETS}
-                onGameModeChange={setGameMode}
-                onLangChange={setLang}
-                onThemeChange={setTheme}
-                onMuteChange={setMuteOn}
-                onVibrateChange={setVibrateOn}
-                onResetProgress={resetProgress}
-                onClose={() => setSettingsOpen(false)}
-              />
-            )}
-          </div>}
-
-          {gameMode === "classic" && (
-            <ClassicGame
-              key={`classic-${progressEpoch}`}
-              lang={lang}
-              activeEmojis={activeEmojis}
-              activeColors={activeTheme.colors}
-              vibrateOn={vibrateOn}
-              comboLabels={{ ultra: t("common.ultra"), fire: t("common.fire") }}
+            <ActiveGame
+              gameMode={gameMode}
+              progressEpoch={progressEpoch}
+              ctx={gameCtx}
             />
-          )}
-
-          {gameMode === "balloons" && (
-            <Balloons
-              key={`balloons-${progressEpoch}`}
-              t={t}
-              vibrate={vibrate}
-            />
-          )}
-
-          {gameMode === "drums" && (
-            <DrumsGame
-              key={`drums-${progressEpoch}`}
-              vibrateOn={vibrateOn}
-            />
-          )}
-
-          {gameMode === "targets" && (
-            <Targets
-              key={`targets-${progressEpoch}`}
-              activeEmojis={activeEmojis}
-              t={t}
-              vibrate={vibrate}
-            />
-          )}
-
-          {gameMode === "autoshow" && (
-            <SleepGame
-              key={`autoshow-${progressEpoch}`}
-              lang={lang}
-              muteOn={muteOn}
-            />
-          )}
-
-          {gameMode === "piano" && (
-            <PianoGame
-              key={`piano-${progressEpoch}`}
-              lang={lang}
-              vibrateOn={vibrateOn}
-            />
-          )}
-
-          {gameMode === "memory" && (
-            <MemoryGame
-              key={`memory-${progressEpoch}`}
-              lang={lang}
-              onSound={(type) => {
-                if (muteRef.current) return;
-                if (type === "match") playSound("match");
-                else playSound("miss");
-              }}
-            />
-          )}
-
-          {gameMode === "shapes" && (
-            <ShapesGame
-              key={`shapes-${progressEpoch}`}
-              lang={lang}
-              onSound={(type) => {
-                if (muteRef.current) return;
-                if (type === "match") playSound("match");
-                else playSound("miss");
-              }}
-            />
-          )}
-
-        </>
-      )}
-
-      {isFullscreen && gameMode === "shapematch" && (
-        <ShapeMatch
-          key={`shapematch-${progressEpoch}`}
-          onExit={() => setGameMode("classic")}
-          lang={lang}
-          vibrateOn={vibrateOn}
-        />
-      )}
-
-      {isFullscreen && gameMode === "colormix" && (
-        <ColorMix
-          key={`colormix-${progressEpoch}`}
-          onExit={() => setGameMode("classic")}
-          lang={lang}
-          vibrateOn={vibrateOn}
-        />
-      )}
-
-      {isFullscreen && gameMode === "sizesort" && (
-        <SizeSort
-          key={`sizesort-${progressEpoch}`}
-          onExit={() => setGameMode("classic")}
-          lang={lang}
-          vibrateOn={vibrateOn}
-        />
-      )}
-
-      {isFullscreen && gameMode === "shapememory" && (
-        <ShapeMemory
-          key={`shapememory-${progressEpoch}`}
-          onExit={() => setGameMode("classic")}
-          lang={lang}
-          vibrateOn={vibrateOn}
-        />
-      )}
-
-      {isFullscreen && gameMode === "pattern" && (
-        <PatternGame
-          key={`pattern-${progressEpoch}`}
-          onExit={() => setGameMode("classic")}
-          lang={lang}
-          vibrateOn={vibrateOn}
-        />
-      )}
-    </div>
+          </>
+        )}
+      </div>
+    </LangProvider>
   );
 }

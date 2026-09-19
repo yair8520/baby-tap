@@ -1,0 +1,75 @@
+/* Tap feedback shared by classic, balloons, targets and shapematch.
+   Imported once from index.css so every mode gets it without duplicating rules. */
+
+/* ===================== SPINNING EMOJIS ===================== */
+.emoji-item {
+  position: fixed;
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+  z-index: 50;
+  animation: emojiSpin var(--dur, 800ms) cubic-bezier(0.22, 0.61, 0.36, 1) forwards;
+  will-change: transform, opacity;
+  line-height: 1;
+}
+
+@keyframes emojiSpin {
+  0% {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(0.15) rotate(0deg);
+  }
+  20% {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1.3) rotate(calc(var(--rot) * 0.15));
+  }
+  65% {
+    opacity: 1;
+    transform:
+      translate(calc(-50% + var(--dx)), calc(-50% + var(--dy)))
+      scale(1)
+      rotate(var(--rot));
+  }
+  100% {
+    opacity: 0;
+    transform:
+      translate(calc(-50% + var(--dx) * 1.05), calc(-50% + var(--dy) + 60px))
+      scale(0.2)
+      rotate(calc(var(--rot) * 1.8));
+  }
+}
+
+/* ===================== PARTICLES ===================== */
+.particle {
+  position: fixed;
+  pointer-events: none;
+  z-index: 49;
+  animation: particleBurst 0.6s cubic-bezier(0.22, 0.61, 0.36, 1) forwards;
+  will-change: transform, opacity;
+  transform: translate(-50%, -50%);
+}
+
+.particle.circle { border-radius: 50%; }
+
+.particle.square {
+  border-radius: 4px;
+}
+
+@keyframes particleBurst {
+  0% {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1) rotate(0deg);
+  }
+  60% {
+    opacity: 0.8;
+    transform:
+      translate(calc(-50% + var(--px) * 0.9), calc(-50% + var(--py) * 0.9))
+      scale(0.8)
+      rotate(540deg);
+  }
+  100% {
+    opacity: 0;
+    transform:
+      translate(calc(-50% + var(--px)), calc(-50% + var(--py)))
+      scale(0.1)
+      rotate(900deg);
+  }
+}

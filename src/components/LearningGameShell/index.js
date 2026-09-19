@@ -1,5 +1,8 @@
-export { default as LearningGameShell } from "./LearningGameShell.jsx";
-export { default } from "./LearningGameShell.jsx";
+export * from "./LearningGameShell.jsx";
+export * from "./LearningGameShell.props.js";
+export * from "./ShellHeader";
+export * from "./ShellComplete";
+export * from "./LevelDots";
 export {
   normalizeBestStars,
   recordBestStars,

@@ -1,6 +1,5 @@
 import { STORAGE_KEYS, MODE_LEVEL_KEYS, MODE_STARS_KEYS } from "./keys.js";
-
-const PREFIX = "bt_";
+import { removeStored } from "./storage.js";
 
 /** All progress-related logical keys (not settings). */
 export function listProgressKeys() {
@@ -18,10 +17,6 @@ export function listProgressKeys() {
 /** Remove all progress keys from localStorage. Settings are kept. */
 export function resetAllProgress() {
   for (const key of listProgressKeys()) {
-    try {
-      localStorage.removeItem(`${PREFIX}${key}`);
-    } catch {
-      // ignore
-    }
+    removeStored(key);
   }
 }

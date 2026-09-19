@@ -4,11 +4,13 @@ import { LearningGameShell, starsFromMistakes } from '../../components/LearningG
 import { PATTERN_LEVELS, buildLevel } from './levels.js';
 import { useGameBestStars, useGameLevel } from '../../hooks/useGameProgress.js';
 import { buzz } from '../../components/LearningGameShell/vibrate.js';
+import { useT } from '../../i18n';
 import './PatternGame.css';
 
 // ─── Main Component ───────────────────────────────────────────────────────────
 
-export default function PatternGame({ onExit, lang = 'he', vibrateOn = true }) {
+export default function PatternGame({ onExit, vibrateOn = true }) {
+  const t = useT();
   const [levelIdx, setLevelIdx]   = useGameLevel('pattern', 0, {
     maxLevels: PATTERN_LEVELS.length,
   });
@@ -123,7 +125,6 @@ export default function PatternGame({ onExit, lang = 'he', vibrateOn = true }) {
       </div>
 
       <LearningGameShell
-        lang={lang}
         levelNum={levelNum}
         totalStars={totalStars}
         onExit={onExit}
@@ -136,7 +137,7 @@ export default function PatternGame({ onExit, lang = 'he', vibrateOn = true }) {
         {/* Pattern display */}
         <div className="pg-content">
           <div className="pg-instruction">
-            {lang === 'he' ? 'מה הבא בסדרה?' : 'What comes next?'}
+            {t("pattern.question")}
           </div>
 
           <div className="pg-pattern-row">

@@ -1,13 +1,11 @@
 import { useState } from "react";
-import { getT } from "../../i18n/index.js";
+import { useT } from "../../i18n";
 import "./ResetProgressControl.css";
 
-/** @import { ResetProgressControlProps } from "./ResetProgressControl.props.js" */
-
-/** @param {ResetProgressControlProps} props */
-export function ResetProgressControl({ lang, onReset }) {
+/** Confirm + reset gameplay progress (keeps preferences). */
+export function ResetProgressControl({ onReset }) {
   const [confirming, setConfirming] = useState(false);
-  const t = getT(lang);
+  const t = useT();
 
   const reset = () => {
     onReset();
@@ -25,16 +23,28 @@ export function ResetProgressControl({ lang, onReset }) {
         <div className="rpc-confirm">
           <span className="rpc-warning">{t("progress.warning")}</span>
           <div className="rpc-actions">
-            <button type="button" className="rpc-cancel" onClick={() => setConfirming(false)}>
+            <button
+              type="button"
+              className="rpc-cancel"
+              onClick={() => setConfirming(false)}
+            >
               {t("progress.cancel")}
             </button>
-            <button type="button" className="rpc-confirm-button" onClick={reset}>
+            <button
+              type="button"
+              className="rpc-confirm-button"
+              onClick={reset}
+            >
               {t("progress.confirm")}
             </button>
           </div>
         </div>
       ) : (
-        <button type="button" className="rpc-start" onClick={() => setConfirming(true)}>
+        <button
+          type="button"
+          className="rpc-start"
+          onClick={() => setConfirming(true)}
+        >
           {t("progress.reset")}
         </button>
       )}

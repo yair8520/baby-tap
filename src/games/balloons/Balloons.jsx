@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { playBalloonPop } from "../../audio.js";
-import { IS_TOUCH } from "../../constants.js";
+import { IS_TOUCH } from "../../constants";
 import { useLocalStorage } from "../../hooks/useLocalStorage.js";
 import { STORAGE_KEYS } from "../../storage/keys.js";
 import { nextId, rand, randInt } from "../../utils/random.js";

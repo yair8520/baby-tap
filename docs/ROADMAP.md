@@ -1,23 +1,20 @@
 # Baby Tap — improvement roadmap
 
-Ordered workstreams toward a high-quality, maintainable codebase.
-
-## Done
+## Done (merged / on branch)
 1. Data-driven `levels.js` per game type + `levelUtils`
-2. Folder cleanup (`games/<id>/`, ShapeGeom, PrivacyPolicy pages)
+2. Folder cleanup (`games/<id>/`, ShapeGeom, PrivacyPolicy)
 3. Unified persistence (`storage/keys.js`, `useGameLevel` / `useGameStars`)
-4. Persist all learning levels + stars; shapes score; sleep prefs; balloons on level-up
-5. README structure docs
+4. Persist learning levels/stars, shapes score, sleep prefs, balloons on level-up
+5. LearningGameShell (ShapeMatch, Pattern, ShapeMemory)
+6. Extracted from App: classic, drums, piano, sleep + learning games
+7. App shell ~927 lines (down from ~2700)
 
-## In progress (parallel agents)
-6. Extract balloons / targets from App.jsx
-7. LearningGameShell shared chrome
-8. Extract classic / drums / piano / sleep
-
-## Next
-9. Finish App as thin shell (&lt;400 lines) + split App.css per mode
-10. Adopt `i18n/` instead of scattered `L()` / `UI_TEXT`
-11. Reset-progress control in Settings
-12. Expand stage counts where parametric (optional product pass)
-13. Light automated smoke tests (Playwright or vitest component)
-14. Brand string unify (Baby Tap vs Baby Spark)
+## Remaining (follow-up PRs)
+1. Extract **balloons** + **targets** still inline in App.jsx
+2. Adopt LearningGameShell in ColorMix / SizeSort
+3. Dead CSS leftovers in App.css; shared SparkBurst / palette
+4. Wire unused `i18n/` instead of scattered strings
+5. Settings: “Reset progress” button
+6. Expand parametric stage counts (product pass)
+7. Light automated smoke tests
+8. App shell goal &lt;400 lines once balloons/targets extracted

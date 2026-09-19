@@ -19,6 +19,7 @@ import {
   canVibrate,
 } from "./constants.js";
 import {
+  BALLOON_LEVELS,
   BALLOON_LEVEL_STEP,
   getBalloonLevelNumber,
   getBalloonConfigByLevel,
@@ -33,6 +34,10 @@ import {
 
 import { useLocalStorage } from "./hooks/useLocalStorage.js";
 import { STORAGE_KEYS } from "./storage/keys.js";
+import {
+  isBoolean,
+  isNonNegativeInteger,
+} from "./storage/validation.js";
 import SettingsMenu from "./components/SettingsMenu/index.jsx";
 import MemoryGame from "./games/memory/MemoryGame.jsx";
 import ShapesGame from "./games/shapes/ShapesGame.jsx";
@@ -94,6 +99,28 @@ const THEME_PRESETS = {
   },
 };
 
+const LANGUAGE_IDS = ["he", "en"];
+const THEME_IDS = Object.keys(THEME_PRESETS);
+const GAME_MODE_IDS = [
+  "classic",
+  "balloons",
+  "drums",
+  "targets",
+  "autoshow",
+  "piano",
+  "memory",
+  "shapes",
+  "shapematch",
+  "colormix",
+  "sizesort",
+  "shapememory",
+  "pattern",
+];
+const isBalloonLevel = (value) =>
+  Number.isInteger(value) &&
+  value >= 1 &&
+  value <= BALLOON_LEVELS.length;
+
 // speedFactor: 1 = normal, 2 = twice as fast, etc.
 function makeBalloon(speedFactor = 1) {
   const size = randInt(65, 106);
@@ -116,18 +143,38 @@ function makeBalloon(speedFactor = 1) {
 }
 
 export default function App() {
-  const [lang, setLang] = useLocalStorage(STORAGE_KEYS.lang, defaultHebrew ? "he" : "en");
+  const [lang, setLang] = useLocalStorage(
+    STORAGE_KEYS.lang,
+    defaultHebrew ? "he" : "en",
+    LANGUAGE_IDS,
+  );
   const isHebrewUI = lang === "he";
   const ui = UI_TEXT[lang];
-  const [theme, setTheme] = useLocalStorage(STORAGE_KEYS.theme, "space");
+  const [theme, setTheme] = useLocalStorage(
+    STORAGE_KEYS.theme,
+    "space",
+    THEME_IDS,
+  );
   const activeTheme = THEME_PRESETS[theme] || THEME_PRESETS.space;
   const activeEmojis = activeTheme.emojis;
 
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [holdProgress, setHoldProgress] = useState(0);
-  const [vibrateOn, setVibrateOn] = useLocalStorage(STORAGE_KEYS.vibrateOn, true);
-  const [muteOn, setMuteOn] = useLocalStorage(STORAGE_KEYS.muteOn, false);
-  const [gameMode, setGameMode] = useLocalStorage(STORAGE_KEYS.gameMode, "classic");
+  const [vibrateOn, setVibrateOn] = useLocalStorage(
+    STORAGE_KEYS.vibrateOn,
+    true,
+    isBoolean,
+  );
+  const [muteOn, setMuteOn] = useLocalStorage(
+    STORAGE_KEYS.muteOn,
+    false,
+    isBoolean,
+  );
+  const [gameMode, setGameMode] = useLocalStorage(
+    STORAGE_KEYS.gameMode,
+    "classic",
+    GAME_MODE_IDS,
+  );
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [showSettingsHint, setShowSettingsHint] = useState(false);
 
@@ -146,10 +193,12 @@ export default function App() {
   const [balloonSavedLevel, setBalloonSavedLevel] = useLocalStorage(
     STORAGE_KEYS.balloonLevel,
     1,
+    isBalloonLevel,
   );
   const [targetHighScore, setTargetHighScore] = useLocalStorage(
     STORAGE_KEYS.targetHighScore,
     0,
+    isNonNegativeInteger,
   );
 
   // Target mode state

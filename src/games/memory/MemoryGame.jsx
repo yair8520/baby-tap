@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { MEMORY_LEVELS, buildDeck } from "./levels.js";
 import { useGameLevel } from "../../hooks/useGameProgress.js";
 import "./MemoryGame.css";
@@ -49,11 +49,26 @@ export default function MemoryGame({ lang, onSound }) {
   const [won, setWon] = useState(false);
   const [locked, setLocked] = useState(false);
   const [feedback, setFeedback] = useState(null);
+  const timersRef = useRef(new Set());
 
   const currentLevel = MEMORY_LEVELS[levelIdx];
   const cardSize = useCardSize(currentLevel.cols, currentLevel.rows);
 
+  const clearTimers = useCallback(() => {
+    timersRef.current.forEach((timerId) => window.clearTimeout(timerId));
+    timersRef.current.clear();
+  }, []);
+
+  const schedule = useCallback((callback, delay) => {
+    const timerId = window.setTimeout(() => {
+      timersRef.current.delete(timerId);
+      callback();
+    }, delay);
+    timersRef.current.add(timerId);
+  }, []);
+
   const startLevel = useCallback((idx) => {
+    clearTimers();
     const lvl = MEMORY_LEVELS[idx];
     setCards(buildDeck(lvl));
     setFlipped([]);
@@ -62,9 +77,13 @@ export default function MemoryGame({ lang, onSound }) {
     setWon(false);
     setLocked(false);
     setFeedback(null);
-  }, []);
+  }, [clearTimers]);
 
-  useEffect(() => { startLevel(levelIdx); }, [levelIdx, startLevel]);
+  useEffect(() => {
+    clearTimers();
+    schedule(() => startLevel(levelIdx), 0);
+  }, [clearTimers, levelIdx, schedule, startLevel]);
+  useEffect(() => () => clearTimers(), [clearTimers]);
 
   const handleCardTap = useCallback((cardId) => {
     if (locked) return;
@@ -81,25 +100,29 @@ export default function MemoryGame({ lang, onSound }) {
 
       const [a, b] = newFlipped.map((id) => cards.find((c) => c.id === id));
       if (a.pairId === b.pairId) {
-        setTimeout(() => {
+        schedule(() => {
           setFeedback("correct");
           onSound?.("match");
           const newMatched = new Set([...matched, a.id, b.id]);
           setMatched(newMatched);
           setFlipped([]);
           setLocked(false);
-          setTimeout(() => setFeedback(null), 700);
+          schedule(() => setFeedback(null), 700);
           if (newMatched.size === cards.length) setWon(true);
         }, 400);
       } else {
-        setTimeout(() => {
+        schedule(() => {
           setFeedback("wrong");
           onSound?.("miss");
-          setTimeout(() => { setFlipped([]); setLocked(false); setFeedback(null); }, 400);
+          schedule(() => {
+            setFlipped([]);
+            setLocked(false);
+            setFeedback(null);
+          }, 400);
         }, 700);
       }
     }
-  }, [locked, matched, flipped, cards, onSound]);
+  }, [locked, matched, flipped, cards, onSound, schedule]);
 
   const isFlipped = (id) => flipped.includes(id) || matched.has(id);
 
@@ -132,16 +155,17 @@ export default function MemoryGame({ lang, onSound }) {
               {levelIdx < MEMORY_LEVELS.length - 1 && (
                 <button
                   className="mg-btn mg-btn--primary"
-                  onTouchEnd={(e) => { e.preventDefault(); setLevelIdx((i) => i + 1); }}
-                  onMouseUp={() => setLevelIdx((i) => i + 1)}
+                  onPointerUp={() => {
+                    clearTimers();
+                    setLevelIdx((i) => i + 1);
+                  }}
                 >
                   {L("רמה הבאה ➡️", "Next Level ➡️")}
                 </button>
               )}
               <button
                 className="mg-btn"
-                onTouchEnd={(e) => { e.preventDefault(); startLevel(levelIdx); }}
-                onMouseUp={() => startLevel(levelIdx)}
+                onPointerUp={() => startLevel(levelIdx)}
               >
                 {L("שחק שוב 🔄", "Play again 🔄")}
               </button>
@@ -173,8 +197,7 @@ export default function MemoryGame({ lang, onSound }) {
               key={card.id}
               className={`mg-card${face ? " mg-card--flipped" : ""}${matched.has(card.id) ? " mg-card--matched" : ""}`}
               style={{ width: cardSize, height: cardSize, fontSize: emojiFontSize }}
-              onTouchEnd={(e) => { e.preventDefault(); handleCardTap(card.id); }}
-              onMouseUp={() => handleCardTap(card.id)}
+              onPointerUp={() => handleCardTap(card.id)}
               aria-label={face ? card.emoji : "card"}
             >
               <div className="mg-card-inner">
@@ -192,8 +215,12 @@ export default function MemoryGame({ lang, onSound }) {
           <button
             key={lvl.id}
             className={`mg-dot${i === levelIdx ? " mg-dot--active" : ""}${i > levelIdx ? " mg-dot--locked" : ""}`}
-            onTouchEnd={(e) => { e.preventDefault(); if (i <= levelIdx + 1) setLevelIdx(i); }}
-            onMouseUp={() => { if (i <= levelIdx + 1) setLevelIdx(i); }}
+            onPointerUp={() => {
+              if (i <= levelIdx + 1) {
+                clearTimers();
+                setLevelIdx(i);
+              }
+            }}
             aria-label={`Level ${lvl.id}`}
           />
         ))}

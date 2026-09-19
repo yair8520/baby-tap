@@ -80,14 +80,22 @@ export const SHAPES_LEVELS = [
   },
 ];
 
-export function getShapesLevelConfig(score) {
-  let config = SHAPES_LEVELS[0];
-  for (const lvl of SHAPES_LEVELS) {
-    if (score >= (SHAPES_LEVELS[SHAPES_LEVELS.indexOf(lvl) - 1]?.scoreToAdvance ?? 0)) {
-      config = lvl;
-    }
+export function getShapesLevelIndex(score) {
+  const safeScore =
+    Number.isFinite(score) && score >= 0 ? Math.floor(score) : 0;
+  let index = 0;
+
+  while (
+    index < SHAPES_LEVELS.length - 1 &&
+    safeScore >= SHAPES_LEVELS[index].scoreToAdvance
+  ) {
+    index += 1;
   }
-  return config;
+  return index;
+}
+
+export function getShapesLevelConfig(score) {
+  return SHAPES_LEVELS[getShapesLevelIndex(score)];
 }
 
 /** Generate a random shapes challenge for a given level config */

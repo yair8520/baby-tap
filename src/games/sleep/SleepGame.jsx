@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import { getAudioCtx } from "../../audio.js";
 import { useLocalStorage } from "../../hooks/useLocalStorage.js";
 import { STORAGE_KEYS } from "../../storage/keys.js";
+import { isBoolean } from "../../storage/validation.js";
 import "./SleepGame.css";
 
 const SLEEP_OPUS_URLS = {
@@ -15,31 +16,23 @@ const SLEEP_OPUS_URLS = {
     "../../assets/sounds/small_24-Storm-10min.opus",
     import.meta.url,
   ).href,
-  white: new URL(
-    "../../assets/sounds/small_32-Waterfall-10min.opus",
-    import.meta.url,
-  ).href,
-  pink: new URL(
-    "../../assets/sounds/small_32-Waterfall-10min.opus",
-    import.meta.url,
-  ).href,
-  brown: new URL(
-    "../../assets/sounds/small_32-Waterfall-10min.opus",
-    import.meta.url,
-  ).href,
-  lullaby: new URL(
-    "../../assets/sounds/small_42-Rain-10min.opus",
-    import.meta.url,
-  ).href,
-  lullaby2: new URL(
-    "../../assets/sounds/small_47-Waves-10min.opus",
-    import.meta.url,
-  ).href,
-  lullaby3: new URL(
-    "../../assets/sounds/small_32-Waterfall-10min.opus",
-    import.meta.url,
-  ).href,
 };
+
+const SLEEP_SOUND_MODES = [
+  "rain",
+  "ocean",
+  "wind",
+  "white",
+  "pink",
+  "brown",
+  "heartbeat",
+  "lullaby",
+  "lullaby2",
+  "lullaby3",
+];
+
+const isSleepVolume = (value) =>
+  Number.isFinite(value) && value >= 0 && value <= 0.9;
 
 const sleepOpusBufferCache = new Map();
 
@@ -67,14 +60,17 @@ export default function SleepGame({ lang = "he", muteOn = false }) {
   const [sleepSoundMode, setSleepSoundMode] = useLocalStorage(
     STORAGE_KEYS.sleepSoundMode,
     "rain",
+    SLEEP_SOUND_MODES,
   );
   const [sleepVolume, setSleepVolume] = useLocalStorage(
     STORAGE_KEYS.sleepVolume,
     0.5,
+    isSleepVolume,
   );
   const [sleepEnabled, setSleepEnabled] = useLocalStorage(
     STORAGE_KEYS.sleepEnabled,
     true,
+    isBoolean,
   );
   const [sleepMenuOpen, setSleepMenuOpen] = useState(true);
   const [sleepMelodiesOpen, setSleepMelodiesOpen] = useState(false);

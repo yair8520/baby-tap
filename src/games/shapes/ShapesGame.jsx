@@ -1,8 +1,14 @@
-import { useState, useEffect, useCallback } from "react";
-import { SHAPES_LEVELS, SHAPE_COLORS, SHAPE_TYPES, generateChallenge } from "./levels.js";
+import { useState, useEffect, useCallback, useRef } from "react";
+import {
+  SHAPES_LEVELS,
+  SHAPE_COLORS,
+  SHAPE_TYPES,
+  generateChallenge,
+  getShapesLevelIndex,
+} from "./levels.js";
 import { useLocalStorage } from "../../hooks/useLocalStorage.js";
 import { STORAGE_KEYS } from "../../storage/keys.js";
-import { useGameLevel } from "../../hooks/useGameProgress.js";
+import { isNonNegativeInteger } from "../../storage/validation.js";
 import "./ShapesGame.css";
 
 function ShapeIcon({ shape, color, size = 80 }) {
@@ -55,16 +61,33 @@ export default function ShapesGame({ lang, onSound }) {
   const isHe = lang === "he";
   const L = (he, en) => (isHe ? he : en);
 
-  const [score, setScore] = useLocalStorage(STORAGE_KEYS.shapesScore, 0);
-  const [levelIdx, setLevelIdx] = useGameLevel("shapes", 0, {
-    maxLevels: SHAPES_LEVELS.length,
-  });
+  const [score, setScore] = useLocalStorage(
+    STORAGE_KEYS.shapesScore,
+    0,
+    isNonNegativeInteger,
+  );
+  const levelIdx = getShapesLevelIndex(score);
   const [challenge, setChallenge] = useState(null);
   const [feedback, setFeedback] = useState(null); // { correct: bool, shapeId }
   const [locked, setLocked] = useState(false);
   const [levelUpFlash, setLevelUpFlash] = useState(false);
+  const timersRef = useRef(new Set());
+  const previousLevelRef = useRef(levelIdx);
 
   const currentLevel = SHAPES_LEVELS[levelIdx];
+
+  const clearTimers = useCallback(() => {
+    timersRef.current.forEach((timerId) => window.clearTimeout(timerId));
+    timersRef.current.clear();
+  }, []);
+
+  const schedule = useCallback((callback, delay) => {
+    const timerId = window.setTimeout(() => {
+      timersRef.current.delete(timerId);
+      callback();
+    }, delay);
+    timersRef.current.add(timerId);
+  }, []);
 
   const nextChallenge = useCallback((lvlConfig) => {
     setChallenge(generateChallenge(lvlConfig));
@@ -73,26 +96,19 @@ export default function ShapesGame({ lang, onSound }) {
   }, []);
 
   useEffect(() => {
-    nextChallenge(currentLevel);
-  }, [levelIdx]); // eslint-disable-line react-hooks/exhaustive-deps
-
-  // Advance level when score crosses current level threshold
-  useEffect(() => {
-    if (
-      levelIdx < SHAPES_LEVELS.length - 1 &&
-      score >= currentLevel.scoreToAdvance
-    ) {
-      setLevelIdx((i) => {
-        const ni = Math.min(i + 1, SHAPES_LEVELS.length - 1);
+    clearTimers();
+    const levelChanged = previousLevelRef.current !== levelIdx;
+    previousLevelRef.current = levelIdx;
+    schedule(() => {
+      nextChallenge(currentLevel);
+      if (levelChanged) {
         setLevelUpFlash(true);
-        setTimeout(() => {
-          setLevelUpFlash(false);
-          nextChallenge(SHAPES_LEVELS[ni]);
-        }, 1200);
-        return ni;
-      });
-    }
-  }, [score]); // eslint-disable-line react-hooks/exhaustive-deps
+        schedule(() => setLevelUpFlash(false), 1200);
+      }
+    }, 0);
+  }, [clearTimers, currentLevel, levelIdx, nextChallenge, schedule]);
+
+  useEffect(() => () => clearTimers(), [clearTimers]);
 
   const handleTap = useCallback((shapeItem) => {
     if (locked || !challenge) return;
@@ -111,10 +127,10 @@ export default function ShapesGame({ lang, onSound }) {
       onSound?.("miss");
     }
 
-    setTimeout(() => {
+    schedule(() => {
       nextChallenge(currentLevel);
     }, 700);
-  }, [locked, challenge, currentLevel, nextChallenge, onSound]);
+  }, [locked, challenge, currentLevel, nextChallenge, onSound, schedule, setScore]);
 
   if (!challenge) return null;
 
@@ -167,8 +183,7 @@ export default function ShapesGame({ lang, onSound }) {
             <button
               key={item.id}
               className={`sg-shape-btn${isFeedback ? (feedback.correct ? " sg-correct" : " sg-wrong") : ""}`}
-              onTouchEnd={(e) => { e.preventDefault(); handleTap(item); }}
-              onMouseUp={() => handleTap(item)}
+              onPointerUp={() => handleTap(item)}
               aria-label={`${item.color} ${item.shape}`}
             >
               <ShapeIcon shape={item.shape} color={item.color} size={shapeSize} />

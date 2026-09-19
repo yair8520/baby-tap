@@ -27,6 +27,7 @@ const TABS = [
   { id: "audio",    he: "🔊 שמע",    en: "🔊 Audio" },
   { id: "display",  he: "🎨 תצוגה",  en: "🎨 Display" },
 ];
+const TAB_IDS = TABS.map((tab) => tab.id);
 
 export default function SettingsMenu({
   lang,
@@ -43,7 +44,11 @@ export default function SettingsMenu({
   onClose,
 }) {
   const isHe = lang === "he";
-  const [activeTab, setActiveTab] = useLocalStorage(STORAGE_KEYS.settingsTab, "games");
+  const [activeTab, setActiveTab] = useLocalStorage(
+    STORAGE_KEYS.settingsTab,
+    "games",
+    TAB_IDS,
+  );
 
   const L = (he, en) => (isHe ? he : en);
 

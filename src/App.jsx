@@ -230,12 +230,6 @@ function songDisplayName(song, lang = "he") {
   return song.name[lang] || song.name.he || song.name.en || "";
 }
 
-function drumPadLabel(pad, lang = "he") {
-  if (!pad?.label) return "";
-  if (typeof pad.label === "string") return pad.label;
-  return pad.label[lang] || pad.label.he || pad.label.en || "";
-}
-
 // ── Main component ─────────────────────────────────────────────────────────────
 export default function App() {
   const [lang, setLang] = useLocalStorage("lang", defaultHebrew ? "he" : "en");

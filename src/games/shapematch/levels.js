@@ -3,17 +3,10 @@
  * Add rows here to create more stages; buildLevel reads by index.
  */
 import { clampLevelIndex } from "../levelUtils.js";
+import { LEARNING_PALETTE, LEARNING_SHAPES } from "../shared/palette.js";
 
-export const PALETTE = [
-  { id: "red", fill: "#FF3B3B", glow: "rgba(255,59,59,0.55)" },
-  { id: "blue", fill: "#2979FF", glow: "rgba(41,121,255,0.55)" },
-  { id: "yellow", fill: "#FFD600", glow: "rgba(255,214,0,0.55)" },
-  { id: "green", fill: "#00C853", glow: "rgba(0,200,83,0.55)" },
-  { id: "purple", fill: "#BB44FF", glow: "rgba(187,68,255,0.55)" },
-  { id: "orange", fill: "#FF7700", glow: "rgba(255,119,0,0.55)" },
-];
-
-export const SHAPES = ["circle", "square", "triangle", "star", "hexagon"];
+export const PALETTE = LEARNING_PALETTE;
+export const SHAPES = LEARNING_SHAPES;
 
 export const PIECE_R = 55;
 export const SLOT_R = 72;
@@ -81,6 +74,11 @@ export const SHAPEMATCH_LEVELS = [
   { id: 8, count: 4, variety: 3, label: { he: "מאתגר", en: "Challenging" } },
   { id: 9, count: 4, variety: 4, label: { he: "כוכבים", en: "Stars" } },
   { id: 10, count: 5, variety: 5, label: { he: "אלוף", en: "Master" } },
+  { id: 11, count: 5, variety: 5, label: { he: "ספיד", en: "Speed" } },
+  { id: 12, count: 5, variety: 5, label: { he: "פרו", en: "Pro" } },
+  { id: 13, count: 5, variety: 5, label: { he: "ערבוב", en: "Remix" } },
+  { id: 14, count: 5, variety: 5, label: { he: "עלית", en: "Elite" } },
+  { id: 15, count: 5, variety: 5, label: { he: "אגדה", en: "Legend" } },
 ];
 
 export function getShapeMatchLevel(levelIdx) {

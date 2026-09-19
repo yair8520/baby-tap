@@ -1,7 +1,7 @@
 {
   "common": {
     "emojiRow": "👶🏻 🎉 🌈",
-    "title": "Baby Tap Game",
+    "title": "Baby Tap! ✨",
     "subtitle": "תנו לתינוק ללחוץ על המסך\nולראות קסם צבעוני! ✨",
     "startFullscreen": "🚀 התחל מסך מלא",
     "exitHint": "ליציאה: החזיקו את הפינה הימנית העליונה למשך שנייה",
@@ -47,7 +47,15 @@
     "totalStars": "סה״כ ⭐ {{total}}",
     "replay": "שוב ↻",
     "nextLevel": "שלב הבא ➜",
-    "exit": "יציאה ממשחק הלמידה"
+    "exit": "יציאה ממשחק הלמידה",
+    "piano": "פסנתר",
+    "memory": "זיכרון",
+    "shapes": "צורות",
+    "shapematch": "התאמת צורות",
+    "colormix": "ערבוב צבעים",
+    "sizesort": "מיון גדלים",
+    "shapememory": "זכור סדרה",
+    "pattern": "דפוס"
   },
   "audio": {
     "label": "הגדרות שמע",
@@ -65,7 +73,10 @@
       "animals": "חיות",
       "ocean": "ים",
       "farm": "חווה"
-    }
+    },
+    "progress": "התקדמות",
+    "resetProgress": "איפוס התקדמות משחקים",
+    "resetConfirm": "לאפס את כל השלבים והניקוד השמורים? ההגדרות יישמרו."
   },
   "progress": {
     "title": "איפוס התקדמות",

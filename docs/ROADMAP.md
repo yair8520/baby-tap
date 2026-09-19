@@ -1,20 +1,18 @@
 # Baby Tap — improvement roadmap
 
-## Done (merged / on branch)
+## Done
 1. Data-driven `levels.js` per game type + `levelUtils`
 2. Folder cleanup (`games/<id>/`, ShapeGeom, PrivacyPolicy)
 3. Unified persistence (`storage/keys.js`, `useGameLevel` / `useGameStars`)
 4. Persist learning levels/stars, shapes score, sleep prefs, balloons on level-up
-5. LearningGameShell (ShapeMatch, Pattern, ShapeMemory)
-6. Extracted from App: classic, drums, piano, sleep + learning games
-7. App shell ~927 lines (down from ~2700)
+5. LearningGameShell on all learning games (ShapeMatch, Pattern, ShapeMemory, ColorMix, SizeSort)
+6. Extracted from App: classic, drums, piano, sleep, balloons, targets + learning games
+7. App shell ~417 lines (down from ~2700)
+8. Shared `SparkBurst` + `games/shared/palette.js`
+9. i18n wired into App start screen + Settings (incl. learning mode labels)
+10. Settings: Reset progress (keeps prefs)
+11. Vitest smoke tests (`npm test`)
+12. Expanded parametric campaigns to 15 stages (learning + balloons)
 
-## Remaining (follow-up PRs)
-1. Extract **balloons** + **targets** still inline in App.jsx
-2. Adopt LearningGameShell in ColorMix / SizeSort
-3. Dead CSS leftovers in App.css; shared SparkBurst / palette
-4. Wire unused `i18n/` instead of scattered strings
-5. Settings: “Reset progress” button
-6. Expand parametric stage counts (product pass)
-7. Light automated smoke tests
-8. App shell goal &lt;400 lines once balloons/targets extracted
+## Remaining
+_None required for the current cleanup pass._ Optional later: more product-tuned stage curves, React Native packaging polish.

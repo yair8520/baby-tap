@@ -13,5 +13,7 @@ export { clampLevelIndex, getLevelByIndex, getLevelByThreshold, levelNumber, lev
 
 export { default as ClassicGame } from "./classic";
 export { default as DrumsGame } from "./drums";
+export { default as BalloonsGame } from "./balloons";
+export { default as TargetsGame } from "./targets";
 export { default as PianoGame } from "./piano";
 export { default as SleepGame } from "./sleep";

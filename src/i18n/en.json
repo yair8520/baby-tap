@@ -1,7 +1,7 @@
 {
   "common": {
     "emojiRow": "👶🏻 🎉 🌈",
-    "title": "Baby Tap Game",
+    "title": "Baby Tap! ✨",
     "subtitle": "Let the baby tap the screen\nand see colorful magic! ✨",
     "startFullscreen": "🚀 Start Fullscreen",
     "exitHint": "To exit: hold the top-right corner for 1 second",
@@ -47,7 +47,15 @@
     "totalStars": "Total ⭐ {{total}}",
     "replay": "Replay ↻",
     "nextLevel": "Next Level ➜",
-    "exit": "Exit learning game"
+    "exit": "Exit learning game",
+    "piano": "Piano",
+    "memory": "Memory",
+    "shapes": "Shapes",
+    "shapematch": "Shape Match",
+    "colormix": "Mix Colors",
+    "sizesort": "Size Sort",
+    "shapememory": "Sequence",
+    "pattern": "Pattern"
   },
   "audio": {
     "label": "Audio Settings",
@@ -65,7 +73,10 @@
       "animals": "Animals",
       "ocean": "Ocean",
       "farm": "Farm"
-    }
+    },
+    "progress": "Progress",
+    "resetProgress": "Reset game progress",
+    "resetConfirm": "Reset all saved levels and scores? Settings will be kept."
   },
   "progress": {
     "title": "Reset progress",

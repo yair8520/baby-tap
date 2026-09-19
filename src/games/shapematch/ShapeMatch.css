@@ -128,24 +128,4 @@
   100% { transform: translateX(0)     rotate(0);     }
 }
 
-/* ── spark particles ─────────────────────────────────── */
-
-.shm-spark {
-  position: absolute;
-  border-radius: 50%;
-  transform: translate(-50%, -50%);
-  pointer-events: none;
-  z-index: 60;
-  animation: shm-spark-out 0.75s ease-out forwards;
-}
-
-@keyframes shm-spark-out {
-  0% {
-    transform: translate(-50%, -50%) translate(0, 0) scale(1.2);
-    opacity: 1;
-  }
-  100% {
-    transform: translate(-50%, -50%) translate(var(--dx), var(--dy)) scale(0);
-    opacity: 0;
-  }
-}
+/* ── sparks → shared SparkBurst ──────────────────────── */

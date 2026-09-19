@@ -3,17 +3,10 @@
  * patternTypes: which pattern templates are allowed at this stage.
  */
 import { clampLevelIndex } from "../levelUtils.js";
+import { LEARNING_PALETTE, LEARNING_SHAPES } from "../shared/palette.js";
 
-export const PALETTE = [
-  { id: "red", fill: "#FF3B3B" },
-  { id: "blue", fill: "#2979FF" },
-  { id: "yellow", fill: "#FFD600" },
-  { id: "green", fill: "#00C853" },
-  { id: "purple", fill: "#BB44FF" },
-  { id: "orange", fill: "#FF7700" },
-];
-
-export const ALL_SHAPES = ["circle", "square", "triangle", "star"];
+export const PALETTE = LEARNING_PALETTE.map(({ id, fill }) => ({ id, fill }));
+export const ALL_SHAPES = LEARNING_SHAPES.filter((s) => s !== "hexagon");
 
 export const PATTERN_TYPES = {
   ABAB: { slots: [0, 1, 0, 1, 0], answer: 0 },
@@ -38,6 +31,23 @@ export const PATTERN_LEVELS = [
     id: 10,
     patternTypes: Object.keys(PATTERN_TYPES),
     label: { he: "אקראי", en: "Random" },
+  },
+  { id: 11, patternTypes: ["AAAB"], label: { he: "AAAB", en: "AAAB" } },
+  { id: 12, patternTypes: ["AABB", "ABBA", "AAAB"], label: { he: "מאתגר", en: "Hard" } },
+  {
+    id: 13,
+    patternTypes: Object.keys(PATTERN_TYPES),
+    label: { he: "פרו", en: "Pro" },
+  },
+  {
+    id: 14,
+    patternTypes: Object.keys(PATTERN_TYPES),
+    label: { he: "עלית", en: "Elite" },
+  },
+  {
+    id: 15,
+    patternTypes: Object.keys(PATTERN_TYPES),
+    label: { he: "אגדה", en: "Legend" },
   },
 ];
 

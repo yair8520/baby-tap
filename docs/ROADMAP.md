@@ -15,4 +15,7 @@
 12. Expanded parametric campaigns to 15 stages (learning + balloons)
 
 ## Remaining
-_None required for the current cleanup pass._ Optional later: more product-tuned stage curves, React Native packaging polish.
+See [REVIEW.md](./REVIEW.md) for the current structure review — dead CSS and a duplicated
+`.settings-wrap` rule, a failing `npm run lint`, CI that skips lint/tests, the half-migrated
+i18n layer, the hand-written mode dispatch in `App.jsx`, and the two 700-line game
+components. Optional later: more product-tuned stage curves, React Native packaging polish.

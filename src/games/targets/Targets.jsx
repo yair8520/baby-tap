@@ -28,6 +28,7 @@ export function Targets({ activeEmojis, t, vibrate }) {
   const targetsRef = useRef([]);
   const targetScoreRef = useRef(0);
   const spawnTargetRef = useRef(null);
+  const activeEmojisRef = useRef(activeEmojis);
   const timeoutIdsRef = useRef(new Set());
 
   const scheduleTimeout = useCallback((callback, delay) => {
@@ -52,10 +53,15 @@ export function Targets({ activeEmojis, t, vibrate }) {
     targetScoreRef.current = targetScore;
   }, [targetScore]);
 
+  useEffect(() => {
+    activeEmojisRef.current = activeEmojis;
+  }, [activeEmojis]);
+
   const spawnTarget = useCallback(() => {
     const config = getTargetLevelConfig(targetScoreRef.current);
     if (targetsRef.current.length >= config.maxTargets) return;
 
+    const pool = activeEmojisRef.current;
     const size = randInt(config.minSize, config.maxSize + 1);
     const id = nextId();
     const removeTimer = scheduleTimeout(() => {
@@ -81,14 +87,14 @@ export function Targets({ activeEmojis, t, vibrate }) {
         window.innerHeight - 80 - size / 2,
       ),
       size,
-      emoji: activeEmojis[randInt(0, activeEmojis.length)],
+      emoji: pool[randInt(0, pool.length)],
       hue: randInt(0, 360),
       duration: config.durationMs,
       removeTimer,
       popped: false,
     };
     setTargets((previous) => [...previous, target]);
-  }, [activeEmojis, scheduleTimeout]);
+  }, [scheduleTimeout]);
 
   useEffect(() => {
     spawnTargetRef.current = spawnTarget;

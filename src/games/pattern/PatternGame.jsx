@@ -33,6 +33,10 @@ export default function PatternGame({ onExit, lang = 'he', vibrateOn = true }) {
   // ── Build level ──────────────────────────────────────────────────────────
 
   useEffect(() => {
+    clearTimeout(advanceTimer.current);
+    clearTimeout(disableTimer.current);
+    advanceTimer.current = null;
+    disableTimer.current = null;
     const initializeTimer = setTimeout(() => {
       levelDoneRef.current = false;
       const data = buildLevel(levelIdx);
@@ -45,7 +49,11 @@ export default function PatternGame({ onExit, lang = 'he', vibrateOn = true }) {
       setDisabledIds(new Set());
       setRevealed(false);
     }, 0);
-    return () => clearTimeout(initializeTimer);
+    return () => {
+      clearTimeout(initializeTimer);
+      clearTimeout(advanceTimer.current);
+      clearTimeout(disableTimer.current);
+    };
   }, [levelIdx, roundKey]);
 
   // Cleanup on unmount

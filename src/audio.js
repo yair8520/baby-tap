@@ -1,5 +1,8 @@
 import { NOTES, NUMBER_NOTES } from './constants.js'
 import { PIANO_SONGS } from './games/piano/levels.js'
+import { MAX_MELODY_QUEUE, reserveMelodySlot } from './audioTimeline.js'
+
+export { MAX_MELODY_QUEUE, reserveMelodySlot } from './audioTimeline.js'
 
 function songDisplayName(song, lang = 'he') {
   if (!song?.name) return ''
@@ -23,6 +26,10 @@ export function getAudioCtx() {
 // ── Timeline pointers ─────────────────────────────────────────────────────────
 let nextNoteTime   = 0
 export let nextMelodyTime = 0
+
+export function resetMelodyTimeline(at = 0) {
+  nextMelodyTime = Number.isFinite(at) ? at : 0
+}
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 function scheduleNote(ctx, freq, type, volume, startAt, dur) {
@@ -82,18 +89,23 @@ export async function playSound(type = 'normal') {
 export async function playMelodyNote(noteIdxRef, songIdxRef, setSongName, setShowSongName, songNameTimerRef, lang = 'he', scheduleTimeout = setTimeout) {
   if (globalMute) return
   const song = PIANO_SONGS[songIdxRef.current]
-  const [freq, beats] = song.notes[noteIdxRef.current]
+  const note = song?.notes?.[noteIdxRef.current]
+  if (!note) return
+  const [freq, beats] = note
   const beat  = 60 / song.bpm
   const dur   = beats * beat * 0.88
   const slot  = beats * beat
 
+  let startAt = 0
   try {
     const ctx = getAudioCtx()
-    if (ctx.state === 'suspended') await ctx.resume()
+    // Claim the timeline slot before any await so concurrent taps cannot race.
+    const reserved = reserveMelodySlot(ctx.currentTime, nextMelodyTime, slot)
+    if (!reserved.accepted) return
+    startAt = reserved.startAt
+    nextMelodyTime = reserved.nextTime
 
-    const now     = ctx.currentTime
-    const startAt = nextMelodyTime > now ? nextMelodyTime : now
-    nextMelodyTime = startAt + slot
+    if (ctx.state === 'suspended') await ctx.resume()
 
     const osc  = ctx.createOscillator()
     const gain = ctx.createGain()

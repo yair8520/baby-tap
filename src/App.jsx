@@ -167,8 +167,8 @@ export default function App() {
       const resetTimer = scheduleTimeout(() => setShowSettingsHint(false), 0);
       return () => clearTimeout(resetTimer);
     }
-    const hintTimer = setTimeout(() => setShowSettingsHint(true), 2000);
-    const hideTimer = setTimeout(() => setShowSettingsHint(false), 7000);
+    const hintTimer = scheduleTimeout(() => setShowSettingsHint(true), 2000);
+    const hideTimer = scheduleTimeout(() => setShowSettingsHint(false), 7000);
     return () => {
       clearTimeout(hintTimer);
       clearTimeout(hideTimer);

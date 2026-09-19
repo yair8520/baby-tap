@@ -65,13 +65,30 @@ export default function ShapeMemory({ onExit, lang = 'he', vibrateOn = true }) {
   const levelDoneRef  = useRef(false);
   const intervalRef   = useRef(null);
   const wrongTimerRef = useRef(null);
+  const phaseTimerRef = useRef(null);
+  const glowTimerRef  = useRef(null);
+  const doneTimerRef  = useRef(null);
 
   const cfg = getShapeMemoryLevel(levelIdx);
   const totalShowSec = cfg.showMs / 1000;
 
+  const clearPhaseTimers = useCallback(() => {
+    clearInterval(intervalRef.current);
+    clearTimeout(phaseTimerRef.current);
+    clearTimeout(wrongTimerRef.current);
+    clearTimeout(glowTimerRef.current);
+    clearTimeout(doneTimerRef.current);
+    intervalRef.current = null;
+    phaseTimerRef.current = null;
+    wrongTimerRef.current = null;
+    glowTimerRef.current = null;
+    doneTimerRef.current = null;
+  }, []);
+
   // ── Build level ──────────────────────────────────────────────────────────
 
   useEffect(() => {
+    clearPhaseTimers();
     levelDoneRef.current = false;
     const seq = buildSequence(cfg);
     const pal = buildPalette(seq, cfg);
@@ -98,10 +115,13 @@ export default function ShapeMemory({ onExit, lang = 'he', vibrateOn = true }) {
         const next = prev - 0.1;
         if (next <= 0) {
           clearInterval(intervalRef.current);
+          intervalRef.current = null;
           setFading(true);
-          setTimeout(() => {
+          clearTimeout(phaseTimerRef.current);
+          phaseTimerRef.current = setTimeout(() => {
             setPhase('recall');
             setFading(false);
+            phaseTimerRef.current = null;
           }, 500);
           return 0;
         }
@@ -109,7 +129,10 @@ export default function ShapeMemory({ onExit, lang = 'he', vibrateOn = true }) {
       });
     }, 100);
 
-    return () => clearInterval(intervalRef.current);
+    return () => {
+      clearInterval(intervalRef.current);
+      intervalRef.current = null;
+    };
   }, [phase]);
 
   // ── Tap palette item ──────────────────────────────────────────────────────
@@ -128,7 +151,11 @@ export default function ShapeMemory({ onExit, lang = 'he', vibrateOn = true }) {
 
       const nextAnswers = [...userAnswers, item];
       setSlotGlow(currentIdx);
-      setTimeout(() => setSlotGlow(null), 500);
+      clearTimeout(glowTimerRef.current);
+      glowTimerRef.current = setTimeout(() => {
+        setSlotGlow(null);
+        glowTimerRef.current = null;
+      }, 500);
 
       if (nextAnswers.length === sequence.length) {
         // Sequence complete!
@@ -136,7 +163,11 @@ export default function ShapeMemory({ onExit, lang = 'he', vibrateOn = true }) {
         setUserAnswers(nextAnswers);
         recordStars(levelIdx, starsFromMistakes(mistakes));
         buzz([40, 30, 80, 30, 120], vibrateOn);
-        setTimeout(() => setLevelDone(true), 600);
+        clearTimeout(doneTimerRef.current);
+        doneTimerRef.current = setTimeout(() => {
+          setLevelDone(true);
+          doneTimerRef.current = null;
+        }, 600);
       } else {
         setUserAnswers(nextAnswers);
       }
@@ -151,6 +182,7 @@ export default function ShapeMemory({ onExit, lang = 'he', vibrateOn = true }) {
       wrongTimerRef.current = setTimeout(() => {
         setWrongSlot(null);
         setUserAnswers([]);
+        wrongTimerRef.current = null;
       }, 600);
     }
   }, [
@@ -163,12 +195,7 @@ export default function ShapeMemory({ onExit, lang = 'he', vibrateOn = true }) {
   ]);
 
   // Cleanup on unmount
-  useEffect(() => {
-    return () => {
-      clearInterval(intervalRef.current);
-      clearTimeout(wrongTimerRef.current);
-    };
-  }, []);
+  useEffect(() => () => clearPhaseTimers(), [clearPhaseTimers]);
 
   const starCount = starsFromMistakes(mistakes);
   const levelNum  = levelIdx + 1;

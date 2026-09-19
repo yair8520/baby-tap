@@ -13,8 +13,17 @@ import {
   getAudioCtx,
   playMelodyNote,
   nextMelodyTime,
+  MAX_MELODY_QUEUE,
+  resetMelodyTimeline,
 } from "../../audio.js";
-import { getClassicLevelConfig } from "./levels.js";
+import {
+  getClassicLevelConfig,
+  COMBO_GAP_MS,
+  IDLE_TIMEOUT_MS,
+  PARTICLE_LIFE_MS,
+  TRAIL_LIFE_MS,
+  SPAWN_THROTTLE_MS,
+} from "./levels.js";
 import { PIANO_SONGS } from "../piano/levels.js";
 import { rand, randInt, nextId } from "../../utils/random.js";
 import "./ClassicGame.css";
@@ -81,10 +90,22 @@ export default function ClassicGame({
     return id;
   }, []);
 
+  const clearScheduledTimeout = useCallback((id) => {
+    if (id == null) return;
+    clearTimeout(id);
+    timeoutIdsRef.current.delete(id);
+  }, []);
+
   const scheduleInterval = useCallback((callback, delay) => {
     const id = setInterval(callback, delay);
     intervalIdsRef.current.add(id);
     return id;
+  }, []);
+
+  const clearScheduledInterval = useCallback((id) => {
+    if (id == null) return;
+    clearInterval(id);
+    intervalIdsRef.current.delete(id);
   }, []);
 
   useEffect(() => {
@@ -103,9 +124,12 @@ export default function ClassicGame({
 
   const resetIdle = useCallback(() => {
     setShowIdle(false);
-    clearTimeout(idleTimerRef.current);
-    idleTimerRef.current = scheduleTimeout(() => setShowIdle(true), 4000);
-  }, [scheduleTimeout]);
+    clearScheduledTimeout(idleTimerRef.current);
+    idleTimerRef.current = scheduleTimeout(
+      () => setShowIdle(true),
+      IDLE_TIMEOUT_MS,
+    );
+  }, [clearScheduledTimeout, scheduleTimeout]);
 
   useEffect(() => {
     const initializeTimer = scheduleTimeout(resetIdle, 0);
@@ -132,7 +156,9 @@ export default function ClassicGame({
       isNumber = false,
       comboScale = 1,
     ) => {
-      lastSpawnRef.current = Date.now();
+      const nowMs = Date.now();
+      if (nowMs - lastSpawnRef.current < SPAWN_THROTTLE_MS) return;
+      lastSpawnRef.current = nowMs;
       resetIdle();
 
       const bonus = Math.min(Math.floor((comboScale - 1) * 0.8), 2);
@@ -166,7 +192,7 @@ export default function ClassicGame({
         const speed = rand(60, isNumber ? 220 : 170);
         scheduleTimeout(
           () => setParticles((prev) => prev.filter((p) => p.id !== id)),
-          600,
+          PARTICLE_LIFE_MS,
         );
         return {
           id,
@@ -182,7 +208,7 @@ export default function ClassicGame({
       setParticles((prev) => [...prev, ...newParticles]);
 
       const ctx = getAudioCtx();
-      if (!ctx || nextMelodyTime - ctx.currentTime < 0.9) {
+      if (!ctx || nextMelodyTime - ctx.currentTime < MAX_MELODY_QUEUE) {
         playMelody();
       }
     },
@@ -197,7 +223,7 @@ export default function ClassicGame({
     const now = Date.now();
     const gap = now - lastTapTimeRef.current;
     lastTapTimeRef.current = now;
-    comboRef.current = gap < 650 ? Math.min(comboRef.current + 1, 15) : 1;
+    comboRef.current = gap < COMBO_GAP_MS ? Math.min(comboRef.current + 1, 15) : 1;
     const c = comboRef.current;
 
     if (c === 10) {
@@ -222,14 +248,14 @@ export default function ClassicGame({
     if (c >= 2) {
       setCombo(c);
       setShowCombo(true);
-      clearTimeout(comboTimerRef.current);
+      clearScheduledTimeout(comboTimerRef.current);
       comboTimerRef.current = scheduleTimeout(() => {
         setShowCombo(false);
         comboRef.current = 0;
-      }, 900);
+      }, COMBO_GAP_MS + 250);
     }
     return c;
-  }, [spawnAt, doVibrate, scheduleTimeout]);
+  }, [spawnAt, doVibrate, scheduleTimeout, clearScheduledTimeout]);
 
   // Shake detection
   useEffect(() => {
@@ -275,8 +301,10 @@ export default function ClassicGame({
           const dy = t.clientY - start.y;
           if (Math.sqrt(dx * dx + dy * dy) > 12) {
             isSwipingRef.current[t.identifier] = true;
-            clearTimeout(longPressTimerRef.current[t.identifier]);
-            clearInterval(longPressIntervalRef.current[t.identifier]);
+            clearScheduledTimeout(longPressTimerRef.current[t.identifier]);
+            clearScheduledInterval(longPressIntervalRef.current[t.identifier]);
+            delete longPressTimerRef.current[t.identifier];
+            delete longPressIntervalRef.current[t.identifier];
           }
         }
         if (isSwipingRef.current[t.identifier]) {
@@ -290,7 +318,7 @@ export default function ClassicGame({
           ]);
           scheduleTimeout(
             () => setTrail((prev) => prev.filter((tr) => tr.id !== id)),
-            750,
+            TRAIL_LIFE_MS,
           );
         }
       });
@@ -309,7 +337,7 @@ export default function ClassicGame({
       ]);
       scheduleTimeout(
         () => setTrail((prev) => prev.filter((t) => t.id !== id)),
-        700,
+        TRAIL_LIFE_MS,
       );
     };
 
@@ -319,7 +347,7 @@ export default function ClassicGame({
       window.removeEventListener("mousemove", onMove);
       window.removeEventListener("touchmove", onTouchMove);
     };
-  }, [scheduleTimeout]);
+  }, [scheduleTimeout, clearScheduledTimeout, clearScheduledInterval]);
 
   // Keyboard
   useEffect(() => {
@@ -423,8 +451,8 @@ export default function ClassicGame({
       if (isChromeTarget(e.target)) return;
       Array.from(e.changedTouches).forEach((t) => {
         const wasLongPress = !!longPressIntervalRef.current[t.identifier];
-        clearTimeout(longPressTimerRef.current[t.identifier]);
-        clearInterval(longPressIntervalRef.current[t.identifier]);
+        clearScheduledTimeout(longPressTimerRef.current[t.identifier]);
+        clearScheduledInterval(longPressIntervalRef.current[t.identifier]);
         delete longPressTimerRef.current[t.identifier];
         delete longPressIntervalRef.current[t.identifier];
 
@@ -473,7 +501,14 @@ export default function ClassicGame({
         delete isSwipingRef.current[t.identifier];
       });
     },
-    [doVibrate, spawnAt, trackCombo, scheduleTimeout],
+    [
+      doVibrate,
+      spawnAt,
+      trackCombo,
+      scheduleTimeout,
+      clearScheduledTimeout,
+      clearScheduledInterval,
+    ],
   );
 
   const handleMouseDown = useCallback(
@@ -500,8 +535,8 @@ export default function ClassicGame({
       if (e.button !== 0) return;
       if (isChromeTarget(e.target)) return;
       const wasLong = !!mouseLongIntervalRef.current;
-      clearTimeout(mouseLongTimerRef.current);
-      clearInterval(mouseLongIntervalRef.current);
+      clearScheduledTimeout(mouseLongTimerRef.current);
+      clearScheduledInterval(mouseLongIntervalRef.current);
       mouseLongTimerRef.current = null;
       mouseLongIntervalRef.current = null;
       if (!wasLong && mousePosRef.current) {
@@ -543,7 +578,14 @@ export default function ClassicGame({
       }
       mousePosRef.current = null;
     },
-    [doVibrate, spawnAt, trackCombo, scheduleTimeout],
+    [
+      doVibrate,
+      spawnAt,
+      trackCombo,
+      scheduleTimeout,
+      clearScheduledTimeout,
+      clearScheduledInterval,
+    ],
   );
 
   const handleMouseMoveLong = useCallback((e) => {
@@ -552,12 +594,12 @@ export default function ClassicGame({
   }, []);
 
   const handleMouseLeaveLong = useCallback(() => {
-    clearTimeout(mouseLongTimerRef.current);
-    clearInterval(mouseLongIntervalRef.current);
+    clearScheduledTimeout(mouseLongTimerRef.current);
+    clearScheduledInterval(mouseLongIntervalRef.current);
     mouseLongTimerRef.current = null;
     mouseLongIntervalRef.current = null;
     mousePosRef.current = null;
-  }, []);
+  }, [clearScheduledTimeout, clearScheduledInterval]);
 
   // Attach pointer handlers on window so chrome siblings still receive events
   useEffect(() => {
@@ -599,6 +641,7 @@ export default function ClassicGame({
       intervalIds.forEach(clearInterval);
       timeoutIds.clear();
       intervalIds.clear();
+      resetMelodyTimeline();
     };
   }, []);
 

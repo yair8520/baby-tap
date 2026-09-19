@@ -114,15 +114,44 @@ export default function SleepGame({ lang = "he", muteOn = false }) {
     sleepAudioRef.current = null;
   }, []);
 
+  const abandonSleepGraph = useCallback((master, partial = {}) => {
+    try {
+      if (partial.intervalId) window.clearInterval(partial.intervalId);
+      partial.sources?.forEach((s) => {
+        try {
+          s.stop?.();
+          s.disconnect?.();
+        } catch {
+          // Best-effort cleanup for abandoned async graphs.
+        }
+      });
+      partial.oscillators?.forEach((o) => {
+        try {
+          o.stop?.();
+          o.disconnect?.();
+        } catch {
+          // Best-effort cleanup for abandoned async graphs.
+        }
+      });
+      partial.extra?.forEach((n) => n.disconnect?.());
+      master?.disconnect?.();
+    } catch {
+      // Abandoned graphs may already be partially torn down.
+    }
+  }, []);
+
   const startSleepAudio = useCallback(
     async (mode, volume) => {
       if (muteRef.current) return;
       const ctx = getAudioCtx();
       if (!ctx) return;
       if (ctx.state === "suspended") await ctx.resume();
+      if (muteRef.current) return;
       stopSleepAudio();
 
       const myVersion = sleepAudioVersionRef.current;
+      const isCurrent = () =>
+        myVersion === sleepAudioVersionRef.current && !muteRef.current;
 
       const master = ctx.createGain();
       master.gain.value = Math.max(0, Math.min(0.45, volume));
@@ -132,9 +161,10 @@ export default function SleepGame({ lang = "he", muteOn = false }) {
       if (sleepOpusUrl) {
         try {
           const buffer = await getSleepOpusBuffer(ctx, sleepOpusUrl);
-          if (!buffer) return;
-          if (myVersion !== sleepAudioVersionRef.current) return;
-          if (muteRef.current) return;
+          if (!buffer || !isCurrent()) {
+            abandonSleepGraph(master);
+            return;
+          }
 
           const src = ctx.createBufferSource();
           src.buffer = buffer;
@@ -146,7 +176,16 @@ export default function SleepGame({ lang = "he", muteOn = false }) {
           return;
         } catch {
           // Fall back to generated ambience when the recording cannot load.
+          if (!isCurrent()) {
+            abandonSleepGraph(master);
+            return;
+          }
         }
+      }
+
+      if (!isCurrent()) {
+        abandonSleepGraph(master);
+        return;
       }
 
       const makeNoiseBuffer = (kind = "white") => {
@@ -184,6 +223,7 @@ export default function SleepGame({ lang = "he", muteOn = false }) {
         };
         const notes = sequences[mode];
         const noteDur = 0.42;
+        const lookahead = 0.18;
 
         const osc = ctx.createOscillator();
         osc.type = "sine";
@@ -205,24 +245,29 @@ export default function SleepGame({ lang = "he", muteOn = false }) {
         toneLP.connect(master);
 
         let idx = 0;
+        let nextNoteAt = ctx.currentTime;
         const scheduleNote = () => {
-          const t = ctx.currentTime;
+          const t = Math.max(nextNoteAt, ctx.currentTime);
           const f = notes[idx % notes.length];
           idx++;
           gain.gain.cancelScheduledValues(t);
           gain.gain.setValueAtTime(0.0001, t);
           gain.gain.linearRampToValueAtTime(0.11, t + 0.02);
           gain.gain.exponentialRampToValueAtTime(0.001, t + noteDur * 0.9);
-          osc.frequency.setTargetAtTime(f, t + 0.02);
+          osc.frequency.setTargetAtTime(f, t + 0.02, 0.015);
+          nextNoteAt = t + noteDur;
         };
 
         osc.start();
         lfo.start();
         scheduleNote();
-        const iv = window.setInterval(
-          scheduleNote,
-          Math.max(250, Math.round(noteDur * 1000)),
-        );
+        const iv = window.setInterval(() => {
+          if (!isCurrent()) return;
+          // Keep a small lookahead buffer on the audio clock (not wall clock).
+          while (nextNoteAt < ctx.currentTime + lookahead) {
+            scheduleNote();
+          }
+        }, 100);
         sleepAudioRef.current = {
           master,
           oscillators: [osc, lfo],
@@ -269,17 +314,26 @@ export default function SleepGame({ lang = "he", muteOn = false }) {
         breathSrc.start();
         breathLFO.start();
 
+        const pulsePeriod = 0.98;
+        const lookahead = 0.25;
+        let nextPulseAt = ctx.currentTime;
         const pulse = () => {
-          const t = ctx.currentTime;
+          const t = Math.max(nextPulseAt, ctx.currentTime);
           heartGain.gain.cancelScheduledValues(t);
           heartGain.gain.setValueAtTime(0.001, t);
           heartGain.gain.linearRampToValueAtTime(0.22, t + 0.04);
           heartGain.gain.exponentialRampToValueAtTime(0.001, t + 0.19);
           heartGain.gain.linearRampToValueAtTime(0.12, t + 0.23);
           heartGain.gain.exponentialRampToValueAtTime(0.001, t + 0.48);
+          nextPulseAt = t + pulsePeriod;
         };
         pulse();
-        const iv = window.setInterval(pulse, 980);
+        const iv = window.setInterval(() => {
+          if (!isCurrent()) return;
+          while (nextPulseAt < ctx.currentTime + lookahead) {
+            pulse();
+          }
+        }, 120);
         sleepAudioRef.current = {
           master,
           sources: [breathSrc],
@@ -381,7 +435,7 @@ export default function SleepGame({ lang = "he", muteOn = false }) {
       src.start();
       sleepAudioRef.current = { master, sources: [src], extra: [filter1, filter2] };
     },
-    [stopSleepAudio],
+    [abandonSleepGraph, stopSleepAudio],
   );
 
   useEffect(() => {

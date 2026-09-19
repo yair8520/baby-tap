@@ -72,6 +72,21 @@ export default function SizeSort({ onExit, lang = 'he', vibrateOn = true }) {
   const slotsRef     = useRef([]);
   const mistakesRef  = useRef(0);
   const completeTimerRef = useRef(null);
+  const timeoutIdsRef = useRef(new Set());
+
+  const scheduleTimeout = useCallback((callback, delay) => {
+    const id = setTimeout(() => {
+      timeoutIdsRef.current.delete(id);
+      callback();
+    }, delay);
+    timeoutIdsRef.current.add(id);
+    return id;
+  }, []);
+
+  const clearScheduledTimeouts = useCallback(() => {
+    timeoutIdsRef.current.forEach(clearTimeout);
+    timeoutIdsRef.current.clear();
+  }, []);
 
   useEffect(() => { piecesRef.current   = pieces;   }, [pieces]);
   useEffect(() => { slotsRef.current    = slots;    }, [slots]);
@@ -80,7 +95,7 @@ export default function SizeSort({ onExit, lang = 'he', vibrateOn = true }) {
   // Build level
   useEffect(() => {
     if (!W || !H) return;
-    const initializeTimer = setTimeout(() => {
+    const initializeTimer = scheduleTimeout(() => {
       const { slots: s, pieces: p } = buildLevel(levelIdx, W, H);
       setSlots(s);
       setPieces(p);
@@ -96,8 +111,17 @@ export default function SizeSort({ onExit, lang = 'he', vibrateOn = true }) {
     return () => {
       clearTimeout(initializeTimer);
       clearTimeout(completeTimerRef.current);
+      clearScheduledTimeouts();
     };
-  }, [levelIdx, roundKey, W, H]);
+  }, [clearScheduledTimeouts, levelIdx, roundKey, W, H, scheduleTimeout]);
+
+  useEffect(() => {
+    const timeoutIds = timeoutIdsRef.current;
+    return () => {
+      timeoutIds.forEach(clearTimeout);
+      timeoutIds.clear();
+    };
+  }, []);
 
   // ── Pointer handlers ────────────────────────────────────────────────────────
 
@@ -163,23 +187,23 @@ export default function SizeSort({ onExit, lang = 'he', vibrateOn = true }) {
         ));
 
         setMatchId(nearest.id);
-        setTimeout(() => setMatchId(null), 700);
+        scheduleTimeout(() => setMatchId(null), 700);
 
         const sparkId = Date.now() + Math.random();
         setSparks(prev => [...prev, { id: sparkId, x: nearest.cx, y: nearest.cy, color: piece.color }]);
-        setTimeout(() => setSparks(prev => prev.filter(s => s.id !== sparkId)), 950);
+        scheduleTimeout(() => setSparks(prev => prev.filter(s => s.id !== sparkId)), 950);
 
         const matched = piecesRef.current.filter(p => p.matched).length + 1;
         if (matched >= piecesRef.current.length) {
           recordStars(levelIdx, starsFromMistakes(mistakesRef.current));
-          completeTimerRef.current = setTimeout(() => setLevelDone(true), 650);
+          completeTimerRef.current = scheduleTimeout(() => setLevelDone(true), 650);
         }
       } else {
         // Wrong slot
         buzz([80, 40, 80], vibrateOn);
         setWrongId(pieceId);
         setMistakes(m => m + 1);
-        setTimeout(() => setWrongId(null), 520);
+        scheduleTimeout(() => setWrongId(null), 520);
         setPieces(prev => prev.map(pc =>
           pc.id === pieceId ? { ...pc, cx: pc.homeCx, cy: pc.homeCy } : pc
         ));
@@ -190,7 +214,7 @@ export default function SizeSort({ onExit, lang = 'he', vibrateOn = true }) {
         pc.id === pieceId ? { ...pc, cx: pc.homeCx, cy: pc.homeCy } : pc
       ));
     }
-  }, [levelIdx, recordStars, vibrateOn]);
+  }, [levelIdx, recordStars, scheduleTimeout, vibrateOn]);
 
   // ── Derived ─────────────────────────────────────────────────────────────────
 

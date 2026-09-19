@@ -24,6 +24,7 @@ export {
   PLAY,
   LEARNING,
   DEFAULT_GAME_ID,
+  GAME_MODE_IDS,
   getGame,
   gamesByCategory,
 } from "./registry.js";

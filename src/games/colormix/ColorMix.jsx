@@ -12,6 +12,7 @@ import { LearningGameShell, starsFromMistakes } from '../../components/LearningG
 import { useGameBestStars, useGameLevel } from '../../hooks/useGameProgress.js';
 import { useResponsiveGameViewport } from '../../hooks/useResponsiveGameViewport.js';
 import { buzz } from '../../components/LearningGameShell/vibrate.js';
+import { useT } from '../../i18n';
 import './ColorMix.css';
 
 // ─── SparkBurst ───────────────────────────────────────────────────────────────
@@ -53,6 +54,7 @@ function SparkBurst({ x, y, color }) {
 // ─── Main component ───────────────────────────────────────────────────────────
 
 export default function ColorMix({ onExit, lang = 'he', vibrateOn = true }) {
+  const t = useT();
   const containerRef = useRef(null);
   const { width: W, height: H } = useResponsiveGameViewport(containerRef);
   const [roundKey, setRoundKey] = useState(0);
@@ -268,7 +270,6 @@ export default function ColorMix({ onExit, lang = 'he', vibrateOn = true }) {
       <div className="cm-bg" />
 
       <LearningGameShell
-        lang={lang}
         levelNum={levelNum}
         totalStars={totalStars}
         onExit={onExit}
@@ -281,7 +282,7 @@ export default function ColorMix({ onExit, lang = 'he', vibrateOn = true }) {
 
       {/* Target circles */}
       <div className="cm-targets-label" style={{ top: H * 0.085 }}>
-        <span>{lang === 'he' ? 'ערבב ל...' : 'Mix to...'}</span>
+        <span>{t("colormix.mixTo")}</span>
       </div>
 
       {targets.map(tgt => (
@@ -351,12 +352,12 @@ export default function ColorMix({ onExit, lang = 'he', vibrateOn = true }) {
         className="cm-bowl-label"
         style={{ top: H * 0.47 }}
       >
-        {lang === 'he' ? 'קערת הערבוב' : 'Mixing Bowl'}
+        {t("colormix.bowl")}
       </div>
 
       {/* Source swatches at bottom */}
       <div className="cm-sources-label" style={{ top: H * 0.80 }}>
-        {lang === 'he' ? 'גרור צבע' : 'Drag a color'}
+        {t("colormix.dragColor")}
       </div>
 
       {sources.map(src => {

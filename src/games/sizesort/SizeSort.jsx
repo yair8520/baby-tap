@@ -4,6 +4,7 @@ import { LearningGameShell, starsFromMistakes } from '../../components/LearningG
 import { useGameBestStars, useGameLevel } from '../../hooks/useGameProgress.js';
 import { useResponsiveGameViewport } from '../../hooks/useResponsiveGameViewport.js';
 import { buzz } from '../../components/LearningGameShell/vibrate.js';
+import { useT } from '../../i18n';
 import './SizeSort.css';
 
 // ─── SparkBurst ───────────────────────────────────────────────────────────────
@@ -44,7 +45,8 @@ function SparkBurst({ x, y, color }) {
 
 // ─── Main component ───────────────────────────────────────────────────────────
 
-export default function SizeSort({ onExit, lang = 'he', vibrateOn = true }) {
+export default function SizeSort({ onExit, vibrateOn = true }) {
+  const t = useT();
   const containerRef = useRef(null);
   const { width: W, height: H } = useResponsiveGameViewport(containerRef);
   const [roundKey, setRoundKey] = useState(0);
@@ -211,7 +213,6 @@ export default function SizeSort({ onExit, lang = 'he', vibrateOn = true }) {
       <div className="ss-bg" />
 
       <LearningGameShell
-        lang={lang}
         levelNum={levelNum}
         totalStars={totalStars}
         onExit={onExit}
@@ -224,7 +225,7 @@ export default function SizeSort({ onExit, lang = 'he', vibrateOn = true }) {
 
       {/* Direction label */}
       <div className="ss-direction-label" style={{ top: 66 }}>
-        {lang === 'he' ? 'מהקטן לגדול →' : 'Smallest → Largest'}
+        {t("sizesort.instruction")}
       </div>
 
       {/* Slots */}

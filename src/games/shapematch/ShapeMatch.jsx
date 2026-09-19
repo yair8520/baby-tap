@@ -51,7 +51,7 @@ function SparkBurst({ x, y, color }) {
 
 // ─── Main component ───────────────────────────────────────────────────────────
 
-export default function ShapeMatch({ onExit, lang = 'he', vibrateOn = true }) {
+export default function ShapeMatch({ onExit, vibrateOn = true }) {
   const containerRef  = useRef(null);
   const { width: w, height: h } = useResponsiveGameViewport(containerRef);
   const [roundKey, setRoundKey] = useState(0);
@@ -239,7 +239,6 @@ export default function ShapeMatch({ onExit, lang = 'he', vibrateOn = true }) {
       <div className="shm-bg" />
 
       <LearningGameShell
-        lang={lang}
         levelNum={levelNum}
         totalStars={totalStars}
         onExit={onExit}

@@ -2,26 +2,20 @@ import "./SettingsMenu.css";
 import { useLocalStorage } from "../../hooks/useLocalStorage.js";
 import { getT } from "../../i18n/index.js";
 import { STORAGE_KEYS } from "../../storage/keys.js";
+import { PLAY, LEARNING, gamesByCategory } from "../../games/registry.js";
 import { ResetProgressControl } from "../ResetProgressControl/index.js";
 
-const GAME_MODES = [
-  { id: "classic", emoji: "🎮", key: "games.classic" },
-  { id: "balloons", emoji: "🎈", key: "games.balloons" },
-  { id: "drums", emoji: "🥁", key: "games.drums" },
-  { id: "targets", emoji: "🎯", key: "games.targets" },
-  { id: "autoshow", emoji: "🌙", key: "games.sleep" },
-];
+const GAME_MODES = gamesByCategory(PLAY).map((g) => ({
+  id: g.id,
+  emoji: g.emoji,
+  key: g.i18nKey,
+}));
 
-const LEARNING_MODES = [
-  { id: "piano", emoji: "🎹", key: "games.piano" },
-  { id: "memory", emoji: "🧠", key: "games.memory" },
-  { id: "shapes", emoji: "🎨", key: "games.shapes" },
-  { id: "shapematch", emoji: "🔵", key: "games.shapematch" },
-  { id: "colormix", emoji: "🧪", key: "games.colormix" },
-  { id: "sizesort", emoji: "📏", key: "games.sizesort" },
-  { id: "shapememory", emoji: "🃏", key: "games.shapememory" },
-  { id: "pattern", emoji: "🔷", key: "games.pattern" },
-];
+const LEARNING_MODES = gamesByCategory(LEARNING).map((g) => ({
+  id: g.id,
+  emoji: g.emoji,
+  key: g.i18nKey,
+}));
 
 const TABS = [
   { id: "games", key: "menu.tabGames" },

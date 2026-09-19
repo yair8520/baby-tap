@@ -4,8 +4,12 @@ export const PLAY = "play";
 export const LEARNING = "learning";
 
 /** Lazily load a named export from a game package barrel. */
-const lazyGame = (loader, name) =>
+const lazyNamed = (loader, name) =>
   lazy(() => loader().then((mod) => ({ default: mod[name] })));
+
+/** Lazily load a default export from a game package barrel. */
+const lazyDefault = (loader) =>
+  lazy(() => loader().then((mod) => ({ default: mod.default })));
 
 /**
  * Single source of truth for game modes.
@@ -14,10 +18,10 @@ const lazyGame = (loader, name) =>
  * list — add a mode here and both pick it up. Components are lazy so a mode's
  * code (and its CSS) only loads when it is first opened.
  *
- * Every game reads the active language from `LangProvider` via `useT` / `useLang`,
- * so no entry passes a `lang` prop. `props` adapts the shell context to whatever
- * else a game needs:
- *   { activeEmojis, activeColors, vibrateOn, muteOn, canVibrate, onExit }
+ * `hideAppChrome`: the game draws its own exit control (LearningGameShell), so
+ * App hides the corner-hold and settings gear while it is active.
+ *
+ * `props` adapts the shell context to whatever a game needs.
  */
 export const GAMES = [
   {
@@ -25,11 +29,13 @@ export const GAMES = [
     category: PLAY,
     emoji: "🎮",
     i18nKey: "games.classic",
-    Component: lazyGame(() => import("./classic/index.js"), "ClassicGame"),
+    Component: lazyDefault(() => import("./classic/index.js")),
     props: (ctx) => ({
+      lang: ctx.lang,
       activeEmojis: ctx.activeEmojis,
       activeColors: ctx.activeColors,
       vibrateOn: ctx.vibrateOn,
+      comboLabels: ctx.comboLabels,
     }),
   },
   {
@@ -37,15 +43,15 @@ export const GAMES = [
     category: PLAY,
     emoji: "🎈",
     i18nKey: "games.balloons",
-    Component: lazyGame(() => import("./balloons/index.js"), "BalloonsGame"),
-    props: (ctx) => ({ vibrateOn: ctx.vibrateOn }),
+    Component: lazyNamed(() => import("./balloons/index.js"), "Balloons"),
+    props: (ctx) => ({ t: ctx.t, vibrate: ctx.vibrate }),
   },
   {
     id: "drums",
     category: PLAY,
     emoji: "🥁",
     i18nKey: "games.drums",
-    Component: lazyGame(() => import("./drums/index.js"), "DrumsGame"),
+    Component: lazyDefault(() => import("./drums/index.js")),
     props: (ctx) => ({ vibrateOn: ctx.vibrateOn }),
   },
   {
@@ -53,10 +59,11 @@ export const GAMES = [
     category: PLAY,
     emoji: "🎯",
     i18nKey: "games.targets",
-    Component: lazyGame(() => import("./targets/index.js"), "TargetsGame"),
+    Component: lazyNamed(() => import("./targets/index.js"), "Targets"),
     props: (ctx) => ({
       activeEmojis: ctx.activeEmojis,
-      vibrateOn: ctx.vibrateOn,
+      t: ctx.t,
+      vibrate: ctx.vibrate,
     }),
   },
   {
@@ -64,76 +71,99 @@ export const GAMES = [
     category: PLAY,
     emoji: "🌙",
     i18nKey: "games.sleep",
-    Component: lazyGame(() => import("./sleep/index.js"), "SleepGame"),
-    props: (ctx) => ({ muteOn: ctx.muteOn }),
+    Component: lazyDefault(() => import("./sleep/index.js")),
+    props: (ctx) => ({ lang: ctx.lang, muteOn: ctx.muteOn }),
   },
   {
     id: "piano",
     category: LEARNING,
     emoji: "🎹",
-    i18nKey: "learning.piano",
-    Component: lazyGame(() => import("./piano/index.js"), "PianoGame"),
-    props: (ctx) => ({ vibrateOn: ctx.vibrateOn }),
+    i18nKey: "games.piano",
+    Component: lazyDefault(() => import("./piano/index.js")),
+    props: (ctx) => ({ lang: ctx.lang, vibrateOn: ctx.vibrateOn }),
   },
   {
     id: "memory",
     category: LEARNING,
     emoji: "🧠",
-    i18nKey: "learning.memory",
-    Component: lazyGame(() => import("./memory/index.js"), "MemoryGame"),
-    props: (ctx) => ({ onExit: ctx.onExit }),
+    i18nKey: "games.memory",
+    Component: lazyDefault(() => import("./memory/index.js")),
+    props: (ctx) => ({ lang: ctx.lang, onSound: ctx.onSound }),
   },
   {
     id: "shapes",
     category: LEARNING,
     emoji: "🎨",
-    i18nKey: "learning.shapes",
-    Component: lazyGame(() => import("./shapes/index.js"), "ShapesGame"),
-    props: (ctx) => ({ onExit: ctx.onExit }),
+    i18nKey: "games.shapes",
+    Component: lazyDefault(() => import("./shapes/index.js")),
+    props: (ctx) => ({ lang: ctx.lang, onSound: ctx.onSound }),
   },
   {
     id: "shapematch",
     category: LEARNING,
     emoji: "🔵",
-    i18nKey: "learning.shapematch",
-    Component: lazyGame(() => import("./shapematch/index.js"), "ShapeMatch"),
-    props: (ctx) => ({ onExit: ctx.onExit, vibrateOn: ctx.canVibrate }),
+    i18nKey: "games.shapematch",
+    hideAppChrome: true,
+    Component: lazyDefault(() => import("./shapematch/index.js")),
+    props: (ctx) => ({
+      onExit: ctx.onExit,
+      vibrateOn: ctx.vibrateOn,
+    }),
   },
   {
     id: "colormix",
     category: LEARNING,
     emoji: "🧪",
-    i18nKey: "learning.colormix",
-    Component: lazyGame(() => import("./colormix/index.js"), "ColorMix"),
-    props: (ctx) => ({ onExit: ctx.onExit, vibrateOn: ctx.canVibrate }),
+    i18nKey: "games.colormix",
+    hideAppChrome: true,
+    Component: lazyDefault(() => import("./colormix/index.js")),
+    props: (ctx) => ({
+      onExit: ctx.onExit,
+      lang: ctx.lang,
+      vibrateOn: ctx.vibrateOn,
+    }),
   },
   {
     id: "sizesort",
     category: LEARNING,
     emoji: "📏",
-    i18nKey: "learning.sizesort",
-    Component: lazyGame(() => import("./sizesort/index.js"), "SizeSort"),
-    props: (ctx) => ({ onExit: ctx.onExit, vibrateOn: ctx.canVibrate }),
+    i18nKey: "games.sizesort",
+    hideAppChrome: true,
+    Component: lazyDefault(() => import("./sizesort/index.js")),
+    props: (ctx) => ({
+      onExit: ctx.onExit,
+      vibrateOn: ctx.vibrateOn,
+    }),
   },
   {
     id: "shapememory",
     category: LEARNING,
     emoji: "🃏",
-    i18nKey: "learning.shapememory",
-    Component: lazyGame(() => import("./shapememory/index.js"), "ShapeMemory"),
-    props: (ctx) => ({ onExit: ctx.onExit, vibrateOn: ctx.canVibrate }),
+    i18nKey: "games.shapememory",
+    hideAppChrome: true,
+    Component: lazyDefault(() => import("./shapememory/index.js")),
+    props: (ctx) => ({
+      onExit: ctx.onExit,
+      vibrateOn: ctx.vibrateOn,
+    }),
   },
   {
     id: "pattern",
     category: LEARNING,
     emoji: "🔷",
-    i18nKey: "learning.pattern",
-    Component: lazyGame(() => import("./pattern/index.js"), "PatternGame"),
-    props: (ctx) => ({ onExit: ctx.onExit, vibrateOn: ctx.canVibrate }),
+    i18nKey: "games.pattern",
+    hideAppChrome: true,
+    Component: lazyDefault(() => import("./pattern/index.js")),
+    props: (ctx) => ({
+      onExit: ctx.onExit,
+      vibrateOn: ctx.vibrateOn,
+    }),
   },
 ];
 
 export const DEFAULT_GAME_ID = "classic";
+
+export const GAME_MODE_IDS = GAMES.map((g) => g.id);
 
 const BY_ID = new Map(GAMES.map((g) => [g.id, g]));
 

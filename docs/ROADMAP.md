@@ -7,15 +7,18 @@
 4. Persist learning levels/stars, shapes score, sleep prefs, balloons on level-up
 5. LearningGameShell on all learning games (ShapeMatch, Pattern, ShapeMemory, ColorMix, SizeSort)
 6. Extracted from App: classic, drums, piano, sleep, balloons, targets + learning games
-7. App shell ~417 lines (down from ~2700)
-8. Shared `SparkBurst` + `games/shared/palette.js`
-9. i18n wired into App start screen + Settings (incl. learning mode labels)
+7. App shell uses `games/registry.js` + lazy `ActiveGame` (code-split per mode)
+8. Shared `SparkBurst` + `games/shared/palette.js` + `styles/effects.css`
+9. `LangProvider` / `useT` + `<html lang|dir>` follow the language toggle
 10. Settings: Reset progress (keeps prefs)
-11. Vitest smoke tests (`npm test`)
+11. Node test suite (`npm test`) + CI lint/test/build gate
 12. Expanded parametric campaigns to 15 stages (learning + balloons)
+13. Storage schema versioning + validated `useLocalStorage` with cross-tab sync
+14. PWA manifest / service worker via `vite-plugin-pwa`
+15. Hash routing via `useHashRoute` (privacy page without full reload)
 
 ## Remaining
-See [REVIEW.md](./REVIEW.md) for the current structure review — dead CSS and a duplicated
-`.settings-wrap` rule, a failing `npm run lint`, CI that skips lint/tests, the half-migrated
-i18n layer, the hand-written mode dispatch in `App.jsx`, and the two 700-line game
-components. Optional later: more product-tuned stage curves, React Native packaging polish.
+See [REVIEW.md](./REVIEW.md). Still open: finish i18n adoption in sleep/piano/memory/shapes
+(ternaries remain), migrate Memory/Shapes/Piano onto LearningGameShell, and split the
+long SleepGame / ClassicGame modules. Optional later: more product-tuned stage curves,
+React Native packaging polish.

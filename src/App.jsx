@@ -12,7 +12,7 @@ import { useLocalStorage } from "./hooks/useLocalStorage.js";
 import { STORAGE_KEYS } from "./storage/keys.js";
 import { clearStoredProgress } from "./storage/progress.js";
 import { isBoolean } from "./storage/validation.js";
-import SettingsMenu from "./components/SettingsMenu/index.jsx";
+import { SettingsMenu } from "./components/SettingsMenu";
 import { ActiveGame } from "./components/ActiveGame";
 import { getT } from "./i18n/index.js";
 import { LangProvider } from "./i18n/LangProvider.jsx";
@@ -411,7 +411,6 @@ export default function App() {
 
                 {settingsOpen && (
                   <SettingsMenu
-                    lang={lang}
                     gameMode={gameMode}
                     theme={theme}
                     muteOn={muteOn}

@@ -1,9 +1,9 @@
-import "./SettingsMenu.css";
 import { useLocalStorage } from "../../hooks/useLocalStorage.js";
-import { getT } from "../../i18n/index.js";
+import { useLang, useT } from "../../i18n";
 import { STORAGE_KEYS } from "../../storage/keys.js";
 import { PLAY, LEARNING, gamesByCategory } from "../../games/registry.js";
 import { ResetProgressControl } from "../ResetProgressControl/index.js";
+import "./SettingsMenu.css";
 
 const GAME_MODES = gamesByCategory(PLAY).map((g) => ({
   id: g.id,
@@ -25,8 +25,8 @@ const TABS = [
 ];
 const TAB_IDS = TABS.map((tab) => tab.id);
 
+/** In-game settings drawer (modes, audio, display). */
 export function SettingsMenu({
-  lang,
   gameMode,
   theme,
   muteOn,
@@ -40,25 +40,24 @@ export function SettingsMenu({
   onResetProgress,
   onClose,
 }) {
-  const isHe = lang === "he";
+  const { lang, dir } = useLang();
+  const t = useT();
   const [activeTab, setActiveTab] = useLocalStorage(
     STORAGE_KEYS.settingsTab,
     "games",
     TAB_IDS,
   );
 
-  const t = getT(lang);
   const stopPointerPropagation = (event) => event.stopPropagation();
 
   return (
     <div
       id="settings-menu"
       className="sm-panel"
-      dir={isHe ? "rtl" : "ltr"}
+      dir={dir}
       onPointerDown={stopPointerPropagation}
       onPointerUp={stopPointerPropagation}
     >
-      {/* Header */}
       <div className="sm-header">
         <span className="sm-title">{t("menu.title")}</span>
         <button
@@ -71,7 +70,6 @@ export function SettingsMenu({
         </button>
       </div>
 
-      {/* Tab bar */}
       <div className="sm-tabs" role="tablist">
         {TABS.map((tab) => (
           <button
@@ -90,10 +88,7 @@ export function SettingsMenu({
         ))}
       </div>
 
-      {/* Tab content */}
       <div className="sm-body">
-
-        {/* ── GAMES tab ── */}
         {activeTab === "games" && (
           <section
             id="settings-panel-games"
@@ -110,7 +105,10 @@ export function SettingsMenu({
                   key={m.id}
                   className={`sm-mode-btn${gameMode === m.id ? " sm-mode-btn--active" : ""}`}
                   aria-pressed={gameMode === m.id}
-                  onClick={() => { onGameModeChange(m.id); onClose(); }}
+                  onClick={() => {
+                    onGameModeChange(m.id);
+                    onClose();
+                  }}
                 >
                   <span className="sm-mode-emoji">{m.emoji}</span>
                   <span className="sm-mode-label">{t(m.key)}</span>
@@ -120,7 +118,6 @@ export function SettingsMenu({
           </section>
         )}
 
-        {/* ── LEARNING tab ── */}
         {activeTab === "learning" && (
           <section
             id="settings-panel-learning"
@@ -130,9 +127,7 @@ export function SettingsMenu({
             tabIndex={0}
           >
             <h3 className="sm-section-label">{t("learning.label")}</h3>
-            <p className="sm-section-desc">
-              {t("learning.description")}
-            </p>
+            <p className="sm-section-desc">{t("learning.description")}</p>
             <div className="sm-mode-grid">
               {LEARNING_MODES.map((m) => (
                 <button
@@ -140,7 +135,10 @@ export function SettingsMenu({
                   key={m.id}
                   className={`sm-mode-btn${gameMode === m.id ? " sm-mode-btn--active" : ""}`}
                   aria-pressed={gameMode === m.id}
-                  onClick={() => { onGameModeChange(m.id); onClose(); }}
+                  onClick={() => {
+                    onGameModeChange(m.id);
+                    onClose();
+                  }}
                 >
                   <span className="sm-mode-emoji">{m.emoji}</span>
                   <span className="sm-mode-label">{t(m.key)}</span>
@@ -150,7 +148,6 @@ export function SettingsMenu({
           </section>
         )}
 
-        {/* ── AUDIO tab ── */}
         {activeTab === "audio" && (
           <section
             id="settings-panel-audio"
@@ -191,7 +188,6 @@ export function SettingsMenu({
           </section>
         )}
 
-        {/* ── DISPLAY tab ── */}
         {activeTab === "display" && (
           <section
             id="settings-panel-display"
@@ -205,42 +201,40 @@ export function SettingsMenu({
               {[
                 { id: "he", emoji: "🇮🇱", label: "עברית" },
                 { id: "en", emoji: "🇬🇧", label: "English" },
-              ].map((l) => (
+              ].map((option) => (
                 <button
                   type="button"
-                  key={l.id}
-                  className={`sm-mode-btn${lang === l.id ? " sm-mode-btn--active" : ""}`}
-                  aria-pressed={lang === l.id}
-                  onClick={() => onLangChange(l.id)}
+                  key={option.id}
+                  className={`sm-mode-btn${lang === option.id ? " sm-mode-btn--active" : ""}`}
+                  aria-pressed={lang === option.id}
+                  onClick={() => onLangChange(option.id)}
                 >
-                  <span className="sm-mode-emoji">{l.emoji}</span>
-                  <span className="sm-mode-label">{l.label}</span>
+                  <span className="sm-mode-emoji">{option.emoji}</span>
+                  <span className="sm-mode-label">{option.label}</span>
                 </button>
               ))}
             </div>
 
             <h3 className="sm-section-label">{t("display.theme")}</h3>
             <div className="sm-mode-grid sm-mode-grid--4">
-              {Object.values(themePresets).map((t) => (
+              {Object.values(themePresets).map((preset) => (
                 <button
                   type="button"
-                  key={t.id}
-                  className={`sm-mode-btn${theme === t.id ? " sm-mode-btn--active" : ""}`}
-                  aria-pressed={theme === t.id}
-                  onClick={() => onThemeChange(t.id)}
+                  key={preset.id}
+                  className={`sm-mode-btn${theme === preset.id ? " sm-mode-btn--active" : ""}`}
+                  aria-pressed={theme === preset.id}
+                  onClick={() => onThemeChange(preset.id)}
                 >
-                  <span className="sm-mode-emoji">{t.emoji}</span>
-                  <span className="sm-mode-label">{t.label[lang]}</span>
+                  <span className="sm-mode-emoji">{preset.emoji}</span>
+                  <span className="sm-mode-label">{preset.label[lang]}</span>
                 </button>
               ))}
             </div>
 
-            <ResetProgressControl lang={lang} onReset={onResetProgress} />
+            <ResetProgressControl onReset={onResetProgress} />
           </section>
         )}
       </div>
     </div>
   );
 }
-
-export default SettingsMenu;

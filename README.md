@@ -6,23 +6,37 @@ Colorful tap-and-play games for babies and toddlers (React + Vite).
 
 ```
 src/
-  App.jsx              # Shell: fullscreen, settings, mode routing
-  audio.js             # Shared Web Audio helpers
-  constants.js         # Themes, emoji pools, piano keys
-  storage/keys.js      # All localStorage key names (bt_* prefix via hook)
+  App.jsx                 # Shell: fullscreen, settings, active mode
+  Root.jsx                # Hash route: app vs privacy policy
+  audio.js                # Shared Web Audio helpers
+  constants/              # env, emojis, audio (no games/ imports)
+  storage/                # keys, validation, progress, schema versioning
   hooks/
     useLocalStorage.js
-    useGameProgress.js # useGameLevel / useGameStars
+    useGameProgress.js    # useGameLevel / useGameStars / useGameBestStars
+    useHashRoute.js
+  i18n/                   # LangProvider, useT, he.json / en.json
   games/
+    registry.js           # Single source of truth for modes (lazy)
     <modeId>/
-      levels.js        # Stage configs — append rows to add stages
-      *Game.jsx
+      levels.js           # Stage configs — append rows to add stages
+      *Game.jsx / *.jsx
       index.js
   components/
+    ActiveGame/           # Suspense + registry dispatch
     SettingsMenu/
+    LearningGameShell/    # Shared learning chrome
     ShapeGeom/
-    LearningGameShell/ # (if present)
+    ResetProgressControl/
 ```
+
+## Adding a mode
+
+1. Create `src/games/<id>/` with levels + component + `index.js`
+2. Add an entry to `src/games/registry.js` (`props`, `category`, `i18nKey`)
+3. Add labels to `src/i18n/he.json` and `en.json`
+
+App and SettingsMenu both read from the registry — no other wiring needed.
 
 ## Adding stages
 
@@ -35,7 +49,7 @@ All keys go through `useLocalStorage` → `bt_<key>`. Canonical names live in `s
 | What | Key |
 |------|-----|
 | Settings | `lang`, `theme`, `vibrateOn`, `muteOn`, `gameMode` |
-| Memory / Shapes level | `memoryLevel`, `shapesLevel`, `shapesScore` |
+| Memory / Shapes | `memoryLevel`, `shapesScore` |
 | Learning drag games | `shapematchLevel`, `colormixLevel`, … + `*Stars` |
 | Balloons | `balloonLevel` (1-based) |
 | Targets | `targetHighScore` |
@@ -45,6 +59,8 @@ All keys go through `useLocalStorage` → `bt_<key>`. Canonical names live in `s
 
 ```bash
 npm run dev
+npm run lint
+npm test
 npm run build
 npm run deploy
 ```

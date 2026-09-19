@@ -8,7 +8,9 @@ import {
   COLORMIX_LEVELS,
   buildLevel,
 } from './levels.js';
-import { useGameLevel, useGameStars } from '../../hooks/useGameProgress.js';
+import { LearningGameShell, starsFromMistakes } from '../../components/LearningGameShell';
+import { useGameBestStars, useGameLevel } from '../../hooks/useGameProgress.js';
+import { useResponsiveGameViewport } from '../../hooks/useResponsiveGameViewport.js';
 import './ColorMix.css';
 
 // ─── SparkBurst ───────────────────────────────────────────────────────────────
@@ -44,8 +46,8 @@ function SparkBurst({ x, y, color }) {
 
 export default function ColorMix({ onExit, lang = 'he', vibrateOn = true }) {
   const containerRef = useRef(null);
-  const [W, setW]    = useState(window.innerWidth);
-  const [H, setH]    = useState(window.innerHeight);
+  const { width: W, height: H } = useResponsiveGameViewport(containerRef);
+  const [roundKey, setRoundKey] = useState(0);
 
   const [levelIdx,    setLevelIdx]    = useGameLevel('colormix', 0, {
     maxLevels: COLORMIX_LEVELS.length,
@@ -61,26 +63,21 @@ export default function ColorMix({ onExit, lang = 'he', vibrateOn = true }) {
   const [sparks,        setSparks]        = useState([]);
   const [levelDone,     setLevelDone]     = useState(false);
   const [mistakes,      setMistakes]      = useState(0);
-  const [totalStars,    setTotalStars]    = useGameStars('colormix', 0);
+  const { recordStars, totalStars } = useGameBestStars(
+    'colormix',
+    COLORMIX_LEVELS.length,
+  );
 
   // Refs for pointer handlers
   const draggingRef  = useRef(null);
   const bowlsRef     = useRef([]);
   const targetsRef   = useRef([]);
   const mistakesRef  = useRef(0);
+  const completeTimerRef = useRef(null);
 
   useEffect(() => { bowlsRef.current   = bowls;    }, [bowls]);
   useEffect(() => { targetsRef.current = targets;  }, [targets]);
   useEffect(() => { mistakesRef.current = mistakes; }, [mistakes]);
-
-  // Measure on mount
-  useEffect(() => {
-    const el = containerRef.current;
-    if (!el) return;
-    const r = el.getBoundingClientRect();
-    setW(r.width);
-    setH(r.height);
-  }, []);
 
   // Build level
   useEffect(() => {
@@ -95,7 +92,10 @@ export default function ColorMix({ onExit, lang = 'he', vibrateOn = true }) {
     setSparks([]);
     setWrongBowlId(null);
     setMatchedTgtId(null);
-  }, [levelIdx, W, H]);
+    draggingRef.current = null;
+    setDragging(null);
+    return () => clearTimeout(completeTimerRef.current);
+  }, [levelIdx, roundKey, W, H]);
 
   // ── Bowl logic ──────────────────────────────────────────────────────────────
 
@@ -130,10 +130,8 @@ export default function ColorMix({ onExit, lang = 'he', vibrateOn = true }) {
       // Check level done
       const newMatched = targets.filter(t => t.matched).length + 1;
       if (newMatched >= targets.length) {
-        const m = mistakesRef.current;
-        const stars = m === 0 ? 3 : m <= 2 ? 2 : 1;
-        setTotalStars(prev => prev + stars);
-        setTimeout(() => setLevelDone(true), 700);
+        recordStars(levelIdx, starsFromMistakes(mistakesRef.current));
+        completeTimerRef.current = setTimeout(() => setLevelDone(true), 700);
       }
     } else {
       // Wrong combo — shake bowl, return circles
@@ -145,7 +143,7 @@ export default function ColorMix({ onExit, lang = 'he', vibrateOn = true }) {
         setBowls(prev => prev.map(b => b.id === bowlId ? { ...b, slot1: null, slot2: null } : b));
       }, 500);
     }
-  }, [vibrateOn]);
+  }, [levelIdx, recordStars, vibrateOn]);
 
   // ── Pointer handlers ────────────────────────────────────────────────────────
 
@@ -217,7 +215,7 @@ export default function ColorMix({ onExit, lang = 'he', vibrateOn = true }) {
 
   // ── Derived ─────────────────────────────────────────────────────────────────
 
-  const starCount = mistakes === 0 ? 3 : mistakes <= 2 ? 2 : 1;
+  const starCount = starsFromMistakes(mistakes);
   const levelNum  = levelIdx + 1;
 
   // ── Render ──────────────────────────────────────────────────────────────────
@@ -233,18 +231,17 @@ export default function ColorMix({ onExit, lang = 'he', vibrateOn = true }) {
       {/* Background */}
       <div className="cm-bg" />
 
-      {/* Header */}
-      <div className="cm-header">
-        <button className="cm-btn-exit" onClick={onExit}>✕</button>
-        <span className="cm-level-label">
-          {lang === 'he' ? `שלב ${levelNum}` : `Level ${levelNum}`}
-        </span>
-        <span className="cm-hdr-stars">
-          {[0, 1, 2].map(i => (
-            <span key={i} style={{ opacity: i < starCount ? 1 : 0.22 }}>⭐</span>
-          ))}
-        </span>
-      </div>
+      <LearningGameShell
+        lang={lang}
+        levelNum={levelNum}
+        totalStars={totalStars}
+        onExit={onExit}
+        levelDone={levelDone}
+        starCount={starCount}
+        onNextLevel={() => setLevelIdx(p => p + 1)}
+        onReplay={() => setRoundKey(key => key + 1)}
+        isLastLevel={levelIdx === COLORMIX_LEVELS.length - 1}
+      >
 
       {/* Target circles */}
       <div className="cm-targets-label" style={{ top: H * 0.085 }}>
@@ -364,36 +361,7 @@ export default function ColorMix({ onExit, lang = 'he', vibrateOn = true }) {
       {sparks.map(s => (
         <SparkBurst key={s.id} x={s.x} y={s.y} color={s.color} />
       ))}
-
-      {/* Level-complete overlay */}
-      {levelDone && (
-        <div
-          className="cm-complete"
-          onPointerDown={e => e.stopPropagation()}
-          onPointerUp={e => e.stopPropagation()}
-        >
-          <div className="cm-complete-card">
-            <span className="cm-complete-emoji">🎨</span>
-            <div className="cm-complete-title">
-              {lang === 'he' ? 'כל הכבוד!' : 'Great job!'}
-            </div>
-            <div className="cm-complete-stars">
-              {[0, 1, 2].map(i => (
-                <span key={i} className={`cm-cstar${i < starCount ? ' on' : ''}`}>⭐</span>
-              ))}
-            </div>
-            <div className="cm-total-score">
-              {lang === 'he' ? `סה"כ ⭐ ${totalStars}` : `Total ⭐ ${totalStars}`}
-            </div>
-            <button
-              className="cm-btn-next"
-              onClick={() => setLevelIdx(p => p + 1)}
-            >
-              {lang === 'he' ? 'שלב הבא ➜' : 'Next Level ➜'}
-            </button>
-          </div>
-        </div>
-      )}
+      </LearningGameShell>
     </div>
   );
 }

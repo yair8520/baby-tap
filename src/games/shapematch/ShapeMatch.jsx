@@ -8,7 +8,8 @@ import {
   SHAPEMATCH_LEVELS,
   buildLevel,
 } from './levels.js';
-import { useGameLevel, useGameStars } from '../../hooks/useGameProgress.js';
+import { useGameBestStars, useGameLevel } from '../../hooks/useGameProgress.js';
+import { useResponsiveGameViewport } from '../../hooks/useResponsiveGameViewport.js';
 import './ShapeMatch.css';
 
 // ─── Spark burst on correct match ─────────────────────────────────────────────
@@ -44,8 +45,8 @@ function SparkBurst({ x, y, color }) {
 
 export default function ShapeMatch({ onExit, lang = 'he', vibrateOn = true }) {
   const containerRef  = useRef(null);
-  const [w, setW]     = useState(window.innerWidth);
-  const [h, setH]     = useState(window.innerHeight);
+  const { width: w, height: h } = useResponsiveGameViewport(containerRef);
+  const [roundKey, setRoundKey] = useState(0);
 
   const [levelIdx,   setLevelIdx]   = useGameLevel('shapematch', 0, {
     maxLevels: SHAPEMATCH_LEVELS.length,
@@ -58,27 +59,22 @@ export default function ShapeMatch({ onExit, lang = 'he', vibrateOn = true }) {
   const piecesRef    = useRef([]);
   const slotsRef     = useRef([]);
   const mistakesRef  = useRef(0);
+  const completeTimerRef = useRef(null);
 
   const [wrongId,    setWrongId]    = useState(null);  // piece shake
   const [matchId,    setMatchId]    = useState(null);  // slot pop
   const [sparks,     setSparks]     = useState([]);    // {id, x, y, color}
   const [mistakes,   setMistakes]   = useState(0);
   const [levelDone,  setLevelDone]  = useState(false);
-  const [totalStars, setTotalStars] = useGameStars('shapematch', 0);
+  const { recordStars, totalStars } = useGameBestStars(
+    'shapematch',
+    SHAPEMATCH_LEVELS.length,
+  );
 
   // keep refs in sync
   useEffect(() => { piecesRef.current  = pieces;   }, [pieces]);
   useEffect(() => { slotsRef.current   = slots;    }, [slots]);
   useEffect(() => { mistakesRef.current = mistakes; }, [mistakes]);
-
-  // measure container once mounted
-  useEffect(() => {
-    const el = containerRef.current;
-    if (!el) return;
-    const r = el.getBoundingClientRect();
-    setW(r.width);
-    setH(r.height);
-  }, []);
 
   // build level whenever levelIdx or dimensions change
   useEffect(() => {
@@ -90,7 +86,10 @@ export default function ShapeMatch({ onExit, lang = 'he', vibrateOn = true }) {
     mistakesRef.current = 0;
     setLevelDone(false);
     setSparks([]);
-  }, [levelIdx, w, h]);
+    draggingRef.current = null;
+    setDragging(null);
+    return () => clearTimeout(completeTimerRef.current);
+  }, [levelIdx, roundKey, w, h]);
 
   // ── drag handlers ──────────────────────────────────────────────────────────
 
@@ -164,10 +163,8 @@ export default function ShapeMatch({ onExit, lang = 'he', vibrateOn = true }) {
         // level complete?
         const matched = piecesRef.current.filter(p => p.matched).length + 1;
         if (matched >= piecesRef.current.length) {
-          const m = mistakesRef.current;
-          const stars = m === 0 ? 3 : m <= 2 ? 2 : 1;
-          setTotalStars(prev => prev + stars);
-          setTimeout(() => setLevelDone(true), 650);
+          recordStars(levelIdx, starsFromMistakes(mistakesRef.current));
+          completeTimerRef.current = setTimeout(() => setLevelDone(true), 650);
         }
       } else {
         // ❌ wrong match — shake and return home
@@ -185,7 +182,7 @@ export default function ShapeMatch({ onExit, lang = 'he', vibrateOn = true }) {
         pc.id === pieceId ? { ...pc, cx: pc.homeCx, cy: pc.homeCy } : pc
       ));
     }
-  }, [vibrateOn]);
+  }, [levelIdx, recordStars, vibrateOn]);
 
   // ── derived ────────────────────────────────────────────────────────────────
 
@@ -213,6 +210,8 @@ export default function ShapeMatch({ onExit, lang = 'he', vibrateOn = true }) {
         levelDone={levelDone}
         starCount={starCount}
         onNextLevel={() => setLevelIdx(p => p + 1)}
+        onReplay={() => setRoundKey(key => key + 1)}
+        isLastLevel={levelIdx === SHAPEMATCH_LEVELS.length - 1}
       >
         {/* slot outlines */}
         {slots.map(sl => (

@@ -1,6 +1,7 @@
 import "./SettingsMenu.css";
 import { useLocalStorage } from "../../hooks/useLocalStorage.js";
 import { STORAGE_KEYS } from "../../storage/keys.js";
+import { ResetProgressControl } from "../ResetProgressControl/index.js";
 
 const GAME_MODES = [
   { id: "classic",  emoji: "🎮", he: "קלאסי",   en: "Classic" },
@@ -41,6 +42,7 @@ export default function SettingsMenu({
   onThemeChange,
   onMuteChange,
   onVibrateChange,
+  onResetProgress,
   onClose,
 }) {
   const isHe = lang === "he";
@@ -189,6 +191,8 @@ export default function SettingsMenu({
                 </button>
               ))}
             </div>
+
+            <ResetProgressControl lang={lang} onReset={onResetProgress} />
           </section>
         )}
       </div>

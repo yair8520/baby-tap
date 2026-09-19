@@ -1,8 +1,13 @@
-import { useCallback, useEffect } from "react";
+import { useCallback, useEffect, useMemo } from "react";
 import { useLocalStorage } from "./useLocalStorage.js";
 import { MODE_LEVEL_KEYS, MODE_STARS_KEYS } from "../storage/keys.js";
 import { clampLevelIndex } from "../games/levelUtils.js";
 import { isNonNegativeInteger } from "../storage/validation.js";
+import {
+  normalizeBestStars,
+  recordBestStars,
+  totalBestStars,
+} from "../components/LearningGameShell/stars.js";
 
 /**
  * Persist a 0-based level index for a game mode.
@@ -56,4 +61,45 @@ export function useGameLevel(modeId, defaultLevel = 0, opts = {}) {
 export function useGameStars(modeId, defaultStars = 0) {
   const key = MODE_STARS_KEYS[modeId] ?? `${modeId}Stars`;
   return useLocalStorage(key, defaultStars, isNonNegativeInteger);
+}
+
+const isBestStarsStorageValue = (value) =>
+  Array.isArray(value) || isNonNegativeInteger(value);
+
+/**
+ * Persist the best star score for each level. Numeric cumulative values from
+ * older releases are accepted long enough to migrate safely to an empty list.
+ */
+export function useGameBestStars(modeId, maxLevels) {
+  const key = MODE_STARS_KEYS[modeId] ?? `${modeId}Stars`;
+  const [storedStars, setStoredStars] = useLocalStorage(
+    key,
+    [],
+    isBestStarsStorageValue,
+  );
+  const bestStars = useMemo(
+    () => normalizeBestStars(storedStars, maxLevels),
+    [maxLevels, storedStars],
+  );
+
+  useEffect(() => {
+    if (JSON.stringify(storedStars) !== JSON.stringify(bestStars)) {
+      setStoredStars(bestStars);
+    }
+  }, [bestStars, setStoredStars, storedStars]);
+
+  const recordStars = useCallback(
+    (levelIndex, stars) => {
+      setStoredStars((previous) =>
+        recordBestStars(previous, levelIndex, stars, maxLevels),
+      );
+    },
+    [maxLevels, setStoredStars],
+  );
+
+  return {
+    bestStars,
+    recordStars,
+    totalStars: totalBestStars(bestStars, maxLevels),
+  };
 }

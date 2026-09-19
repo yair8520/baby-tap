@@ -12,6 +12,7 @@ export default function LearningGameShell({
   starCount = 3,
   onNextLevel,
   onReplay,
+  isLastLevel = false,
   children,
 }) {
   const isHe = lang === 'he';
@@ -48,7 +49,9 @@ export default function LearningGameShell({
           <div className="lgs-complete-card">
             <span className="lgs-complete-emoji">🎉</span>
             <div className="lgs-complete-title">
-              {isHe ? 'כל הכבוד!' : 'Great job!'}
+              {isLastLevel
+                ? (isHe ? 'סיימת את כל השלבים!' : 'All levels complete!')
+                : (isHe ? 'כל הכבוד!' : 'Great job!')}
             </div>
             <div className="lgs-complete-stars">
               {[0, 1, 2].map((i) => (
@@ -66,7 +69,7 @@ export default function LearningGameShell({
                   {isHe ? 'שוב ↻' : 'Replay ↻'}
                 </button>
               )}
-              {onNextLevel && (
+              {onNextLevel && !isLastLevel && (
                 <button type="button" className="lgs-btn-next" onClick={onNextLevel}>
                   {isHe ? 'שלב הבא ➜' : 'Next Level ➜'}
                 </button>

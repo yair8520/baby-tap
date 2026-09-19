@@ -34,6 +34,7 @@ import {
 
 import { useLocalStorage } from "./hooks/useLocalStorage.js";
 import { STORAGE_KEYS } from "./storage/keys.js";
+import { clearStoredProgress } from "./storage/progress.js";
 import {
   isBoolean,
   isNonNegativeInteger,
@@ -177,6 +178,7 @@ export default function App() {
   );
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [showSettingsHint, setShowSettingsHint] = useState(false);
+  const [progressEpoch, setProgressEpoch] = useState(0);
 
   // Shared sparkle emojis for balloons / targets
   const [emojis, setEmojis] = useState([]);
@@ -583,6 +585,26 @@ export default function App() {
     [popBalloon],
   );
 
+  const resetProgress = useCallback(() => {
+    try {
+      clearStoredProgress(window.localStorage);
+    } catch {
+      // Preference storage may be unavailable; still reset live game state.
+    }
+    targetsRef.current.forEach((target) => clearTimeout(target.removeTimer));
+    setBalloonSavedLevel(1);
+    setTargetHighScore(0);
+    setBalloons([]);
+    setPopCount(0);
+    setBalloonMissed(0);
+    setBalloonLevel(1);
+    balloonLevelRef.current = 1;
+    setTargets([]);
+    setTargetScore(0);
+    setTargetMissed(0);
+    setProgressEpoch((epoch) => epoch + 1);
+  }, [setBalloonSavedLevel, setTargetHighScore]);
+
   const C = 2 * Math.PI * 22;
 
   return (
@@ -739,6 +761,7 @@ export default function App() {
                 onThemeChange={setTheme}
                 onMuteChange={setMuteOn}
                 onVibrateChange={setVibrateOn}
+                onResetProgress={resetProgress}
                 onClose={() => setSettingsOpen(false)}
               />
             )}
@@ -891,6 +914,7 @@ export default function App() {
 
           {gameMode === "memory" && (
             <MemoryGame
+              key={`memory-${progressEpoch}`}
               lang={lang}
               onSound={(type) => {
                 if (muteRef.current) return;
@@ -902,6 +926,7 @@ export default function App() {
 
           {gameMode === "shapes" && (
             <ShapesGame
+              key={`shapes-${progressEpoch}`}
               lang={lang}
               onSound={(type) => {
                 if (muteRef.current) return;
@@ -934,6 +959,7 @@ export default function App() {
 
       {isFullscreen && gameMode === "shapematch" && (
         <ShapeMatch
+          key={`shapematch-${progressEpoch}`}
           onExit={() => setGameMode("classic")}
           lang={lang}
           vibrateOn={vibrateOn && canVibrate}
@@ -942,6 +968,7 @@ export default function App() {
 
       {isFullscreen && gameMode === "colormix" && (
         <ColorMix
+          key={`colormix-${progressEpoch}`}
           onExit={() => setGameMode("classic")}
           lang={lang}
           vibrateOn={vibrateOn && canVibrate}
@@ -950,6 +977,7 @@ export default function App() {
 
       {isFullscreen && gameMode === "sizesort" && (
         <SizeSort
+          key={`sizesort-${progressEpoch}`}
           onExit={() => setGameMode("classic")}
           lang={lang}
           vibrateOn={vibrateOn && canVibrate}
@@ -958,6 +986,7 @@ export default function App() {
 
       {isFullscreen && gameMode === "shapememory" && (
         <ShapeMemory
+          key={`shapememory-${progressEpoch}`}
           onExit={() => setGameMode("classic")}
           lang={lang}
           vibrateOn={vibrateOn && canVibrate}
@@ -966,6 +995,7 @@ export default function App() {
 
       {isFullscreen && gameMode === "pattern" && (
         <PatternGame
+          key={`pattern-${progressEpoch}`}
           onExit={() => setGameMode("classic")}
           lang={lang}
           vibrateOn={vibrateOn && canVibrate}

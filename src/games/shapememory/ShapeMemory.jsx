@@ -7,7 +7,7 @@ import {
   buildSequence,
   buildPalette,
 } from './levels.js';
-import { useGameLevel } from '../../hooks/useGameProgress.js';
+import { useGameBestStars, useGameLevel } from '../../hooks/useGameProgress.js';
 import './ShapeMemory.css';
 
 // ─── Countdown Ring ──────────────────────────────────────────────────────────
@@ -55,6 +55,11 @@ export default function ShapeMemory({ onExit, lang = 'he', vibrateOn = true }) {
   const [palette, setPalette]       = useState([]);
   const [fading, setFading]         = useState(false);
   const [slotGlow, setSlotGlow]     = useState(null); // index of correct slot
+  const [roundKey, setRoundKey]     = useState(0);
+  const { recordStars, totalStars } = useGameBestStars(
+    'shapememory',
+    SHAPEMEMORY_LEVELS.length,
+  );
 
   const levelDoneRef  = useRef(false);
   const intervalRef   = useRef(null);
@@ -80,7 +85,7 @@ export default function ShapeMemory({ onExit, lang = 'he', vibrateOn = true }) {
     setCountdown(totalShowSec);
     setFading(false);
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [levelIdx]);
+  }, [levelIdx, roundKey]);
 
   // ── Countdown interval (SHOW phase) ──────────────────────────────────────
 
@@ -128,6 +133,7 @@ export default function ShapeMemory({ onExit, lang = 'he', vibrateOn = true }) {
         // Sequence complete!
         levelDoneRef.current = true;
         setUserAnswers(nextAnswers);
+        recordStars(levelIdx, starsFromMistakes(mistakes));
         if (vibrateOn) navigator.vibrate?.([40, 30, 80, 30, 120]);
         setTimeout(() => setLevelDone(true), 600);
       } else {
@@ -146,7 +152,14 @@ export default function ShapeMemory({ onExit, lang = 'he', vibrateOn = true }) {
         setUserAnswers([]);
       }, 600);
     }
-  }, [userAnswers, sequence, vibrateOn]);
+  }, [
+    levelIdx,
+    mistakes,
+    recordStars,
+    sequence,
+    userAnswers,
+    vibrateOn,
+  ]);
 
   // Cleanup on unmount
   useEffect(() => {
@@ -172,10 +185,13 @@ export default function ShapeMemory({ onExit, lang = 'he', vibrateOn = true }) {
       <LearningGameShell
         lang={lang}
         levelNum={levelNum}
+        totalStars={totalStars}
         onExit={onExit}
         levelDone={levelDone}
         starCount={starCount}
         onNextLevel={() => setLevelIdx(p => p + 1)}
+        onReplay={() => setRoundKey(key => key + 1)}
+        isLastLevel={levelIdx === SHAPEMEMORY_LEVELS.length - 1}
       >
         {/* SHOW phase */}
         {phase === 'show' && (

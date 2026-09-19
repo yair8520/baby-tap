@@ -1,6 +1,8 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { SIZESORT_LEVELS, buildLevel } from './levels.js';
-import { useGameLevel, useGameStars } from '../../hooks/useGameProgress.js';
+import { LearningGameShell, starsFromMistakes } from '../../components/LearningGameShell';
+import { useGameBestStars, useGameLevel } from '../../hooks/useGameProgress.js';
+import { useResponsiveGameViewport } from '../../hooks/useResponsiveGameViewport.js';
 import './SizeSort.css';
 
 // ─── SparkBurst ───────────────────────────────────────────────────────────────
@@ -36,8 +38,8 @@ function SparkBurst({ x, y, color }) {
 
 export default function SizeSort({ onExit, lang = 'he', vibrateOn = true }) {
   const containerRef = useRef(null);
-  const [W, setW]    = useState(window.innerWidth);
-  const [H, setH]    = useState(window.innerHeight);
+  const { width: W, height: H } = useResponsiveGameViewport(containerRef);
+  const [roundKey, setRoundKey] = useState(0);
 
   const [levelIdx,  setLevelIdx]  = useGameLevel('sizesort', 0, {
     maxLevels: SIZESORT_LEVELS.length,
@@ -52,25 +54,20 @@ export default function SizeSort({ onExit, lang = 'he', vibrateOn = true }) {
   const [sparks,    setSparks]    = useState([]);
   const [mistakes,  setMistakes]  = useState(0);
   const [levelDone, setLevelDone] = useState(false);
-  const [totalStars,setTotalStars]= useGameStars('sizesort', 0);
+  const { recordStars, totalStars } = useGameBestStars(
+    'sizesort',
+    SIZESORT_LEVELS.length,
+  );
 
   const draggingRef  = useRef(null);
   const piecesRef    = useRef([]);
   const slotsRef     = useRef([]);
   const mistakesRef  = useRef(0);
+  const completeTimerRef = useRef(null);
 
   useEffect(() => { piecesRef.current   = pieces;   }, [pieces]);
   useEffect(() => { slotsRef.current    = slots;    }, [slots]);
   useEffect(() => { mistakesRef.current = mistakes; }, [mistakes]);
-
-  // Measure on mount
-  useEffect(() => {
-    const el = containerRef.current;
-    if (!el) return;
-    const r = el.getBoundingClientRect();
-    setW(r.width);
-    setH(r.height);
-  }, []);
 
   // Build level
   useEffect(() => {
@@ -84,7 +81,10 @@ export default function SizeSort({ onExit, lang = 'he', vibrateOn = true }) {
     setSparks([]);
     setWrongId(null);
     setMatchId(null);
-  }, [levelIdx, W, H]);
+    draggingRef.current = null;
+    setDragging(null);
+    return () => clearTimeout(completeTimerRef.current);
+  }, [levelIdx, roundKey, W, H]);
 
   // ── Pointer handlers ────────────────────────────────────────────────────────
 
@@ -158,10 +158,8 @@ export default function SizeSort({ onExit, lang = 'he', vibrateOn = true }) {
 
         const matched = piecesRef.current.filter(p => p.matched).length + 1;
         if (matched >= piecesRef.current.length) {
-          const m = mistakesRef.current;
-          const stars = m === 0 ? 3 : m <= 2 ? 2 : 1;
-          setTotalStars(prev => prev + stars);
-          setTimeout(() => setLevelDone(true), 650);
+          recordStars(levelIdx, starsFromMistakes(mistakesRef.current));
+          completeTimerRef.current = setTimeout(() => setLevelDone(true), 650);
         }
       } else {
         // Wrong slot
@@ -179,11 +177,11 @@ export default function SizeSort({ onExit, lang = 'he', vibrateOn = true }) {
         pc.id === pieceId ? { ...pc, cx: pc.homeCx, cy: pc.homeCy } : pc
       ));
     }
-  }, [vibrateOn]);
+  }, [levelIdx, recordStars, vibrateOn]);
 
   // ── Derived ─────────────────────────────────────────────────────────────────
 
-  const starCount = mistakes === 0 ? 3 : mistakes <= 2 ? 2 : 1;
+  const starCount = starsFromMistakes(mistakes);
   const levelNum  = levelIdx + 1;
 
   // ── Render ──────────────────────────────────────────────────────────────────
@@ -199,18 +197,17 @@ export default function SizeSort({ onExit, lang = 'he', vibrateOn = true }) {
       {/* Background */}
       <div className="ss-bg" />
 
-      {/* Header */}
-      <div className="ss-header">
-        <button className="ss-btn-exit" onClick={onExit}>✕</button>
-        <span className="ss-level-label">
-          {lang === 'he' ? `שלב ${levelNum}` : `Level ${levelNum}`}
-        </span>
-        <span className="ss-hdr-stars">
-          {[0, 1, 2].map(i => (
-            <span key={i} style={{ opacity: i < starCount ? 1 : 0.22 }}>⭐</span>
-          ))}
-        </span>
-      </div>
+      <LearningGameShell
+        lang={lang}
+        levelNum={levelNum}
+        totalStars={totalStars}
+        onExit={onExit}
+        levelDone={levelDone}
+        starCount={starCount}
+        onNextLevel={() => setLevelIdx(p => p + 1)}
+        onReplay={() => setRoundKey(key => key + 1)}
+        isLastLevel={levelIdx === SIZESORT_LEVELS.length - 1}
+      >
 
       {/* Direction label */}
       <div className="ss-direction-label" style={{ top: 66 }}>
@@ -293,36 +290,7 @@ export default function SizeSort({ onExit, lang = 'he', vibrateOn = true }) {
       {sparks.map(s => (
         <SparkBurst key={s.id} x={s.x} y={s.y} color={s.color} />
       ))}
-
-      {/* Level-complete overlay */}
-      {levelDone && (
-        <div
-          className="ss-complete"
-          onPointerDown={e => e.stopPropagation()}
-          onPointerUp={e => e.stopPropagation()}
-        >
-          <div className="ss-complete-card">
-            <span className="ss-complete-emoji">🏆</span>
-            <div className="ss-complete-title">
-              {lang === 'he' ? 'כל הכבוד!' : 'Great job!'}
-            </div>
-            <div className="ss-complete-stars">
-              {[0, 1, 2].map(i => (
-                <span key={i} className={`ss-cstar${i < starCount ? ' on' : ''}`}>⭐</span>
-              ))}
-            </div>
-            <div className="ss-total-score">
-              {lang === 'he' ? `סה"כ ⭐ ${totalStars}` : `Total ⭐ ${totalStars}`}
-            </div>
-            <button
-              className="ss-btn-next"
-              onClick={() => setLevelIdx(p => p + 1)}
-            >
-              {lang === 'he' ? 'שלב הבא ➜' : 'Next Level ➜'}
-            </button>
-          </div>
-        </div>
-      )}
+      </LearningGameShell>
     </div>
   );
 }

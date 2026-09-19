@@ -72,3 +72,12 @@
   from { width: 0;     height: 0;     opacity: 1; }
   to   { width: 300px; height: 300px; opacity: 0; }
 }
+
+/* Drum grid – tighter on small screens */
+@media (max-width: 400px) {
+  .drum-grid {
+    gap: clamp(6px, 2vw, 10px);
+    padding: 8px;
+  }
+  .drum-pad-emoji { font-size: clamp(36px, 11vw, 60px); }
+}

@@ -20,6 +20,27 @@ export function getAudioCtx() {
   return audioCtx
 }
 
+/** Pause the shared AudioContext to save battery when muted/backgrounded. */
+export function suspendAudio() {
+  if (!audioCtx || audioCtx.state !== 'running') return
+  try {
+    const p = audioCtx.suspend()
+    if (p?.catch) p.catch(() => {})
+  } catch {
+    // AudioContext may already be closed.
+  }
+}
+
+export function resumeAudio() {
+  if (!audioCtx || audioCtx.state !== 'suspended' || globalMute) return
+  try {
+    const p = audioCtx.resume()
+    if (p?.catch) p.catch(() => {})
+  } catch {
+    // AudioContext may already be closed.
+  }
+}
+
 // ── Timeline pointers ─────────────────────────────────────────────────────────
 let nextNoteTime   = 0
 let nextMelodyTime = 0

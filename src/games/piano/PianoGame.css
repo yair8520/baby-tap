@@ -61,7 +61,11 @@
   justify-content: center;
   gap: 18px;
   flex-wrap: wrap;
-  padding: 20px;
+  padding:
+    max(20px, env(safe-area-inset-top, 0px))
+    max(20px, env(safe-area-inset-right, 0px))
+    20px
+    max(20px, env(safe-area-inset-left, 0px));
 }
 
 .piano-note-label {

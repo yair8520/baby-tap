@@ -5,13 +5,19 @@ export default function PrivacyPolicy() {
   useEffect(() => {
     const rootEl = document.getElementById('root')
 
+    const prevLang = document.documentElement.lang
+    const prevDir = document.documentElement.dir
     const prevBodyOverflow = document.body.style.overflow
     const prevHtmlOverflow = document.documentElement.style.overflow
     const prevRootOverflow = rootEl?.style.overflow
     const prevRootHeight = rootEl?.style.height
+    const prevTitle = document.title
 
     document.body.style.overflow = 'auto'
     document.documentElement.style.overflow = 'auto'
+    document.documentElement.lang = 'en'
+    document.documentElement.dir = 'ltr'
+    document.title = 'Privacy Policy — Baby Tap'
 
     // Let the document grow so body scroll works even though #root has 100dvh.
     if (rootEl) {
@@ -20,6 +26,9 @@ export default function PrivacyPolicy() {
     }
 
     return () => {
+      document.documentElement.lang = prevLang
+      document.documentElement.dir = prevDir
+      document.title = prevTitle
       document.body.style.overflow = prevBodyOverflow
       document.documentElement.style.overflow = prevHtmlOverflow
       if (rootEl) {
@@ -33,8 +42,10 @@ export default function PrivacyPolicy() {
     <main className="privacy-page">
       <header className="privacy-header">
         <button
+          type="button"
           className="privacy-back-btn"
-          onClick={() => { window.location.hash = ''; window.location.reload(); }}
+          onClick={() => { window.location.hash = '' }}
+          aria-label="Back to Baby Tap / חזרה ל-Baby Tap"
         >
           ← חזרה / Back
         </button>
@@ -60,7 +71,8 @@ export default function PrivacyPolicy() {
           <h3>How the App Works</h3>
           <p>
             The app runs locally on your device and responds to taps and touches to play
-            sounds and visual effects. No user data is sent to external servers by the app.
+            sounds and visual effects. Preferences and progress are stored only on your
+            device.
           </p>
 
           <h3>Children&apos;s Privacy</h3>
@@ -73,6 +85,14 @@ export default function PrivacyPolicy() {
           <p>
             The app itself does not include sign-in, advertising SDKs, or third-party
             tracking in the gameplay experience.
+          </p>
+
+          <h3>Website Hosting Logs</h3>
+          <p>
+            When you load the website, the hosting provider may process standard technical
+            request logs, such as IP address, browser details, and request time, to deliver
+            and secure the site. Baby Tap does not use those logs to profile children or
+            add analytics to gameplay.
           </p>
 
           <h3>Contact</h3>
@@ -99,7 +119,7 @@ export default function PrivacyPolicy() {
           <h3>איך האפליקציה עובדת</h3>
           <p>
             האפליקציה פועלת מקומית במכשיר שלך ומגיבה למגעים וללחיצות כדי להשמיע
-            צלילים ולהפעיל אפקטים ויזואליים. האפליקציה לא שולחת נתוני משתמש לשרתים חיצוניים.
+            צלילים ולהפעיל אפקטים ויזואליים. ההעדפות וההתקדמות נשמרות רק במכשיר.
           </p>
 
           <h3>פרטיות ילדים</h3>
@@ -111,6 +131,13 @@ export default function PrivacyPolicy() {
           <h3>שירותים של צד שלישי</h3>
           <p>
             האפליקציה עצמה אינה כוללת התחברות, SDKs של פרסום או מעקב של צד שלישי בתוך חוויית המשחק.
+          </p>
+
+          <h3>יומני אירוח האתר</h3>
+          <p>
+            בעת טעינת האתר, ספק האירוח עשוי לעבד יומני בקשות טכניים רגילים, כגון כתובת
+            IP, פרטי דפדפן וזמן הבקשה, כדי לספק ולאבטח את האתר. Baby Tap אינו משתמש
+            ביומנים האלה ליצירת פרופיל של ילדים ואינו מוסיף ניתוח נתונים לחוויית המשחק.
           </p>
 
           <h3>יצירת קשר</h3>

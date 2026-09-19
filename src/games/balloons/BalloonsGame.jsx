@@ -58,7 +58,7 @@ export default function BalloonsGame({ lang = "he", vibrateOn = true }) {
   const balloonLevelRef = useRef(1);
   const balloonsRef = useRef([]);
   const balloonTimerRef = useRef(null);
-  const lastBalloonPopRef = useRef(Date.now());
+  const lastBalloonPopRef = useRef(0);
   const vibrateOnRef = useRef(vibrateOn);
 
   const [balloonSavedLevel, setBalloonSavedLevel] = useLocalStorage(
@@ -87,38 +87,46 @@ export default function BalloonsGame({ lang = "he", vibrateOn = true }) {
   }, [setBalloonSavedLevel]);
 
   useEffect(() => {
-    const newLevel = getBalloonLevelNumber(popCount);
-    if (newLevel > balloonLevelRef.current) {
-      balloonLevelRef.current = newLevel;
-      setBalloonLevel(newLevel);
-      setBalloonSavedLevel(newLevel);
-      setBalloonLevelUp({ level: newLevel });
-      doVibrate([60, 30, 80]);
-      setTimeout(() => setBalloonLevelUp(null), 2000);
-    }
+    const timer = setTimeout(() => {
+      const newLevel = getBalloonLevelNumber(popCount);
+      if (newLevel > balloonLevelRef.current) {
+        balloonLevelRef.current = newLevel;
+        setBalloonLevel(newLevel);
+        setBalloonSavedLevel(newLevel);
+        setBalloonLevelUp({ level: newLevel });
+        doVibrate([60, 30, 80]);
+        setTimeout(() => setBalloonLevelUp(null), 2000);
+      }
+    }, 0);
+    return () => clearTimeout(timer);
   }, [popCount, doVibrate, setBalloonSavedLevel]);
 
   useEffect(() => {
-    if (balloonLevel === 1 && balloonSavedLevel > 1) {
-      const restoredPops = (balloonSavedLevel - 1) * BALLOON_LEVEL_STEP;
-      setPopCount(restoredPops);
-      setBalloonLevel(balloonSavedLevel);
-      balloonLevelRef.current = balloonSavedLevel;
-    }
-    const cfg = getBalloonConfigByLevel(balloonLevel);
-    const speed = cfg.speedFactor;
-    const interval = cfg.spawnIntervalMs;
-    const maxOnScreen = cfg.maxOnScreen;
+    const timer = setTimeout(() => {
+      if (balloonLevel === 1 && balloonSavedLevel > 1) {
+        const restoredPops = (balloonSavedLevel - 1) * BALLOON_LEVEL_STEP;
+        setPopCount(restoredPops);
+        setBalloonLevel(balloonSavedLevel);
+        balloonLevelRef.current = balloonSavedLevel;
+      }
+      const cfg = getBalloonConfigByLevel(balloonLevel);
+      const speed = cfg.speedFactor;
+      const interval = cfg.spawnIntervalMs;
+      const maxOnScreen = cfg.maxOnScreen;
 
-    setBalloons([makeBalloon(speed), makeBalloon(speed), makeBalloon(speed)]);
-    clearInterval(balloonTimerRef.current);
-    balloonTimerRef.current = setInterval(() => {
-      setBalloons((prev) => {
-        if (prev.length >= maxOnScreen) return prev;
-        return [...prev, makeBalloon(speed)];
-      });
-    }, interval);
-    return () => clearInterval(balloonTimerRef.current);
+      setBalloons([makeBalloon(speed), makeBalloon(speed), makeBalloon(speed)]);
+      clearInterval(balloonTimerRef.current);
+      balloonTimerRef.current = setInterval(() => {
+        setBalloons((prev) => {
+          if (prev.length >= maxOnScreen) return prev;
+          return [...prev, makeBalloon(speed)];
+        });
+      }, interval);
+    }, 0);
+    return () => {
+      clearTimeout(timer);
+      clearInterval(balloonTimerRef.current);
+    };
   }, [balloonLevel]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
@@ -134,6 +142,7 @@ export default function BalloonsGame({ lang = "he", vibrateOn = true }) {
   }, []);
 
   useEffect(() => {
+    lastBalloonPopRef.current = Date.now();
     const check = setInterval(() => {
       if (Date.now() - lastBalloonPopRef.current > 5000) {
         setBalloonHint(true);

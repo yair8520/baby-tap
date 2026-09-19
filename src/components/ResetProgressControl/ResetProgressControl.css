@@ -1,0 +1,57 @@
+.rpc-control {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 18px;
+  padding: 14px;
+  border: 1px solid rgba(255, 120, 140, 0.25);
+  border-radius: 14px;
+  background: rgba(255, 80, 110, 0.07);
+}
+
+.rpc-copy,
+.rpc-confirm {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.rpc-title,
+.rpc-warning {
+  color: #fff;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.rpc-description {
+  color: rgba(255, 255, 255, 0.55);
+  font-size: 11px;
+  line-height: 1.4;
+}
+
+.rpc-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 6px;
+}
+
+.rpc-start,
+.rpc-cancel,
+.rpc-confirm-button {
+  border-radius: 10px;
+  padding: 8px 12px;
+  color: #fff;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.rpc-start,
+.rpc-cancel {
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.rpc-confirm-button {
+  border: 1px solid rgba(255, 120, 140, 0.55);
+  background: rgba(210, 35, 70, 0.8);
+}

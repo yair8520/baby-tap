@@ -1,7 +1,5 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import "./App.css";
-import appIcon from "./assets/icon-192.png";
-import appIconLarge from "./assets/icon-512.png";
 import ShapeMatch from "./games/shapematch";
 import ColorMix from "./games/colormix";
 import SizeSort from "./games/sizesort";
@@ -9,78 +7,165 @@ import ShapeMemory from "./games/shapememory";
 import PatternGame from "./games/pattern";
 import ClassicGame from "./games/classic";
 import DrumsGame from "./games/drums";
-import BalloonsGame from "./games/balloons";
-import TargetsGame from "./games/targets";
 import PianoGame from "./games/piano";
 import SleepGame from "./games/sleep";
+import { Balloons } from "./games/balloons";
+import { Targets } from "./games/targets";
 
 import {
   isHebrew as defaultHebrew,
   isWebView,
-  canVibrate,
 } from "./constants";
 
-import { setGlobalMute, playSound } from "./audio.js";
+import {
+  setGlobalMute,
+  playSound,
+} from "./audio.js";
 
 import { useLocalStorage } from "./hooks/useLocalStorage.js";
 import { STORAGE_KEYS } from "./storage/keys.js";
+import { clearStoredProgress } from "./storage/progress.js";
+import { isBoolean } from "./storage/validation.js";
 import SettingsMenu from "./components/SettingsMenu/index.jsx";
-import MemoryGame from "./games/memory";
-import ShapesGame from "./games/shapes";
+import MemoryGame from "./games/memory/MemoryGame.jsx";
+import ShapesGame from "./games/shapes/ShapesGame.jsx";
 import { getT } from "./i18n/index.js";
-import { THEME_PRESETS } from "./themes.js";
+import { buzz } from "./components/LearningGameShell/vibrate.js";
 
+const THEME_PRESETS = {
+  space: {
+    id: "space",
+    label: { he: "חלל", en: "Space" },
+    emoji: "🚀",
+    heroRow: "🚀 🪐 🌙 ✨",
+    emojis: ["🚀", "🛸", "🪐", "🌙", "☄️", "⭐", "🌟", "✨", "💫", "🌌", "👨‍🚀", "🛰️"],
+    colors: ["#7B2FF7", "#3A86FF", "#00C2FF", "#B5179E", "#8338EC", "#5E60CE", "#4CC9F0"],
+  },
+  animals: {
+    id: "animals",
+    label: { he: "חיות", en: "Animals" },
+    emoji: "🦁",
+    heroRow: "🦁 🐼 🐶 🦋",
+    emojis: ["🐶", "🐱", "🐭", "🐹", "🐰", "🦊", "🐻", "🐼", "🐸", "🦁", "🐮", "🐵", "🦋", "🐢", "🦄", "🌈", "⭐"],
+    colors: ["#FF9AA2", "#FFB7B2", "#FFDAC1", "#E2F0CB", "#B5EAD7", "#C7CEEA", "#A0E7E5"],
+  },
+  ocean: {
+    id: "ocean",
+    label: { he: "ים", en: "Ocean" },
+    emoji: "🐬",
+    heroRow: "🐬 🐠 🌊 🫧",
+    emojis: ["🐠", "🐟", "🐬", "🐳", "🐙", "🦀", "🐚", "🌊", "🫧", "⭐", "✨", "💧"],
+    colors: ["#00B4D8", "#0077B6", "#48CAE4", "#90E0EF", "#0096C7", "#5E60CE", "#80ED99"],
+  },
+  farm: {
+    id: "farm",
+    label: { he: "חווה", en: "Farm" },
+    emoji: "🐮",
+    heroRow: "🐮 🚜 🌾 🐔",
+    emojis: ["🐮", "🐷", "🐔", "🐥", "🐴", "🐑", "🦆", "🌾", "🚜", "🍎", "🍓", "🌻"],
+    colors: ["#FFD166", "#EF476F", "#06D6A0", "#118AB2", "#8ECAE6", "#90BE6D", "#F3722C"],
+  },
+};
+
+const LANGUAGE_IDS = ["he", "en"];
+const THEME_IDS = Object.keys(THEME_PRESETS);
+const GAME_MODE_IDS = [
+  "classic",
+  "balloons",
+  "drums",
+  "targets",
+  "autoshow",
+  "piano",
+  "memory",
+  "shapes",
+  "shapematch",
+  "colormix",
+  "sizesort",
+  "shapememory",
+  "pattern",
+];
+const LEARNING_MODE_IDS = new Set([
+  "shapematch",
+  "colormix",
+  "sizesort",
+  "shapememory",
+  "pattern",
+]);
 export default function App() {
-  const [lang, setLang] = useLocalStorage(STORAGE_KEYS.lang, defaultHebrew ? "he" : "en");
+  const [lang, setLang] = useLocalStorage(
+    STORAGE_KEYS.lang,
+    defaultHebrew ? "he" : "en",
+    LANGUAGE_IDS,
+  );
   const isHebrewUI = lang === "he";
-  const t = getT(lang);
-  const [theme, setTheme] = useLocalStorage(STORAGE_KEYS.theme, "space");
+  const t = useMemo(() => getT(lang), [lang]);
+  const [theme, setTheme] = useLocalStorage(
+    STORAGE_KEYS.theme,
+    "space",
+    THEME_IDS,
+  );
   const activeTheme = THEME_PRESETS[theme] || THEME_PRESETS.space;
   const activeEmojis = activeTheme.emojis;
 
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [holdProgress, setHoldProgress] = useState(0);
-  const [vibrateOn, setVibrateOn] = useLocalStorage(STORAGE_KEYS.vibrateOn, true);
-  const [muteOn, setMuteOn] = useLocalStorage(STORAGE_KEYS.muteOn, false);
-  const [gameMode, setGameMode] = useLocalStorage(STORAGE_KEYS.gameMode, "classic");
+  const [vibrateOn, setVibrateOn] = useLocalStorage(
+    STORAGE_KEYS.vibrateOn,
+    true,
+    isBoolean,
+  );
+  const [muteOn, setMuteOn] = useLocalStorage(
+    STORAGE_KEYS.muteOn,
+    false,
+    isBoolean,
+  );
+  const [gameMode, setGameMode] = useLocalStorage(
+    STORAGE_KEYS.gameMode,
+    "classic",
+    GAME_MODE_IDS,
+  );
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [showSettingsHint, setShowSettingsHint] = useState(false);
+  const [progressEpoch, setProgressEpoch] = useState(0);
 
   const containerRef = useRef(null);
   const holdStartRef = useRef(null);
   const holdIntervalRef = useRef(null);
+  const vibrateRef = useRef(true);
   const muteRef = useRef(false);
   const settingsRef = useRef(null);
+  const timeoutIdsRef = useRef(new Set());
 
+  const scheduleTimeout = useCallback((callback, delay) => {
+    const id = setTimeout(() => {
+      timeoutIdsRef.current.delete(id);
+      callback();
+    }, delay);
+    timeoutIdsRef.current.add(id);
+    return id;
+  }, []);
+
+  useEffect(() => {
+    vibrateRef.current = vibrateOn;
+  }, [vibrateOn]);
   useEffect(() => {
     muteRef.current = muteOn;
     setGlobalMute(muteOn);
   }, [muteOn]);
-
-  // Favicons
   useEffect(() => {
-    const setHeadIcon = (selector, rel, href, type) => {
-      let link = document.head.querySelector(selector);
-      if (!link) {
-        link = document.createElement("link");
-        link.setAttribute("rel", rel);
-        document.head.appendChild(link);
-      }
-      if (type) link.setAttribute("type", type);
-      link.setAttribute("href", href);
-    };
-    setHeadIcon('link[rel="icon"]', "icon", appIcon, "image/png");
-    setHeadIcon(
-      'link[rel="apple-touch-icon"]',
-      "apple-touch-icon",
-      appIconLarge,
-    );
+    document.documentElement.lang = lang;
+    document.documentElement.dir = isHebrewUI ? "rtl" : "ltr";
+    document.title = t("common.title");
+  }, [isHebrewUI, lang, t]);
+
+  const vibrate = useCallback((pattern) => {
+    buzz(pattern, vibrateRef.current);
   }, []);
 
   useEffect(() => {
     if (!isFullscreen) {
-      setShowSettingsHint(false);
-      return;
+      const resetTimer = scheduleTimeout(() => setShowSettingsHint(false), 0);
+      return () => clearTimeout(resetTimer);
     }
     const hintTimer = setTimeout(() => setShowSettingsHint(true), 2000);
     const hideTimer = setTimeout(() => setShowSettingsHint(false), 7000);
@@ -88,7 +173,7 @@ export default function App() {
       clearTimeout(hintTimer);
       clearTimeout(hideTimer);
     };
-  }, [isFullscreen]);
+  }, [isFullscreen, scheduleTimeout]);
 
   useEffect(() => {
     if (!settingsOpen) return;
@@ -97,11 +182,9 @@ export default function App() {
         setSettingsOpen(false);
       }
     };
-    document.addEventListener("mousedown", handler);
-    document.addEventListener("touchstart", handler);
+    document.addEventListener("pointerdown", handler);
     return () => {
-      document.removeEventListener("mousedown", handler);
-      document.removeEventListener("touchstart", handler);
+      document.removeEventListener("pointerdown", handler);
     };
   }, [settingsOpen]);
 
@@ -114,14 +197,16 @@ export default function App() {
   const enterFullscreen = async () => {
     if (
       !isWebView &&
-      typeof DeviceMotionEvent?.requestPermission === "function"
+      typeof globalThis.DeviceMotionEvent?.requestPermission === "function"
     ) {
       const cached = sessionStorage.getItem("motionPermission");
       if (cached !== "granted") {
         try {
-          const result = await DeviceMotionEvent.requestPermission();
+          const result = await globalThis.DeviceMotionEvent.requestPermission();
           sessionStorage.setItem("motionPermission", result);
-        } catch (e) {}
+        } catch {
+          // Motion permission is optional; fullscreen can continue without it.
+        }
       }
     }
     if (isWebView) {
@@ -141,8 +226,12 @@ export default function App() {
   };
 
   const handleCornerStart = (e) => {
+    if (e.button != null && e.button !== 0) return;
+    e.preventDefault();
     e.stopPropagation();
+    e.currentTarget.setPointerCapture?.(e.pointerId);
     holdStartRef.current = Date.now();
+    clearInterval(holdIntervalRef.current);
     holdIntervalRef.current = setInterval(() => {
       const p = Math.min((Date.now() - holdStartRef.current) / 1000, 1);
       setHoldProgress(p);
@@ -155,12 +244,32 @@ export default function App() {
   };
 
   const handleCornerEnd = (e) => {
+    e?.preventDefault();
     e?.stopPropagation();
     clearInterval(holdIntervalRef.current);
     setHoldProgress(0);
   };
 
+  useEffect(() => {
+    const timeoutIds = timeoutIdsRef.current;
+    return () => {
+      clearInterval(holdIntervalRef.current);
+      timeoutIds.forEach(clearTimeout);
+      timeoutIds.clear();
+    };
+  }, []);
+
+  const resetProgress = useCallback(() => {
+    try {
+      clearStoredProgress(window.localStorage);
+    } catch {
+      // Preference storage may be unavailable; still reset live game state.
+    }
+    setProgressEpoch((epoch) => epoch + 1);
+  }, []);
+
   const C = 2 * Math.PI * 22;
+  const learningModeActive = LEARNING_MODE_IDS.has(gameMode);
 
   return (
     <div ref={containerRef} className={`app theme-${theme}`}>
@@ -222,14 +331,13 @@ export default function App() {
                 </span>
               ))}
             </p>
-            <button className="start-btn" onClick={enterFullscreen}>
+            <button type="button" className="start-btn" onClick={enterFullscreen}>
               {t("common.startFullscreen")}
             </button>
             <p className="start-hint">{t("common.exitHint")}</p>
             <a
               className="start-privacy-link"
               href="#privacy-policy"
-              rel="noopener noreferrer"
             >
               {t("common.privacyPolicy")}
             </a>
@@ -239,15 +347,16 @@ export default function App() {
 
       {isFullscreen && (
         <>
-          <div
+          {!learningModeActive && <button
+            type="button"
             className="corner-hold"
-            onTouchStart={handleCornerStart}
-            onTouchEnd={handleCornerEnd}
-            onMouseDown={handleCornerStart}
-            onMouseUp={handleCornerEnd}
-            onMouseLeave={handleCornerEnd}
+            aria-label={t("common.exitFullscreen")}
+            onPointerDown={handleCornerStart}
+            onPointerUp={handleCornerEnd}
+            onPointerCancel={handleCornerEnd}
+            onLostPointerCapture={handleCornerEnd}
           >
-            <svg width="52" height="52" viewBox="0 0 52 52">
+            <svg width="52" height="52" viewBox="0 0 52 52" aria-hidden="true">
               <circle
                 cx="26"
                 cy="26"
@@ -277,28 +386,26 @@ export default function App() {
                 ✕
               </text>
             </svg>
-          </div>
+          </button>}
 
-          <div className="settings-wrap" ref={settingsRef}>
+          {!learningModeActive && <div className="settings-wrap" ref={settingsRef}>
             <button
               className={`settings-gear-btn${showSettingsHint ? " settings-gear-pulse" : ""}`}
-              onTouchEnd={(e) => {
-                e.preventDefault();
-                e.stopPropagation();
+              type="button"
+              aria-label={t("common.openSettings")}
+              aria-expanded={settingsOpen}
+              aria-controls="settings-menu"
+              onClick={(e) => {
                 setShowSettingsHint(false);
                 setSettingsOpen((o) => !o);
-              }}
-              onMouseUp={(e) => {
                 e.stopPropagation();
-                setShowSettingsHint(false);
-                setSettingsOpen((o) => !o);
               }}
             >
               ⚙️
             </button>
 
             {showSettingsHint && !settingsOpen && (
-              <div className="settings-hint-bubble">
+              <div className="settings-hint-bubble" role="status" aria-live="polite">
                 {t("menu.settingsHint")}
               </div>
             )}
@@ -316,13 +423,15 @@ export default function App() {
                 onThemeChange={setTheme}
                 onMuteChange={setMuteOn}
                 onVibrateChange={setVibrateOn}
+                onResetProgress={resetProgress}
                 onClose={() => setSettingsOpen(false)}
               />
             )}
-          </div>
+          </div>}
 
           {gameMode === "classic" && (
             <ClassicGame
+              key={`classic-${progressEpoch}`}
               lang={lang}
               activeEmojis={activeEmojis}
               activeColors={activeTheme.colors}
@@ -332,25 +441,48 @@ export default function App() {
           )}
 
           {gameMode === "balloons" && (
-            <BalloonsGame lang={lang} vibrateOn={vibrateOn} />
+            <Balloons
+              key={`balloons-${progressEpoch}`}
+              t={t}
+              vibrate={vibrate}
+            />
           )}
 
-          {gameMode === "drums" && <DrumsGame vibrateOn={vibrateOn} />}
+          {gameMode === "drums" && (
+            <DrumsGame
+              key={`drums-${progressEpoch}`}
+              vibrateOn={vibrateOn}
+            />
+          )}
 
           {gameMode === "targets" && (
-            <TargetsGame lang={lang} activeEmojis={activeEmojis} vibrateOn={vibrateOn} />
+            <Targets
+              key={`targets-${progressEpoch}`}
+              activeEmojis={activeEmojis}
+              t={t}
+              vibrate={vibrate}
+            />
           )}
 
           {gameMode === "autoshow" && (
-            <SleepGame lang={lang} muteOn={muteOn} />
+            <SleepGame
+              key={`autoshow-${progressEpoch}`}
+              lang={lang}
+              muteOn={muteOn}
+            />
           )}
 
           {gameMode === "piano" && (
-            <PianoGame lang={lang} vibrateOn={vibrateOn} />
+            <PianoGame
+              key={`piano-${progressEpoch}`}
+              lang={lang}
+              vibrateOn={vibrateOn}
+            />
           )}
 
           {gameMode === "memory" && (
             <MemoryGame
+              key={`memory-${progressEpoch}`}
               lang={lang}
               onSound={(type) => {
                 if (muteRef.current) return;
@@ -362,6 +494,7 @@ export default function App() {
 
           {gameMode === "shapes" && (
             <ShapesGame
+              key={`shapes-${progressEpoch}`}
               lang={lang}
               onSound={(type) => {
                 if (muteRef.current) return;
@@ -370,46 +503,52 @@ export default function App() {
               }}
             />
           )}
+
         </>
       )}
 
       {isFullscreen && gameMode === "shapematch" && (
         <ShapeMatch
+          key={`shapematch-${progressEpoch}`}
           onExit={() => setGameMode("classic")}
           lang={lang}
-          vibrateOn={vibrateOn && canVibrate}
+          vibrateOn={vibrateOn}
         />
       )}
 
       {isFullscreen && gameMode === "colormix" && (
         <ColorMix
+          key={`colormix-${progressEpoch}`}
           onExit={() => setGameMode("classic")}
           lang={lang}
-          vibrateOn={vibrateOn && canVibrate}
+          vibrateOn={vibrateOn}
         />
       )}
 
       {isFullscreen && gameMode === "sizesort" && (
         <SizeSort
+          key={`sizesort-${progressEpoch}`}
           onExit={() => setGameMode("classic")}
           lang={lang}
-          vibrateOn={vibrateOn && canVibrate}
+          vibrateOn={vibrateOn}
         />
       )}
 
       {isFullscreen && gameMode === "shapememory" && (
         <ShapeMemory
+          key={`shapememory-${progressEpoch}`}
           onExit={() => setGameMode("classic")}
           lang={lang}
-          vibrateOn={vibrateOn && canVibrate}
+          vibrateOn={vibrateOn}
         />
       )}
 
       {isFullscreen && gameMode === "pattern" && (
         <PatternGame
+          key={`pattern-${progressEpoch}`}
           onExit={() => setGameMode("classic")}
           lang={lang}
-          vibrateOn={vibrateOn && canVibrate}
+          vibrateOn={vibrateOn}
         />
       )}
     </div>

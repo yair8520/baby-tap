@@ -4,7 +4,9 @@
     "title": "Baby Tap! ✨",
     "subtitle": "תנו לתינוק ללחוץ על המסך\nולראות קסם צבעוני! ✨",
     "startFullscreen": "🚀 התחל מסך מלא",
-    "exitHint": "לצאת: החזק פינה שמאלית-עליונה 2 שניות",
+    "exitHint": "ליציאה: החזיקו את הפינה הימנית העליונה למשך שנייה",
+    "exitFullscreen": "יציאה ממסך מלא (החזיקו למשך שנייה)",
+    "openSettings": "פתיחת הגדרות",
     "privacyPolicy": "פרטיות",
     "ultra": "👑 עוצמה ×",
     "fire": "🔥 לוהט ×",
@@ -19,7 +21,9 @@
     "tabLearning": "📚 למידה",
     "tabAudio": "🔊 שמע",
     "tabDisplay": "🎨 תצוגה",
-    "settingsHint": "← הגדרות ומצבים"
+    "settingsHint": "← הגדרות ומצבים",
+    "soundToggle": "הפעלה או כיבוי של הצליל",
+    "vibrateToggle": "הפעלה או כיבוי של הרטט"
   },
   "games": {
     "label": "בחר מצב משחק",
@@ -30,11 +34,23 @@
     "sleep": "שינה",
     "piano": "פסנתר",
     "memory": "זיכרון",
-    "shapes": "צורות"
+    "shapes": "צורות",
+    "shapematch": "התאמת צורות",
+    "colormix": "ערבוב צבעים",
+    "sizesort": "מיון גדלים",
+    "shapememory": "זכור סדרה",
+    "pattern": "דפוס"
   },
   "learning": {
     "label": "מצבי למידה",
     "description": "משחקי חשיבה ולמידה לילדים",
+    "level": "שלב {{level}}",
+    "allComplete": "סיימת את כל השלבים!",
+    "greatJob": "כל הכבוד!",
+    "totalStars": "סה״כ ⭐ {{total}}",
+    "replay": "שוב ↻",
+    "nextLevel": "שלב הבא ➜",
+    "exit": "יציאה ממשחק הלמידה",
     "piano": "פסנתר",
     "memory": "זיכרון",
     "shapes": "צורות",
@@ -73,6 +89,14 @@
     "progress": "התקדמות",
     "resetProgress": "איפוס התקדמות משחקים",
     "resetConfirm": "לאפס את כל השלבים והניקוד השמורים? ההגדרות יישמרו."
+  },
+  "progress": {
+    "title": "איפוס התקדמות",
+    "description": "השפה, העיצוב והצלילים יישמרו",
+    "warning": "למחוק את כל ההתקדמות?",
+    "cancel": "ביטול",
+    "confirm": "כן, לאפס",
+    "reset": "איפוס…"
   },
   "balloons": {
     "counter": "🎈 {{pops}} | 💨 {{missed}}",

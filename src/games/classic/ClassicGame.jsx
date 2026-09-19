@@ -1,7 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import {
   IS_TOUCH,
-  canVibrate,
   NUMBER_EMOJIS,
   LETTER_EMOJIS,
   HEBREW_LETTER_EMOJIS,
@@ -9,6 +8,7 @@ import {
   COMBO_HOT_EMOJIS,
   COMBO_ULTRA_EMOJIS,
 } from "../../constants";
+import { buzz } from "../../components/LearningGameShell/vibrate.js";
 import {
   getAudioCtx,
   playMelodyNote,
@@ -23,14 +23,6 @@ function songDisplayName(song, lang = "he") {
   if (!song?.name) return "";
   if (typeof song.name === "string") return song.name;
   return song.name[lang] || song.name.he || song.name.en || "";
-}
-
-function vibrate(pattern, vibrateOn) {
-  if (!vibrateOn) return;
-  if (canVibrate) navigator.vibrate(pattern);
-  window.ReactNativeWebView?.postMessage(
-    JSON.stringify({ type: "vibrate", pattern }),
-  );
 }
 
 /**
@@ -77,6 +69,23 @@ export default function ClassicGame({
   const vibrateOnRef = useRef(vibrateOn);
   const activeEmojisRef = useRef(activeEmojis);
   const activeColorsRef = useRef(activeColors);
+  const timeoutIdsRef = useRef(new Set());
+  const intervalIdsRef = useRef(new Set());
+
+  const scheduleTimeout = useCallback((callback, delay) => {
+    const id = setTimeout(() => {
+      timeoutIdsRef.current.delete(id);
+      callback();
+    }, delay);
+    timeoutIdsRef.current.add(id);
+    return id;
+  }, []);
+
+  const scheduleInterval = useCallback((callback, delay) => {
+    const id = setInterval(callback, delay);
+    intervalIdsRef.current.add(id);
+    return id;
+  }, []);
 
   useEffect(() => {
     vibrateOnRef.current = vibrateOn;
@@ -89,19 +98,19 @@ export default function ClassicGame({
   }, [activeColors]);
 
   const doVibrate = useCallback((pattern) => {
-    vibrate(pattern, vibrateOnRef.current);
+    buzz(pattern, vibrateOnRef.current);
   }, []);
 
   const resetIdle = useCallback(() => {
     setShowIdle(false);
     clearTimeout(idleTimerRef.current);
-    idleTimerRef.current = setTimeout(() => setShowIdle(true), 4000);
-  }, []);
+    idleTimerRef.current = scheduleTimeout(() => setShowIdle(true), 4000);
+  }, [scheduleTimeout]);
 
   useEffect(() => {
-    resetIdle();
-    return () => clearTimeout(idleTimerRef.current);
-  }, [resetIdle]);
+    const initializeTimer = scheduleTimeout(resetIdle, 0);
+    return () => clearTimeout(initializeTimer);
+  }, [resetIdle, scheduleTimeout]);
 
   const playMelody = useCallback(() => {
     playMelodyNote(
@@ -111,15 +120,15 @@ export default function ClassicGame({
       setShowSongName,
       songNameTimerRef,
       lang,
+      scheduleTimeout,
     );
-  }, [lang]);
+  }, [lang, scheduleTimeout]);
 
   const spawnAt = useCallback(
     (
       x,
       y,
       emojiList = null,
-      soundType = "normal",
       isNumber = false,
       comboScale = 1,
     ) => {
@@ -141,7 +150,7 @@ export default function ClassicGame({
         const dy = Math.sin(angle) * distance - rand(40, 90);
         const rotation = rand(-270, 270);
         const duration = rand(650, 950);
-        setTimeout(
+        scheduleTimeout(
           () => setEmojis((prev) => prev.filter((e) => e.id !== id)),
           duration,
         );
@@ -155,7 +164,7 @@ export default function ClassicGame({
         const id = nextId();
         const angle = rand(0, Math.PI * 2);
         const speed = rand(60, isNumber ? 220 : 170);
-        setTimeout(
+        scheduleTimeout(
           () => setParticles((prev) => prev.filter((p) => p.id !== id)),
           600,
         );
@@ -177,7 +186,7 @@ export default function ClassicGame({
         playMelody();
       }
     },
-    [resetIdle, playMelody],
+    [resetIdle, playMelody, scheduleTimeout],
   );
 
   useEffect(() => {
@@ -194,15 +203,14 @@ export default function ClassicGame({
     if (c === 10) {
       doVibrate([100, 40, 100, 40, 200]);
       setUltraFlash(true);
-      setTimeout(() => setUltraFlash(false), 800);
+      scheduleTimeout(() => setUltraFlash(false), 800);
       for (let i = 0; i < 8; i++) {
-        setTimeout(
+        scheduleTimeout(
           () =>
             spawnAt(
               rand(60, window.innerWidth - 60),
               rand(60, window.innerHeight - 60),
               COMBO_ULTRA_EMOJIS,
-              "normal",
               false,
               8,
             ),
@@ -215,13 +223,13 @@ export default function ClassicGame({
       setCombo(c);
       setShowCombo(true);
       clearTimeout(comboTimerRef.current);
-      comboTimerRef.current = setTimeout(() => {
+      comboTimerRef.current = scheduleTimeout(() => {
         setShowCombo(false);
         comboRef.current = 0;
       }, 900);
     }
     return c;
-  }, [spawnAt, doVibrate]);
+  }, [spawnAt, doVibrate, scheduleTimeout]);
 
   // Shake detection
   useEffect(() => {
@@ -236,13 +244,12 @@ export default function ClassicGame({
         lastShake = Date.now();
         doVibrate([80, 40, 80, 40, 120]);
         for (let i = 0; i < 10; i++) {
-          setTimeout(
+          scheduleTimeout(
             () =>
               spawnAt(
                 rand(80, window.innerWidth - 80),
                 rand(80, window.innerHeight - 80),
                 null,
-                "normal",
                 false,
               ),
             i * 70,
@@ -252,7 +259,7 @@ export default function ClassicGame({
     };
     window.addEventListener("devicemotion", onMotion);
     return () => window.removeEventListener("devicemotion", onMotion);
-  }, [spawnAt, doVibrate]);
+  }, [spawnAt, doVibrate, scheduleTimeout]);
 
   // Mouse/touch trail
   useEffect(() => {
@@ -281,7 +288,7 @@ export default function ClassicGame({
             ...prev,
             { id, x: t.clientX, y: t.clientY, color, size, swipe: true },
           ]);
-          setTimeout(
+          scheduleTimeout(
             () => setTrail((prev) => prev.filter((tr) => tr.id !== id)),
             750,
           );
@@ -300,7 +307,7 @@ export default function ClassicGame({
         ...prev.slice(-28),
         { id, x: e.clientX, y: e.clientY, color, size, sparkle },
       ]);
-      setTimeout(
+      scheduleTimeout(
         () => setTrail((prev) => prev.filter((t) => t.id !== id)),
         700,
       );
@@ -312,7 +319,7 @@ export default function ClassicGame({
       window.removeEventListener("mousemove", onMove);
       window.removeEventListener("touchmove", onTouchMove);
     };
-  }, []);
+  }, [scheduleTimeout]);
 
   // Keyboard
   useEffect(() => {
@@ -353,18 +360,18 @@ export default function ClassicGame({
         const emoji = NUMBER_EMOJIS[num];
         const flashId = nextId();
         setKeyFlash({ emoji, id: flashId });
-        setTimeout(
+        scheduleTimeout(
           () => setKeyFlash((f) => (f?.id === flashId ? null : f)),
           1100,
         );
-        spawnAt(x, y, [emoji], "number", true);
+        spawnAt(x, y, [emoji], true);
       } else if (HEBREW_LETTER_EMOJIS[key]) {
-        spawnAt(x, y, HEBREW_LETTER_EMOJIS[key], "normal", false);
+        spawnAt(x, y, HEBREW_LETTER_EMOJIS[key], false);
       } else if (/^[a-zA-Z]$/.test(key)) {
         const letterEmojis = LETTER_EMOJIS[key.toLowerCase()] || pool;
-        spawnAt(x, y, letterEmojis, "normal", false);
+        spawnAt(x, y, letterEmojis, false);
       } else if (SPECIAL_KEY_EMOJIS[key]) {
-        spawnAt(x, y, SPECIAL_KEY_EMOJIS[key], "normal", false);
+        spawnAt(x, y, SPECIAL_KEY_EMOJIS[key], false);
       } else {
         spawnAt(x, y);
       }
@@ -372,7 +379,7 @@ export default function ClassicGame({
     window.addEventListener("keydown", onKey, { capture: true });
     return () =>
       window.removeEventListener("keydown", onKey, { capture: true });
-  }, [spawnAt]);
+  }, [spawnAt, scheduleTimeout]);
 
   const isChromeTarget = (target) =>
     target?.closest?.(".corner-hold") ||
@@ -388,10 +395,10 @@ export default function ClassicGame({
         activeTouchPosRef.current[t.identifier] = pos;
         isSwipingRef.current[t.identifier] = false;
 
-        longPressTimerRef.current[t.identifier] = setTimeout(() => {
+        longPressTimerRef.current[t.identifier] = scheduleTimeout(() => {
           if (!isSwipingRef.current[t.identifier]) {
             doVibrate([20]);
-            longPressIntervalRef.current[t.identifier] = setInterval(() => {
+            longPressIntervalRef.current[t.identifier] = scheduleInterval(() => {
               const cur = activeTouchPosRef.current[t.identifier];
               if (cur) {
                 spawnAtRef.current?.(cur.x, cur.y);
@@ -402,7 +409,7 @@ export default function ClassicGame({
         }, 700);
       });
     },
-    [doVibrate],
+    [doVibrate, scheduleInterval, scheduleTimeout],
   );
 
   const handleTouchMove = useCallback((e) => {
@@ -436,13 +443,12 @@ export default function ClassicGame({
             lastTapPosRef.current = null;
             doVibrate([60, 30, 100]);
             for (let i = 0; i < 5; i++) {
-              setTimeout(
+              scheduleTimeout(
                 () =>
                   spawnAt(
                     t.clientX + rand(-80, 80),
                     t.clientY + rand(-80, 80),
                     null,
-                    "normal",
                     false,
                     5,
                   ),
@@ -458,7 +464,7 @@ export default function ClassicGame({
                 : c >= getClassicLevelConfig(c).comboThresholds.hot
                   ? COMBO_HOT_EMOJIS
                   : null;
-            spawnAt(t.clientX, t.clientY, pool, "normal", false, c);
+            spawnAt(t.clientX, t.clientY, pool, false, c);
           }
         }
 
@@ -467,7 +473,7 @@ export default function ClassicGame({
         delete isSwipingRef.current[t.identifier];
       });
     },
-    [doVibrate, spawnAt, trackCombo],
+    [doVibrate, spawnAt, trackCombo, scheduleTimeout],
   );
 
   const handleMouseDown = useCallback(
@@ -475,9 +481,9 @@ export default function ClassicGame({
       if (e.button !== 0) return;
       if (isChromeTarget(e.target)) return;
       mousePosRef.current = { x: e.clientX, y: e.clientY };
-      mouseLongTimerRef.current = setTimeout(() => {
+      mouseLongTimerRef.current = scheduleTimeout(() => {
         doVibrate([20]);
-        mouseLongIntervalRef.current = setInterval(() => {
+        mouseLongIntervalRef.current = scheduleInterval(() => {
           const p = mousePosRef.current;
           if (p) {
             spawnAtRef.current?.(p.x, p.y);
@@ -486,7 +492,7 @@ export default function ClassicGame({
         }, 300);
       }, 700);
     },
-    [doVibrate],
+    [doVibrate, scheduleInterval, scheduleTimeout],
   );
 
   const handleMouseUp = useCallback(
@@ -511,13 +517,12 @@ export default function ClassicGame({
           lastTapPosRef.current = null;
           doVibrate([60, 30, 100]);
           for (let i = 0; i < 5; i++) {
-            setTimeout(
+            scheduleTimeout(
               () =>
                 spawnAt(
                   e.clientX + rand(-80, 80),
                   e.clientY + rand(-80, 80),
                   null,
-                  "normal",
                   false,
                   5,
                 ),
@@ -533,12 +538,12 @@ export default function ClassicGame({
               : c >= getClassicLevelConfig(c).comboThresholds.hot
                 ? COMBO_HOT_EMOJIS
                 : null;
-          spawnAt(e.clientX, e.clientY, pool, "normal", false, c);
+          spawnAt(e.clientX, e.clientY, pool, false, c);
         }
       }
       mousePosRef.current = null;
     },
-    [doVibrate, spawnAt, trackCombo],
+    [doVibrate, spawnAt, trackCombo, scheduleTimeout],
   );
 
   const handleMouseMoveLong = useCallback((e) => {
@@ -587,14 +592,13 @@ export default function ClassicGame({
   ]);
 
   useEffect(() => {
+    const timeoutIds = timeoutIdsRef.current;
+    const intervalIds = intervalIdsRef.current;
     return () => {
-      clearTimeout(idleTimerRef.current);
-      clearTimeout(comboTimerRef.current);
-      clearTimeout(songNameTimerRef.current);
-      clearTimeout(mouseLongTimerRef.current);
-      clearInterval(mouseLongIntervalRef.current);
-      Object.values(longPressTimerRef.current).forEach(clearTimeout);
-      Object.values(longPressIntervalRef.current).forEach(clearInterval);
+      timeoutIds.forEach(clearTimeout);
+      intervalIds.forEach(clearInterval);
+      timeoutIds.clear();
+      intervalIds.clear();
     };
   }, []);
 

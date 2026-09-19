@@ -1,15 +1,8 @@
 import { useState, useEffect, useCallback, useRef } from "react";
-import { IS_TOUCH, canVibrate, PIANO_KEYS } from "../../constants";
+import { IS_TOUCH, isWebView, PIANO_KEYS } from "../../constants";
 import { playPianoNote } from "../../audio.js";
+import { buzz } from "../../components/LearningGameShell/vibrate.js";
 import "./PianoGame.css";
-
-function vibrate(pattern, vibrateOn) {
-  if (!vibrateOn) return;
-  if (canVibrate) navigator.vibrate(pattern);
-  window.ReactNativeWebView?.postMessage(
-    JSON.stringify({ type: "vibrate", pattern }),
-  );
-}
 
 function getBlackKeyPos(bk, whiteKeys, wKeyWidth) {
   const noteChar = bk.id.slice(0, -1);
@@ -105,7 +98,7 @@ export default function PianoGame({ lang = "he", vibrateOn = true }) {
 
   // Orientation lock (mobile)
   useEffect(() => {
-    if (!IS_TOUCH) return;
+    if (!IS_TOUCH || isWebView) return;
     const orientation = window.screen?.orientation;
     if (!orientation?.lock) return;
     orientation.lock("landscape").catch(() => {});
@@ -143,7 +136,7 @@ export default function PianoGame({ lang = "he", vibrateOn = true }) {
           newPressed.add(key.id);
           if (!pressedKeysRef.current.has(key.id)) {
             playPianoNote(key.freq);
-            vibrate([8], vibrateOn);
+            buzz([8], vibrateOn);
             newDisplayed.add(key.id);
           }
         }
@@ -178,7 +171,7 @@ export default function PianoGame({ lang = "he", vibrateOn = true }) {
       const key = findPianoKeyAtPoint(e.clientX, e.clientY, containerEl, rect);
       if (key) {
         playPianoNote(key.freq);
-        vibrate([8], vibrateOn);
+        buzz([8], vibrateOn);
         clearTimeout(displayTimerRef.current);
         setDisplayedKeys(new Set([key.id]));
         setPressedKeys(new Set([key.id]));

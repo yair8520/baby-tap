@@ -8,17 +8,54 @@ import {
   COLORMIX_LEVELS,
   buildLevel,
 } from './levels.js';
-import { useGameLevel, useGameStars } from '../../hooks/useGameProgress.js';
 import { LearningGameShell, starsFromMistakes } from '../../components/LearningGameShell';
-import { SparkBurst } from '../../components/SparkBurst';
+import { useGameBestStars, useGameLevel } from '../../hooks/useGameProgress.js';
+import { useResponsiveGameViewport } from '../../hooks/useResponsiveGameViewport.js';
+import { buzz } from '../../components/LearningGameShell/vibrate.js';
 import './ColorMix.css';
+
+// ─── SparkBurst ───────────────────────────────────────────────────────────────
+
+const SPARK_PARTICLES = Array.from({ length: 12 }, (_, i) => {
+  const angle = (i / 12) * 360;
+  const distance = 45 + ((i * 17) % 36);
+  return {
+    dx: Math.cos((angle * Math.PI) / 180) * distance,
+    dy: Math.sin((angle * Math.PI) / 180) * distance,
+    size: 6 + ((i * 5) % 8),
+    delay: i * 0.018,
+  };
+});
+
+function SparkBurst({ x, y, color }) {
+  return (
+    <>
+      {SPARK_PARTICLES.map((particle, i) => (
+        <div
+          key={i}
+          className="cm-spark"
+          style={{
+            left: x,
+            top: y,
+            '--dx': `${particle.dx}px`,
+            '--dy': `${particle.dy}px`,
+            background: color,
+            width: `${particle.size}px`,
+            height: `${particle.size}px`,
+            animationDelay: `${particle.delay}s`,
+          }}
+        />
+      ))}
+    </>
+  );
+}
 
 // ─── Main component ───────────────────────────────────────────────────────────
 
 export default function ColorMix({ onExit, lang = 'he', vibrateOn = true }) {
   const containerRef = useRef(null);
-  const [W, setW]    = useState(window.innerWidth);
-  const [H, setH]    = useState(window.innerHeight);
+  const { width: W, height: H } = useResponsiveGameViewport(containerRef);
+  const [roundKey, setRoundKey] = useState(0);
 
   const [levelIdx,    setLevelIdx]    = useGameLevel('colormix', 0, {
     maxLevels: COLORMIX_LEVELS.length,
@@ -34,41 +71,67 @@ export default function ColorMix({ onExit, lang = 'he', vibrateOn = true }) {
   const [sparks,        setSparks]        = useState([]);
   const [levelDone,     setLevelDone]     = useState(false);
   const [mistakes,      setMistakes]      = useState(0);
-  const [totalStars,    setTotalStars]    = useGameStars('colormix', 0);
+  const { recordStars, totalStars } = useGameBestStars(
+    'colormix',
+    COLORMIX_LEVELS.length,
+  );
 
   // Refs for pointer handlers
   const draggingRef  = useRef(null);
   const bowlsRef     = useRef([]);
   const targetsRef   = useRef([]);
   const mistakesRef  = useRef(0);
+  const completeTimerRef = useRef(null);
+  const timeoutIdsRef = useRef(new Set());
+
+  const scheduleTimeout = useCallback((callback, delay) => {
+    const id = setTimeout(() => {
+      timeoutIdsRef.current.delete(id);
+      callback();
+    }, delay);
+    timeoutIdsRef.current.add(id);
+    return id;
+  }, []);
+
+  const clearScheduledTimeouts = useCallback(() => {
+    timeoutIdsRef.current.forEach(clearTimeout);
+    timeoutIdsRef.current.clear();
+  }, []);
 
   useEffect(() => { bowlsRef.current   = bowls;    }, [bowls]);
   useEffect(() => { targetsRef.current = targets;  }, [targets]);
   useEffect(() => { mistakesRef.current = mistakes; }, [mistakes]);
 
-  // Measure on mount
-  useEffect(() => {
-    const el = containerRef.current;
-    if (!el) return;
-    const r = el.getBoundingClientRect();
-    setW(r.width);
-    setH(r.height);
-  }, []);
-
   // Build level
   useEffect(() => {
     if (!W || !H) return;
-    const { targets: t, bowls: b, sources: s } = buildLevel(levelIdx, W, H);
-    setTargets(t);
-    setBowls(b);
-    setSources(s);
-    setMistakes(0);
-    mistakesRef.current = 0;
-    setLevelDone(false);
-    setSparks([]);
-    setWrongBowlId(null);
-    setMatchedTgtId(null);
-  }, [levelIdx, W, H]);
+    const initializeTimer = scheduleTimeout(() => {
+      const { targets: t, bowls: b, sources: s } = buildLevel(levelIdx, W, H);
+      setTargets(t);
+      setBowls(b);
+      setSources(s);
+      setMistakes(0);
+      mistakesRef.current = 0;
+      setLevelDone(false);
+      setSparks([]);
+      setWrongBowlId(null);
+      setMatchedTgtId(null);
+      draggingRef.current = null;
+      setDragging(null);
+    }, 0);
+    return () => {
+      clearTimeout(initializeTimer);
+      clearScheduledTimeouts();
+    };
+  }, [clearScheduledTimeouts, levelIdx, roundKey, W, H, scheduleTimeout]);
+
+  useEffect(() => {
+    const timeoutIds = timeoutIdsRef.current;
+    return () => {
+      timeoutIds.forEach(clearTimeout);
+      timeoutIds.clear();
+    };
+  }, []);
 
   // ── Bowl logic ──────────────────────────────────────────────────────────────
 
@@ -84,17 +147,17 @@ export default function ColorMix({ onExit, lang = 'he', vibrateOn = true }) {
 
     if (tgt) {
       // Correct!
-      if (vibrateOn) navigator.vibrate?.([40, 25, 90]);
+      buzz([40, 25, 90], vibrateOn);
 
       // Flash match on target
       setMatchedTgtId(tgt.id);
-      setTimeout(() => setMatchedTgtId(null), 700);
+      scheduleTimeout(() => setMatchedTgtId(null), 700);
 
       // Sparks
       const sparkId = Date.now() + Math.random();
       const mix = MIX_TABLE[key];
       setSparks(prev => [...prev, { id: sparkId, x: tgt.cx, y: tgt.cy, color: mix.resultFill }]);
-      setTimeout(() => setSparks(prev => prev.filter(s => s.id !== sparkId)), 950);
+      scheduleTimeout(() => setSparks(prev => prev.filter(s => s.id !== sparkId)), 950);
 
       // Mark target matched, clear bowl
       setTargets(prev => prev.map(t => t.id === tgt.id ? { ...t, matched: true } : t));
@@ -103,21 +166,20 @@ export default function ColorMix({ onExit, lang = 'he', vibrateOn = true }) {
       // Check level done
       const newMatched = targets.filter(t => t.matched).length + 1;
       if (newMatched >= targets.length) {
-        const stars = starsFromMistakes(mistakesRef.current);
-        setTotalStars(prev => prev + stars);
-        setTimeout(() => setLevelDone(true), 700);
+        recordStars(levelIdx, starsFromMistakes(mistakesRef.current));
+        completeTimerRef.current = scheduleTimeout(() => setLevelDone(true), 700);
       }
     } else {
       // Wrong combo — shake bowl, return circles
-      if (vibrateOn) navigator.vibrate?.([80, 40, 80]);
+      buzz([80, 40, 80], vibrateOn);
       setWrongBowlId(bowlId);
       setMistakes(m => m + 1);
-      setTimeout(() => {
+      scheduleTimeout(() => {
         setWrongBowlId(null);
         setBowls(prev => prev.map(b => b.id === bowlId ? { ...b, slot1: null, slot2: null } : b));
       }, 500);
     }
-  }, [vibrateOn]);
+  }, [levelIdx, recordStars, scheduleTimeout, vibrateOn]);
 
   // ── Pointer handlers ────────────────────────────────────────────────────────
 
@@ -177,7 +239,7 @@ export default function ColorMix({ onExit, lang = 'he', vibrateOn = true }) {
       }));
 
       // Check after state update
-      setTimeout(() => {
+      scheduleTimeout(() => {
         const updated = bowlsRef.current.find(b => b.id === nearest.id);
         if (updated && updated.slot1 && updated.slot2) {
           checkBowl(nearest.id);
@@ -185,7 +247,7 @@ export default function ColorMix({ onExit, lang = 'he', vibrateOn = true }) {
       }, 50);
     }
     // else: just drop nowhere — circle vanishes (source respawns immediately anyway)
-  }, [checkBowl]);
+  }, [checkBowl, scheduleTimeout]);
 
   // ── Derived ─────────────────────────────────────────────────────────────────
 
@@ -202,6 +264,7 @@ export default function ColorMix({ onExit, lang = 'he', vibrateOn = true }) {
       onPointerUp={onPointerUp}
       onPointerLeave={onPointerUp}
     >
+      {/* Background */}
       <div className="cm-bg" />
 
       <LearningGameShell
@@ -212,116 +275,128 @@ export default function ColorMix({ onExit, lang = 'he', vibrateOn = true }) {
         levelDone={levelDone}
         starCount={starCount}
         onNextLevel={() => setLevelIdx(p => p + 1)}
+        onReplay={() => setRoundKey(key => key + 1)}
+        isLastLevel={levelIdx === COLORMIX_LEVELS.length - 1}
       >
-        <div className="cm-targets-label" style={{ top: H * 0.085 }}>
-          <span>{lang === 'he' ? 'ערבב ל...' : 'Mix to...'}</span>
-        </div>
 
-        {targets.map(tgt => (
+      {/* Target circles */}
+      <div className="cm-targets-label" style={{ top: H * 0.085 }}>
+        <span>{lang === 'he' ? 'ערבב ל...' : 'Mix to...'}</span>
+      </div>
+
+      {targets.map(tgt => (
+        <div
+          key={tgt.id}
+          className={[
+            'cm-target',
+            tgt.matched    ? 'cm-target-matched'  : '',
+            matchedTgtId === tgt.id ? 'cm-target-glow' : '',
+          ].join(' ')}
+          style={{
+            width:     BOWL_R * 2,
+            height:    BOWL_R * 2,
+            left:      tgt.cx - BOWL_R,
+            top:       tgt.cy - BOWL_R,
+            '--glow':  tgt.glow,
+            background: tgt.resultFill,
+          }}
+        >
+          {tgt.matched && <span className="cm-check">✓</span>}
+          <span className="cm-target-name">
+            {tgt.resultName[lang] ?? tgt.resultName.en}
+          </span>
+        </div>
+      ))}
+
+      {/* Mixing Bowls */}
+      {bowls.map(bowl => {
+        const slots = [bowl.slot1, bowl.slot2].filter(Boolean);
+        return (
           <div
-            key={tgt.id}
+            key={bowl.id}
             className={[
-              'cm-target',
-              tgt.matched    ? 'cm-target-matched'  : '',
-              matchedTgtId === tgt.id ? 'cm-target-glow' : '',
+              'cm-bowl',
+              wrongBowlId === bowl.id ? 'cm-bowl-wrong' : '',
             ].join(' ')}
             style={{
-              width:     BOWL_R * 2,
-              height:    BOWL_R * 2,
-              left:      tgt.cx - BOWL_R,
-              top:       tgt.cy - BOWL_R,
-              '--glow':  tgt.glow,
-              background: tgt.resultFill,
+              width:  BOWL_R * 2,
+              height: BOWL_R * 2,
+              left:   bowl.cx - BOWL_R,
+              top:    bowl.cy - BOWL_R,
             }}
           >
-            {tgt.matched && <span className="cm-check">✓</span>}
-            <span className="cm-target-name">
-              {tgt.resultName[lang] ?? tgt.resultName.en}
-            </span>
+            {slots.map((slot, si) => (
+              <div
+                key={si}
+                className="cm-bowl-circle"
+                style={{
+                  width:      MINI_R * 2,
+                  height:     MINI_R * 2,
+                  background: slot.fill,
+                  '--glow':   slot.glow,
+                  left:       slots.length === 1
+                    ? '50%'
+                    : si === 0 ? '28%' : '72%',
+                  top: '50%',
+                  transform: 'translate(-50%, -50%)',
+                }}
+              />
+            ))}
           </div>
-        ))}
+        );
+      })}
 
-        {bowls.map(bowl => {
-          const slots = [bowl.slot1, bowl.slot2].filter(Boolean);
-          return (
-            <div
-              key={bowl.id}
-              className={[
-                'cm-bowl',
-                wrongBowlId === bowl.id ? 'cm-bowl-wrong' : '',
-              ].join(' ')}
-              style={{
-                width:  BOWL_R * 2,
-                height: BOWL_R * 2,
-                left:   bowl.cx - BOWL_R,
-                top:    bowl.cy - BOWL_R,
-              }}
-            >
-              {slots.map((slot, si) => (
-                <div
-                  key={si}
-                  className="cm-bowl-circle"
-                  style={{
-                    width:      MINI_R * 2,
-                    height:     MINI_R * 2,
-                    background: slot.fill,
-                    '--glow':   slot.glow,
-                    left:       slots.length === 1
-                      ? '50%'
-                      : si === 0 ? '28%' : '72%',
-                    top: '50%',
-                    transform: 'translate(-50%, -50%)',
-                  }}
-                />
-              ))}
-            </div>
-          );
-        })}
+      {/* Bowl label */}
+      <div
+        className="cm-bowl-label"
+        style={{ top: H * 0.47 }}
+      >
+        {lang === 'he' ? 'קערת הערבוב' : 'Mixing Bowl'}
+      </div>
 
-        <div className="cm-bowl-label" style={{ top: H * 0.47 }}>
-          {lang === 'he' ? 'קערת הערבוב' : 'Mixing Bowl'}
-        </div>
+      {/* Source swatches at bottom */}
+      <div className="cm-sources-label" style={{ top: H * 0.80 }}>
+        {lang === 'he' ? 'גרור צבע' : 'Drag a color'}
+      </div>
 
-        <div className="cm-sources-label" style={{ top: H * 0.80 }}>
-          {lang === 'he' ? 'גרור צבע' : 'Drag a color'}
-        </div>
-
-        {sources.map(src => {
-          const isDrag = dragging?.srcId === src.id;
-          return (
-            <div
-              key={src.id}
-              className={['cm-source', isDrag ? 'cm-source-drag' : ''].join(' ')}
-              style={{
-                width:   SOURCE_R * 2,
-                height:  SOURCE_R * 2,
-                left:    src.homeCx - SOURCE_R,
-                top:     src.homeCy - SOURCE_R,
-                background: src.fill,
-                '--glow':   src.glow,
-              }}
-              onPointerDown={e => onPointerDown(e, src.id, src.fill, src.glow)}
-            />
-          );
-        })}
-
-        {dragging && (
+      {sources.map(src => {
+        const isDrag = dragging?.srcId === src.id;
+        return (
           <div
-            className="cm-drag-ghost"
+            key={src.id}
+            className={['cm-source', isDrag ? 'cm-source-drag' : ''].join(' ')}
             style={{
-              width:      SOURCE_R * 2,
-              height:     SOURCE_R * 2,
-              left:       dragging.cx - SOURCE_R,
-              top:        dragging.cy - SOURCE_R,
-              background: dragging.fill,
-              '--glow':   dragging.glow,
+              width:   SOURCE_R * 2,
+              height:  SOURCE_R * 2,
+              left:    src.homeCx - SOURCE_R,
+              top:     src.homeCy - SOURCE_R,
+              background: src.fill,
+              '--glow':   src.glow,
             }}
+            onPointerDown={e => onPointerDown(e, src.id, src.fill, src.glow)}
           />
-        )}
+        );
+      })}
 
-        {sparks.map(s => (
-          <SparkBurst key={s.id} x={s.x} y={s.y} color={s.color} />
-        ))}
+      {/* Dragging ghost */}
+      {dragging && (
+        <div
+          className="cm-drag-ghost"
+          style={{
+            width:      SOURCE_R * 2,
+            height:     SOURCE_R * 2,
+            left:       dragging.cx - SOURCE_R,
+            top:        dragging.cy - SOURCE_R,
+            background: dragging.fill,
+            '--glow':   dragging.glow,
+          }}
+        />
+      )}
+
+      {/* Sparks */}
+      {sparks.map(s => (
+        <SparkBurst key={s.id} x={s.x} y={s.y} color={s.color} />
+      ))}
       </LearningGameShell>
     </div>
   );

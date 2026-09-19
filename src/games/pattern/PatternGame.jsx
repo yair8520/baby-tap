@@ -2,7 +2,8 @@ import { useState, useRef, useEffect, useCallback } from 'react';
 import { ShapeGeom } from '../../components/ShapeGeom';
 import { LearningGameShell, starsFromMistakes } from '../../components/LearningGameShell';
 import { PATTERN_LEVELS, buildLevel } from './levels.js';
-import { useGameLevel } from '../../hooks/useGameProgress.js';
+import { useGameBestStars, useGameLevel } from '../../hooks/useGameProgress.js';
+import { buzz } from '../../components/LearningGameShell/vibrate.js';
 import './PatternGame.css';
 
 // ─── Main Component ───────────────────────────────────────────────────────────
@@ -19,6 +20,11 @@ export default function PatternGame({ onExit, lang = 'he', vibrateOn = true }) {
   const [answered, setAnswered]   = useState(false);
   const [disabledIds, setDisabledIds] = useState(new Set());
   const [revealed, setRevealed]   = useState(false); // show answer in ? slot
+  const [roundKey, setRoundKey]   = useState(0);
+  const { recordStars, totalStars } = useGameBestStars(
+    'pattern',
+    PATTERN_LEVELS.length,
+  );
 
   const levelDoneRef = useRef(false);
   const advanceTimer = useRef(null);
@@ -27,17 +33,20 @@ export default function PatternGame({ onExit, lang = 'he', vibrateOn = true }) {
   // ── Build level ──────────────────────────────────────────────────────────
 
   useEffect(() => {
-    levelDoneRef.current = false;
-    const data = buildLevel(levelIdx);
-    setPattern(data);
-    setSelectedId(null);
-    setIsCorrect(null);
-    setMistakes(0);
-    setLevelDone(false);
-    setAnswered(false);
-    setDisabledIds(new Set());
-    setRevealed(false);
-  }, [levelIdx]);
+    const initializeTimer = setTimeout(() => {
+      levelDoneRef.current = false;
+      const data = buildLevel(levelIdx);
+      setPattern(data);
+      setSelectedId(null);
+      setIsCorrect(null);
+      setMistakes(0);
+      setLevelDone(false);
+      setAnswered(false);
+      setDisabledIds(new Set());
+      setRevealed(false);
+    }, 0);
+    return () => clearTimeout(initializeTimer);
+  }, [levelIdx, roundKey]);
 
   // Cleanup on unmount
   useEffect(() => {
@@ -61,16 +70,17 @@ export default function PatternGame({ onExit, lang = 'he', vibrateOn = true }) {
     setIsCorrect(correct);
 
     if (correct) {
-      if (vibrateOn) navigator.vibrate?.([40, 30, 80, 30, 120]);
+      buzz([40, 30, 80, 30, 120], vibrateOn);
       setAnswered(true);
       setRevealed(true);
       levelDoneRef.current = true;
+      recordStars(levelIdx, starsFromMistakes(mistakes));
 
       advanceTimer.current = setTimeout(() => {
         setLevelDone(true);
       }, 1200);
     } else {
-      if (vibrateOn) navigator.vibrate?.([80, 40, 80]);
+      buzz([80, 40, 80], vibrateOn);
       setMistakes(m => m + 1);
 
       // disable wrong choice for 1s
@@ -85,7 +95,15 @@ export default function PatternGame({ onExit, lang = 'he', vibrateOn = true }) {
         setIsCorrect(null);
       }, 1000);
     }
-  }, [pattern, answered, disabledIds, vibrateOn]);
+  }, [
+    pattern,
+    answered,
+    disabledIds,
+    levelIdx,
+    mistakes,
+    recordStars,
+    vibrateOn,
+  ]);
 
   if (!pattern) return null;
 
@@ -107,10 +125,13 @@ export default function PatternGame({ onExit, lang = 'he', vibrateOn = true }) {
       <LearningGameShell
         lang={lang}
         levelNum={levelNum}
+        totalStars={totalStars}
         onExit={onExit}
         levelDone={levelDone}
         starCount={starCount}
         onNextLevel={() => setLevelIdx(p => p + 1)}
+        onReplay={() => setRoundKey(key => key + 1)}
+        isLastLevel={levelIdx === PATTERN_LEVELS.length - 1}
       >
         {/* Pattern display */}
         <div className="pg-content">

@@ -9,7 +9,11 @@
   flex-direction: column;
   align-items: center;
   /* top padding leaves room for the settings gear */
-  padding: 56px 12px 8px;
+  padding:
+    calc(56px + env(safe-area-inset-top, 0px))
+    max(12px, env(safe-area-inset-right, 0px))
+    max(8px, env(safe-area-inset-bottom, 0px))
+    max(12px, env(safe-area-inset-left, 0px));
   gap: 8px;
   overflow: hidden;
   /* center grid vertically in remaining space */

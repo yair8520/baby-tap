@@ -3,5 +3,10 @@ export * from "./LearningGameShell.props.js";
 export * from "./ShellHeader";
 export * from "./ShellComplete";
 export * from "./LevelDots";
-export { starsFromMistakes } from "./stars.js";
+export {
+  normalizeBestStars,
+  recordBestStars,
+  starsFromMistakes,
+  totalBestStars,
+} from "./stars.js";
 export { buzz, VIBRATE } from "./vibrate.js";

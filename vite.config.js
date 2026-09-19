@@ -43,9 +43,4 @@ export default defineConfig({
     }),
   ],
   base: "/baby-tap/",
-  test: {
-    environment: "jsdom",
-    include: ["src/**/*.test.{js,jsx}"],
-    setupFiles: ["./src/test/setup.js"],
-  },
 });

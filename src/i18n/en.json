@@ -4,7 +4,9 @@
     "title": "Baby Tap! ✨",
     "subtitle": "Let the baby tap the screen\nand see colorful magic! ✨",
     "startFullscreen": "🚀 Start Fullscreen",
-    "exitHint": "To exit: hold top-left corner for 2 seconds",
+    "exitHint": "To exit: hold the top-right corner for 1 second",
+    "exitFullscreen": "Exit fullscreen (hold for 1 second)",
+    "openSettings": "Open settings",
     "privacyPolicy": "Privacy Policy",
     "ultra": "👑 ULTRA ×",
     "fire": "🔥 HOT ×",
@@ -19,7 +21,9 @@
     "tabLearning": "📚 Learning",
     "tabAudio": "🔊 Audio",
     "tabDisplay": "🎨 Display",
-    "settingsHint": "Settings & modes →"
+    "settingsHint": "Settings & modes →",
+    "soundToggle": "Toggle sound",
+    "vibrateToggle": "Toggle vibration"
   },
   "games": {
     "label": "Choose Game Mode",
@@ -30,11 +34,23 @@
     "sleep": "Sleep",
     "piano": "Piano",
     "memory": "Memory",
-    "shapes": "Shapes"
+    "shapes": "Shapes",
+    "shapematch": "Shape Match",
+    "colormix": "Mix Colors",
+    "sizesort": "Size Sort",
+    "shapememory": "Sequence",
+    "pattern": "Pattern"
   },
   "learning": {
     "label": "Learning Modes",
     "description": "Educational games for kids",
+    "level": "Level {{level}}",
+    "allComplete": "All levels complete!",
+    "greatJob": "Great job!",
+    "totalStars": "Total ⭐ {{total}}",
+    "replay": "Replay ↻",
+    "nextLevel": "Next Level ➜",
+    "exit": "Exit learning game",
     "piano": "Piano",
     "memory": "Memory",
     "shapes": "Shapes",
@@ -73,6 +89,14 @@
     "progress": "Progress",
     "resetProgress": "Reset game progress",
     "resetConfirm": "Reset all saved levels and scores? Settings will be kept."
+  },
+  "progress": {
+    "title": "Reset progress",
+    "description": "Language, theme and audio settings will be kept",
+    "warning": "Delete all game progress?",
+    "cancel": "Cancel",
+    "confirm": "Yes, reset",
+    "reset": "Reset…"
   },
   "balloons": {
     "counter": "🎈 {{pops}} | 💨 {{missed}}",

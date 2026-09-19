@@ -7,8 +7,11 @@ export const VIBRATE = {
 
 export function buzz(pattern, vibrateOn) {
   if (!vibrateOn) return;
+  if (window.ReactNativeWebView) {
+    window.ReactNativeWebView.postMessage(
+      JSON.stringify({ type: "vibrate", pattern }),
+    );
+    return;
+  }
   navigator.vibrate?.(pattern);
-  window.ReactNativeWebView?.postMessage(
-    JSON.stringify({ type: "vibrate", pattern }),
-  );
 }

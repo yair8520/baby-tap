@@ -1,0 +1,122 @@
+.target {
+  position: fixed;
+  left: var(--target-left);
+  top: var(--target-top);
+  width: var(--target-size);
+  height: var(--target-size);
+  font-size: var(--target-font-size);
+  background: radial-gradient(
+    circle at 35% 30%,
+    hsl(var(--target-hue), 100%, 85%) 0%,
+    hsl(var(--target-hue), 80%, 60%) 50%,
+    hsl(var(--target-hue), 70%, 40%) 100%
+  );
+  box-shadow: 0 4px 20px hsl(var(--target-hue), 70%, 50%, 0.6);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  touch-action: manipulation;
+  z-index: 45;
+  transform: translate(-50%, -50%);
+  transition: transform 0.08s;
+  will-change: transform;
+}
+
+.target:active {
+  transform: translate(-50%, -50%) scale(0.88);
+}
+
+.target.target-pop {
+  animation: targetPop 0.25s ease-out forwards;
+  pointer-events: none;
+}
+
+@keyframes targetPop {
+  0% { transform: translate(-50%, -50%) scale(1); opacity: 1; }
+  60% { transform: translate(-50%, -50%) scale(1.5); opacity: 0.7; }
+  100% { transform: translate(-50%, -50%) scale(0.1); opacity: 0; }
+}
+
+.target-ring {
+  position: absolute;
+  inset: -5px;
+  width: var(--target-ring-size);
+  height: var(--target-ring-size);
+  pointer-events: none;
+}
+
+.target-ring circle {
+  animation: targetRingDrain var(--target-ring-duration) linear forwards;
+}
+
+@keyframes targetRingDrain {
+  0% { stroke-dashoffset: 0; }
+  100% { stroke-dashoffset: var(--circ); }
+}
+
+.target-score {
+  position: fixed;
+  bottom: max(env(safe-area-inset-bottom, 0px) + 18px, 28px);
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(0, 0, 0, 0.45);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  border-radius: 40px;
+  padding: 8px 24px;
+  color: #fff;
+  font-size: clamp(20px, 5vw, 28px);
+  font-weight: 800;
+  font-family: system-ui, sans-serif;
+  pointer-events: none;
+  z-index: 90;
+  white-space: nowrap;
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  flex-wrap: wrap;
+  row-gap: 2px;
+}
+
+.target-highscore {
+  color: rgba(255, 215, 0, 0.9);
+  font-weight: 700;
+}
+
+.targets-emoji-item {
+  position: fixed;
+  left: var(--emoji-left);
+  top: var(--emoji-top);
+  font-size: var(--emoji-size);
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+  z-index: 50;
+  animation: targetsEmojiSpin var(--dur, 800ms)
+    cubic-bezier(0.22, 0.61, 0.36, 1) forwards;
+  will-change: transform, opacity;
+  line-height: 1;
+}
+
+@keyframes targetsEmojiSpin {
+  0% {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(0.15) rotate(0deg);
+  }
+  20% {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1.3)
+      rotate(calc(var(--rot) * 0.15));
+  }
+  65% {
+    opacity: 1;
+    transform: translate(calc(-50% + var(--dx)), calc(-50% + var(--dy)))
+      scale(1) rotate(var(--rot));
+  }
+  100% {
+    opacity: 0;
+    transform:
+      translate(calc(-50% + var(--dx) * 1.05), calc(-50% + var(--dy) + 60px))
+      scale(0.2)
+      rotate(calc(var(--rot) * 1.8));
+  }
+}

@@ -17,8 +17,10 @@ export function LearningGameShell({
   levelDone = DEFAULT_LEARNING_GAME_SHELL_PROPS.levelDone,
   starCount = DEFAULT_LEARNING_GAME_SHELL_PROPS.starCount,
   maxStars = DEFAULT_LEARNING_GAME_SHELL_PROPS.maxStars,
+  headerTrailing,
   onNextLevel,
   onReplay,
+  isLastLevel = DEFAULT_LEARNING_GAME_SHELL_PROPS.isLastLevel,
   children,
 }) {
   return (
@@ -27,6 +29,7 @@ export function LearningGameShell({
         levelNum={levelNum}
         starCount={starCount}
         maxStars={maxStars}
+        trailing={headerTrailing}
         onExit={onExit}
       />
 
@@ -46,6 +49,7 @@ export function LearningGameShell({
           starCount={starCount}
           maxStars={maxStars}
           totalStars={totalStars}
+          isLastLevel={isLastLevel}
           onNextLevel={onNextLevel}
           onReplay={onReplay}
         />
@@ -53,3 +57,5 @@ export function LearningGameShell({
     </>
   );
 }
+
+export default LearningGameShell;

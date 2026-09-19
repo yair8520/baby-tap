@@ -8,9 +8,11 @@
  * @property {() => void} [onExit]
  * @property {boolean} [levelDone]   Shows the completion overlay.
  * @property {number} [starCount]    Stars earned in the current stage.
- * @property {number} [maxStars]     Stars obtainable per stage.
+ * @property {number} [maxStars]     Stars obtainable per stage; 0 hides the star row.
+ * @property {import('react').ReactNode} [headerTrailing] Replaces the star row when maxStars is 0.
  * @property {() => void} [onNextLevel]
  * @property {() => void} [onReplay]
+ * @property {boolean} [isLastLevel] Hides the next-level button and swaps the title.
  * @property {import('react').ReactNode} [children] The playfield.
  */
 
@@ -19,4 +21,5 @@ export const DEFAULT_LEARNING_GAME_SHELL_PROPS = {
   levelDone: false,
   starCount: 3,
   maxStars: 3,
+  isLastLevel: false,
 };

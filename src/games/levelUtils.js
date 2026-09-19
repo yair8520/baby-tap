@@ -5,8 +5,12 @@
 
 /** Clamp a 0-based index into [0, length-1]. */
 export function clampLevelIndex(index, length) {
-  if (length <= 0) return 0;
-  return Math.max(0, Math.min(Math.floor(index), length - 1));
+  const safeLength = Number.isFinite(length) ? Math.floor(length) : 0;
+  if (safeLength <= 0) return 0;
+
+  const numericIndex = Number(index);
+  if (!Number.isFinite(numericIndex)) return 0;
+  return Math.max(0, Math.min(Math.floor(numericIndex), safeLength - 1));
 }
 
 /** Get level config by 0-based index (clamped). */

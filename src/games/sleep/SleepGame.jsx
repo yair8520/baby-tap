@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import { getAudioCtx } from "../../audio.js";
 import { useLocalStorage } from "../../hooks/useLocalStorage.js";
 import { STORAGE_KEYS } from "../../storage/keys.js";
+import { isBoolean } from "../../storage/validation.js";
 import "./SleepGame.css";
 
 const SLEEP_OPUS_URLS = {
@@ -15,31 +16,23 @@ const SLEEP_OPUS_URLS = {
     "../../assets/sounds/small_24-Storm-10min.opus",
     import.meta.url,
   ).href,
-  white: new URL(
-    "../../assets/sounds/small_32-Waterfall-10min.opus",
-    import.meta.url,
-  ).href,
-  pink: new URL(
-    "../../assets/sounds/small_32-Waterfall-10min.opus",
-    import.meta.url,
-  ).href,
-  brown: new URL(
-    "../../assets/sounds/small_32-Waterfall-10min.opus",
-    import.meta.url,
-  ).href,
-  lullaby: new URL(
-    "../../assets/sounds/small_42-Rain-10min.opus",
-    import.meta.url,
-  ).href,
-  lullaby2: new URL(
-    "../../assets/sounds/small_47-Waves-10min.opus",
-    import.meta.url,
-  ).href,
-  lullaby3: new URL(
-    "../../assets/sounds/small_32-Waterfall-10min.opus",
-    import.meta.url,
-  ).href,
 };
+
+const SLEEP_SOUND_MODES = [
+  "rain",
+  "ocean",
+  "wind",
+  "white",
+  "pink",
+  "brown",
+  "heartbeat",
+  "lullaby",
+  "lullaby2",
+  "lullaby3",
+];
+
+const isSleepVolume = (value) =>
+  Number.isFinite(value) && value >= 0 && value <= 0.9;
 
 const sleepOpusBufferCache = new Map();
 
@@ -67,14 +60,17 @@ export default function SleepGame({ lang = "he", muteOn = false }) {
   const [sleepSoundMode, setSleepSoundMode] = useLocalStorage(
     STORAGE_KEYS.sleepSoundMode,
     "rain",
+    SLEEP_SOUND_MODES,
   );
   const [sleepVolume, setSleepVolume] = useLocalStorage(
     STORAGE_KEYS.sleepVolume,
     0.5,
+    isSleepVolume,
   );
   const [sleepEnabled, setSleepEnabled] = useLocalStorage(
     STORAGE_KEYS.sleepEnabled,
     true,
+    isBoolean,
   );
   const [sleepMenuOpen, setSleepMenuOpen] = useState(true);
   const [sleepMelodiesOpen, setSleepMelodiesOpen] = useState(false);
@@ -98,17 +94,23 @@ export default function SleepGame({ lang = "he", muteOn = false }) {
         try {
           s.stop?.();
           s.disconnect?.();
-        } catch (_e) {}
+        } catch {
+          // Nodes may already have stopped or disconnected.
+        }
       });
       nodes.oscillators?.forEach((o) => {
         try {
           o.stop?.();
           o.disconnect?.();
-        } catch (_e) {}
+        } catch {
+          // Nodes may already have stopped or disconnected.
+        }
       });
       nodes.master?.disconnect?.();
       nodes.extra?.forEach((n) => n.disconnect?.());
-    } catch (_e) {}
+    } catch {
+      // Cleanup is best-effort because Web Audio node state varies by browser.
+    }
     sleepAudioRef.current = null;
   }, []);
 
@@ -142,7 +144,9 @@ export default function SleepGame({ lang = "he", muteOn = false }) {
 
           sleepAudioRef.current = { master, sources: [src] };
           return;
-        } catch (_e) {}
+        } catch {
+          // Fall back to generated ambience when the recording cannot load.
+        }
       }
 
       const makeNoiseBuffer = (kind = "white") => {
@@ -406,11 +410,9 @@ export default function SleepGame({ lang = "he", muteOn = false }) {
         setSleepMenuOpen(false);
       }
     };
-    document.addEventListener("mousedown", handler);
-    document.addEventListener("touchstart", handler);
+    document.addEventListener("pointerdown", handler);
     return () => {
-      document.removeEventListener("mousedown", handler);
-      document.removeEventListener("touchstart", handler);
+      document.removeEventListener("pointerdown", handler);
     };
   }, [sleepMenuOpen]);
 
@@ -510,12 +512,8 @@ export default function SleepGame({ lang = "he", muteOn = false }) {
 
       <button
         className="sleep-menu-toggle"
-        onTouchEnd={(e) => {
+        onPointerUp={(e) => {
           e.preventDefault();
-          e.stopPropagation();
-          setSleepMenuOpen((v) => !v);
-        }}
-        onMouseUp={(e) => {
           e.stopPropagation();
           setSleepMenuOpen((v) => !v);
         }}
@@ -547,12 +545,8 @@ export default function SleepGame({ lang = "he", muteOn = false }) {
           <div className="sleep-control-row">
             <button
               className={`sleep-action-btn${sleepEnabled ? " active" : ""}`}
-              onTouchEnd={(e) => {
+              onPointerUp={(e) => {
                 e.preventDefault();
-                e.stopPropagation();
-                setSleepEnabled((v) => !v);
-              }}
-              onMouseUp={(e) => {
                 e.stopPropagation();
                 setSleepEnabled((v) => !v);
               }}
@@ -567,13 +561,8 @@ export default function SleepGame({ lang = "he", muteOn = false }) {
             </button>
             <button
               className="sleep-action-btn"
-              onTouchEnd={(e) => {
+              onPointerUp={(e) => {
                 e.preventDefault();
-                e.stopPropagation();
-                setSleepEnabled(false);
-                setSleepMenuOpen(false);
-              }}
-              onMouseUp={(e) => {
                 e.stopPropagation();
                 setSleepEnabled(false);
                 setSleepMenuOpen(false);
@@ -627,13 +616,8 @@ export default function SleepGame({ lang = "he", muteOn = false }) {
               <button
                 key={s.id}
                 className={`sleep-noise-btn${sleepSoundMode === s.id ? " active" : ""}`}
-                onTouchEnd={(e) => {
+                onPointerUp={(e) => {
                   e.preventDefault();
-                  e.stopPropagation();
-                  setSleepSoundMode(s.id);
-                  setSleepEnabled(true);
-                }}
-                onMouseUp={(e) => {
                   e.stopPropagation();
                   setSleepSoundMode(s.id);
                   setSleepEnabled(true);
@@ -648,12 +632,8 @@ export default function SleepGame({ lang = "he", muteOn = false }) {
           <div className="sleep-melodies-toggle-row">
             <button
               className="sleep-melodies-toggle"
-              onTouchEnd={(e) => {
+              onPointerUp={(e) => {
                 e.preventDefault();
-                e.stopPropagation();
-                setSleepMelodiesOpen((v) => !v);
-              }}
-              onMouseUp={(e) => {
                 e.stopPropagation();
                 setSleepMelodiesOpen((v) => !v);
               }}
@@ -690,13 +670,8 @@ export default function SleepGame({ lang = "he", muteOn = false }) {
                 <button
                   key={s.id}
                   className={`sleep-noise-btn${sleepSoundMode === s.id ? " active" : ""}`}
-                  onTouchEnd={(e) => {
+                  onPointerUp={(e) => {
                     e.preventDefault();
-                    e.stopPropagation();
-                    setSleepSoundMode(s.id);
-                    setSleepEnabled(true);
-                  }}
-                  onMouseUp={(e) => {
                     e.stopPropagation();
                     setSleepSoundMode(s.id);
                     setSleepEnabled(true);

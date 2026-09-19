@@ -1,17 +1,44 @@
 import { useCallback, useEffect, useState } from "react";
-import { STORAGE_PREFIX, readStored, writeStored } from "../storage/index.js";
+import {
+  isValidStoredValue,
+  parseStoredValue,
+} from "../storage/validation.js";
+import { STORAGE_PREFIX, writeStored } from "../storage/storage.js";
 
 /**
- * A useState-like hook that persists to localStorage and stays in sync across
- * tabs (two open copies of the app share one set of settings).
+ * A useState-like hook that persists to localStorage, validates writes, and
+ * stays in sync across tabs.
  *
  * @param {string} key          logical key; the `bt_` prefix is added for you
  * @param {*} defaultValue      used when nothing is stored or storage is unusable
+ * @param {Function|Array|Set} [validator] predicate or allowed values
  */
-export function useLocalStorage(key, defaultValue) {
+export function useLocalStorage(key, defaultValue, validator) {
   const storageKey = `${STORAGE_PREFIX}${key}`;
 
-  const [value, setValue] = useState(() => readStored(key, defaultValue));
+  const [value, setStoredValue] = useState(() => {
+    try {
+      const stored = localStorage.getItem(storageKey);
+      return parseStoredValue(stored, defaultValue, validator);
+    } catch {
+      return defaultValue;
+    }
+  });
+
+  const setValue = useCallback(
+    (nextValue) => {
+      setStoredValue((previousValue) => {
+        const candidate =
+          typeof nextValue === "function"
+            ? nextValue(previousValue)
+            : nextValue;
+        return isValidStoredValue(candidate, validator)
+          ? candidate
+          : previousValue;
+      });
+    },
+    [validator],
+  );
 
   useEffect(() => {
     writeStored(key, value);
@@ -20,24 +47,17 @@ export function useLocalStorage(key, defaultValue) {
   useEffect(() => {
     const onStorage = (e) => {
       if (e.key !== storageKey) return;
-      setValue(e.newValue === null ? defaultValue : safeParse(e.newValue, defaultValue));
+      setStoredValue(
+        e.newValue === null
+          ? defaultValue
+          : parseStoredValue(e.newValue, defaultValue, validator),
+      );
     };
     window.addEventListener("storage", onStorage);
     return () => window.removeEventListener("storage", onStorage);
-    // `defaultValue` is only read when storage is cleared elsewhere; re-subscribing
-    // on every render because a caller passed an inline object would be worse.
+    // `defaultValue` / `validator` are only read when another tab clears storage.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [storageKey]);
 
-  const set = useCallback((next) => setValue(next), []);
-
-  return [value, set];
-}
-
-function safeParse(raw, fallback) {
-  try {
-    return JSON.parse(raw);
-  } catch {
-    return fallback;
-  }
+  return [value, setValue];
 }

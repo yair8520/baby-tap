@@ -55,3 +55,22 @@ export const MODE_STARS_KEYS = {
   shapememory: STORAGE_KEYS.shapememoryStars,
   pattern: STORAGE_KEYS.patternStars,
 };
+
+/** Keys that contain gameplay achievements rather than user preferences. */
+export const PROGRESS_KEYS = [
+  STORAGE_KEYS.balloonLevel,
+  STORAGE_KEYS.targetHighScore,
+  STORAGE_KEYS.memoryLevel,
+  STORAGE_KEYS.shapesLevel,
+  STORAGE_KEYS.shapesScore,
+  STORAGE_KEYS.shapematchLevel,
+  STORAGE_KEYS.shapematchStars,
+  STORAGE_KEYS.colormixLevel,
+  STORAGE_KEYS.colormixStars,
+  STORAGE_KEYS.sizesortLevel,
+  STORAGE_KEYS.sizesortStars,
+  STORAGE_KEYS.shapememoryLevel,
+  STORAGE_KEYS.shapememoryStars,
+  STORAGE_KEYS.patternLevel,
+  STORAGE_KEYS.patternStars,
+];

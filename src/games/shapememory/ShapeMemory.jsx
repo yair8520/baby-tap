@@ -7,7 +7,8 @@ import {
   buildSequence,
   buildPalette,
 } from './levels.js';
-import { useGameLevel } from '../../hooks/useGameProgress.js';
+import { useGameBestStars, useGameLevel } from '../../hooks/useGameProgress.js';
+import { buzz } from '../../components/LearningGameShell/vibrate.js';
 import './ShapeMemory.css';
 
 // ─── Countdown Ring ──────────────────────────────────────────────────────────
@@ -55,6 +56,11 @@ export default function ShapeMemory({ onExit, lang = 'he', vibrateOn = true }) {
   const [palette, setPalette]       = useState([]);
   const [fading, setFading]         = useState(false);
   const [slotGlow, setSlotGlow]     = useState(null); // index of correct slot
+  const [roundKey, setRoundKey]     = useState(0);
+  const { recordStars, totalStars } = useGameBestStars(
+    'shapememory',
+    SHAPEMEMORY_LEVELS.length,
+  );
 
   const levelDoneRef  = useRef(false);
   const intervalRef   = useRef(null);
@@ -80,7 +86,7 @@ export default function ShapeMemory({ onExit, lang = 'he', vibrateOn = true }) {
     setCountdown(totalShowSec);
     setFading(false);
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [levelIdx]);
+  }, [levelIdx, roundKey]);
 
   // ── Countdown interval (SHOW phase) ──────────────────────────────────────
 
@@ -118,7 +124,7 @@ export default function ShapeMemory({ onExit, lang = 'he', vibrateOn = true }) {
 
     if (item.shape === correct.shape && item.colorId === correct.colorId) {
       // Correct
-      if (vibrateOn) navigator.vibrate?.([30, 20, 60]);
+      buzz([30, 20, 60], vibrateOn);
 
       const nextAnswers = [...userAnswers, item];
       setSlotGlow(currentIdx);
@@ -128,14 +134,15 @@ export default function ShapeMemory({ onExit, lang = 'he', vibrateOn = true }) {
         // Sequence complete!
         levelDoneRef.current = true;
         setUserAnswers(nextAnswers);
-        if (vibrateOn) navigator.vibrate?.([40, 30, 80, 30, 120]);
+        recordStars(levelIdx, starsFromMistakes(mistakes));
+        buzz([40, 30, 80, 30, 120], vibrateOn);
         setTimeout(() => setLevelDone(true), 600);
       } else {
         setUserAnswers(nextAnswers);
       }
     } else {
       // Wrong
-      if (vibrateOn) navigator.vibrate?.([80, 40, 80]);
+      buzz([80, 40, 80], vibrateOn);
 
       setWrongSlot(currentIdx);
       setMistakes(m => m + 1);
@@ -146,7 +153,14 @@ export default function ShapeMemory({ onExit, lang = 'he', vibrateOn = true }) {
         setUserAnswers([]);
       }, 600);
     }
-  }, [userAnswers, sequence, vibrateOn]);
+  }, [
+    levelIdx,
+    mistakes,
+    recordStars,
+    sequence,
+    userAnswers,
+    vibrateOn,
+  ]);
 
   // Cleanup on unmount
   useEffect(() => {
@@ -172,10 +186,13 @@ export default function ShapeMemory({ onExit, lang = 'he', vibrateOn = true }) {
       <LearningGameShell
         lang={lang}
         levelNum={levelNum}
+        totalStars={totalStars}
         onExit={onExit}
         levelDone={levelDone}
         starCount={starCount}
         onNextLevel={() => setLevelIdx(p => p + 1)}
+        onReplay={() => setRoundKey(key => key + 1)}
+        isLastLevel={levelIdx === SHAPEMEMORY_LEVELS.length - 1}
       >
         {/* SHOW phase */}
         {phase === 'show' && (

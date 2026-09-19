@@ -1,7 +1,6 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { ShapeGeom } from '../../components/ShapeGeom';
 import { LearningGameShell, starsFromMistakes } from '../../components/LearningGameShell';
-import { SparkBurst } from '../../components/SparkBurst';
 import {
   PIECE_R,
   SLOT_R,
@@ -9,15 +8,53 @@ import {
   SHAPEMATCH_LEVELS,
   buildLevel,
 } from './levels.js';
-import { useGameLevel, useGameStars } from '../../hooks/useGameProgress.js';
+import { useGameBestStars, useGameLevel } from '../../hooks/useGameProgress.js';
+import { useResponsiveGameViewport } from '../../hooks/useResponsiveGameViewport.js';
+import { buzz } from '../../components/LearningGameShell/vibrate.js';
 import './ShapeMatch.css';
+
+// ─── Spark burst on correct match ─────────────────────────────────────────────
+
+const SPARK_PARTICLES = Array.from({ length: 12 }, (_, i) => {
+  const angle = (i / 12) * 360;
+  const distance = 50 + ((i * 19) % 36);
+  return {
+    dx: Math.cos((angle * Math.PI) / 180) * distance,
+    dy: Math.sin((angle * Math.PI) / 180) * distance,
+    size: 7 + ((i * 5) % 7),
+    delay: i * 0.02,
+  };
+});
+
+function SparkBurst({ x, y, color }) {
+  return (
+    <>
+      {SPARK_PARTICLES.map((particle, i) => (
+        <div
+          key={i}
+          className="shm-spark"
+          style={{
+            left: x,
+            top: y,
+            '--dx': `${particle.dx}px`,
+            '--dy': `${particle.dy}px`,
+            background: color,
+            width: `${particle.size}px`,
+            height: `${particle.size}px`,
+            animationDelay: `${particle.delay}s`,
+          }}
+        />
+      ))}
+    </>
+  );
+}
 
 // ─── Main component ───────────────────────────────────────────────────────────
 
 export default function ShapeMatch({ onExit, lang = 'he', vibrateOn = true }) {
   const containerRef  = useRef(null);
-  const [w, setW]     = useState(window.innerWidth);
-  const [h, setH]     = useState(window.innerHeight);
+  const { width: w, height: h } = useResponsiveGameViewport(containerRef);
+  const [roundKey, setRoundKey] = useState(0);
 
   const [levelIdx,   setLevelIdx]   = useGameLevel('shapematch', 0, {
     maxLevels: SHAPEMATCH_LEVELS.length,
@@ -30,39 +67,65 @@ export default function ShapeMatch({ onExit, lang = 'he', vibrateOn = true }) {
   const piecesRef    = useRef([]);
   const slotsRef     = useRef([]);
   const mistakesRef  = useRef(0);
+  const completeTimerRef = useRef(null);
+  const timeoutIdsRef = useRef(new Set());
+
+  const scheduleTimeout = useCallback((callback, delay) => {
+    const id = setTimeout(() => {
+      timeoutIdsRef.current.delete(id);
+      callback();
+    }, delay);
+    timeoutIdsRef.current.add(id);
+    return id;
+  }, []);
+
+  const clearScheduledTimeouts = useCallback(() => {
+    timeoutIdsRef.current.forEach(clearTimeout);
+    timeoutIdsRef.current.clear();
+  }, []);
 
   const [wrongId,    setWrongId]    = useState(null);  // piece shake
   const [matchId,    setMatchId]    = useState(null);  // slot pop
   const [sparks,     setSparks]     = useState([]);    // {id, x, y, color}
   const [mistakes,   setMistakes]   = useState(0);
   const [levelDone,  setLevelDone]  = useState(false);
-  const [totalStars, setTotalStars] = useGameStars('shapematch', 0);
+  const { recordStars, totalStars } = useGameBestStars(
+    'shapematch',
+    SHAPEMATCH_LEVELS.length,
+  );
 
   // keep refs in sync
   useEffect(() => { piecesRef.current  = pieces;   }, [pieces]);
   useEffect(() => { slotsRef.current   = slots;    }, [slots]);
   useEffect(() => { mistakesRef.current = mistakes; }, [mistakes]);
 
-  // measure container once mounted
-  useEffect(() => {
-    const el = containerRef.current;
-    if (!el) return;
-    const r = el.getBoundingClientRect();
-    setW(r.width);
-    setH(r.height);
-  }, []);
-
   // build level whenever levelIdx or dimensions change
   useEffect(() => {
     if (!w || !h) return;
-    const { slots: s, pieces: p } = buildLevel(levelIdx, w, h);
-    setSlots(s);
-    setPieces(p);
-    setMistakes(0);
-    mistakesRef.current = 0;
-    setLevelDone(false);
-    setSparks([]);
-  }, [levelIdx, w, h]);
+    const initializeTimer = scheduleTimeout(() => {
+      const { slots: s, pieces: p } = buildLevel(levelIdx, w, h);
+      setSlots(s);
+      setPieces(p);
+      setMistakes(0);
+      mistakesRef.current = 0;
+      setLevelDone(false);
+      setSparks([]);
+      draggingRef.current = null;
+      setDragging(null);
+    }, 0);
+    return () => {
+      clearTimeout(initializeTimer);
+      clearScheduledTimeouts();
+    };
+  }, [clearScheduledTimeouts, levelIdx, roundKey, w, h, scheduleTimeout]);
+
+  useEffect(() => {
+    const timeoutIds = timeoutIdsRef.current;
+    return () => {
+      timeoutIds.forEach(clearTimeout);
+      timeoutIds.clear();
+    };
+  }, []);
 
   // ── drag handlers ──────────────────────────────────────────────────────────
 
@@ -114,7 +177,7 @@ export default function ShapeMatch({ onExit, lang = 'he', vibrateOn = true }) {
     if (nearest && minDist < SNAP) {
       if (nearest.colorId === piece.colorId && nearest.shape === piece.shape) {
         // ✅ correct match
-        if (vibrateOn) navigator.vibrate?.([40, 25, 90]);
+        buzz([40, 25, 90], vibrateOn);
 
         setSlots(prev => prev.map(sl =>
           sl.id === nearest.id ? { ...sl, filled: true } : sl
@@ -126,26 +189,24 @@ export default function ShapeMatch({ onExit, lang = 'he', vibrateOn = true }) {
         ));
 
         setMatchId(nearest.id);
-        setTimeout(() => setMatchId(null), 700);
+        scheduleTimeout(() => setMatchId(null), 700);
 
         // sparkles
         const sparkId = Date.now() + Math.random();
         setSparks(prev => [...prev, { id: sparkId, x: nearest.cx, y: nearest.cy, color: piece.fill }]);
-        setTimeout(() => setSparks(prev => prev.filter(s => s.id !== sparkId)), 900);
+        scheduleTimeout(() => setSparks(prev => prev.filter(s => s.id !== sparkId)), 900);
 
         // level complete?
         const matched = piecesRef.current.filter(p => p.matched).length + 1;
         if (matched >= piecesRef.current.length) {
-          const m = mistakesRef.current;
-          const stars = starsFromMistakes(m);
-          setTotalStars(prev => prev + stars);
-          setTimeout(() => setLevelDone(true), 650);
+          recordStars(levelIdx, starsFromMistakes(mistakesRef.current));
+          completeTimerRef.current = scheduleTimeout(() => setLevelDone(true), 650);
         }
       } else {
         // ❌ wrong match — shake and return home
-        if (vibrateOn) navigator.vibrate?.([80, 40, 80]);
+        buzz([80, 40, 80], vibrateOn);
         setWrongId(pieceId);
-        setTimeout(() => setWrongId(null), 520);
+        scheduleTimeout(() => setWrongId(null), 520);
         setMistakes(m => m + 1);
         setPieces(prev => prev.map(pc =>
           pc.id === pieceId ? { ...pc, cx: pc.homeCx, cy: pc.homeCy } : pc
@@ -157,7 +218,7 @@ export default function ShapeMatch({ onExit, lang = 'he', vibrateOn = true }) {
         pc.id === pieceId ? { ...pc, cx: pc.homeCx, cy: pc.homeCy } : pc
       ));
     }
-  }, [vibrateOn]);
+  }, [levelIdx, recordStars, scheduleTimeout, vibrateOn]);
 
   // ── derived ────────────────────────────────────────────────────────────────
 
@@ -185,6 +246,8 @@ export default function ShapeMatch({ onExit, lang = 'he', vibrateOn = true }) {
         levelDone={levelDone}
         starCount={starCount}
         onNextLevel={() => setLevelIdx(p => p + 1)}
+        onReplay={() => setRoundKey(key => key + 1)}
+        isLastLevel={levelIdx === SHAPEMATCH_LEVELS.length - 1}
       >
         {/* slot outlines */}
         {slots.map(sl => (

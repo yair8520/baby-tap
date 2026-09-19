@@ -47,7 +47,7 @@ export default function PrivacyPolicy() {
           <h2>Privacy Policy</h2>
 
           <p>
-            Baby Smash is designed for children and does not require account creation.
+            Baby Tap is designed for children and does not require account creation.
             We do not collect, store, sell, or share personal information from users.
           </p>
 
@@ -86,7 +86,7 @@ export default function PrivacyPolicy() {
           <h2>מדיניות פרטיות</h2>
 
           <p>
-            Baby Smash מיועד לילדים ואינו דורש יצירת חשבון. איננו אוספים, מאחסנים,
+            Baby Tap מיועד לילדים ואינו דורש יצירת חשבון. איננו אוספים, מאחסנים,
             מוכרים או משתפים מידע אישי על משתמשים.
           </p>
 

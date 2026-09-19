@@ -1,6 +1,9 @@
 /**
  * Targets game – difficulty levels based on score.
+ * Add rows to TARGET_LEVELS (sorted by minScore) to extend difficulty.
  */
+import { getLevelByThreshold } from "../levelUtils.js";
+
 export const TARGET_LEVELS = [
   {
     id: 1,
@@ -55,10 +58,5 @@ export const TARGET_LEVELS = [
 ];
 
 export function getTargetLevelConfig(score) {
-  let config = TARGET_LEVELS[0];
-  for (const lvl of TARGET_LEVELS) {
-    if (score >= lvl.minScore) config = lvl;
-    else break;
-  }
-  return config;
+  return getLevelByThreshold(TARGET_LEVELS, score, "minScore");
 }

@@ -1,6 +1,8 @@
 import { useState, useEffect, useCallback } from "react";
 import { SHAPES_LEVELS, SHAPE_COLORS, SHAPE_TYPES, generateChallenge } from "./levels.js";
 import { useLocalStorage } from "../../hooks/useLocalStorage.js";
+import { STORAGE_KEYS } from "../../storage/keys.js";
+import { useGameLevel } from "../../hooks/useGameProgress.js";
 import "./ShapesGame.css";
 
 function ShapeIcon({ shape, color, size = 80 }) {
@@ -53,8 +55,10 @@ export default function ShapesGame({ lang, onSound }) {
   const isHe = lang === "he";
   const L = (he, en) => (isHe ? he : en);
 
-  const [score, setScore] = useState(0);
-  const [levelIdx, setLevelIdx] = useLocalStorage("shapesLevel", 0);
+  const [score, setScore] = useLocalStorage(STORAGE_KEYS.shapesScore, 0);
+  const [levelIdx, setLevelIdx] = useGameLevel("shapes", 0, {
+    maxLevels: SHAPES_LEVELS.length,
+  });
   const [challenge, setChallenge] = useState(null);
   const [feedback, setFeedback] = useState(null); // { correct: bool, shapeId }
   const [locked, setLocked] = useState(false);
@@ -72,25 +76,8 @@ export default function ShapesGame({ lang, onSound }) {
     nextChallenge(currentLevel);
   }, [levelIdx]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Advance level based on score
+  // Advance level when score crosses current level threshold
   useEffect(() => {
-    const nextLvlIdx = SHAPES_LEVELS.findIndex((lvl, i) =>
-      i === SHAPES_LEVELS.length - 1
-        ? true
-        : score < SHAPES_LEVELS[i + 1 > 0 ? i : 0].scoreToAdvance
-    );
-    const targetIdx = Math.min(
-      SHAPES_LEVELS.filter((_, i) => {
-        // cumulative score thresholds
-        let threshold = 0;
-        for (let j = 0; j <= i; j++) threshold += (SHAPES_LEVELS[j - 1]?.scoreToAdvance ?? 0);
-        return score >= (SHAPES_LEVELS[i]?.scoreToAdvance ?? Infinity) ? false : true;
-      }).length,
-      SHAPES_LEVELS.length - 1
-    );
-    void nextLvlIdx; // suppress lint
-
-    // Simple: advance when score crosses current level's threshold
     if (
       levelIdx < SHAPES_LEVELS.length - 1 &&
       score >= currentLevel.scoreToAdvance

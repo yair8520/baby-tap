@@ -1,8 +1,8 @@
 /**
  * Drum mode – pad definitions with bilingual labels.
- * Extracted from constants.js for modularity.
+ * Add entries here to add more pads (not score-based levels).
  */
-export const DRUM_PAD_DEFS = [
+export const DRUM_PADS = [
   {
     type: "kick",
     emoji: "🥁",

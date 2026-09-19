@@ -79,54 +79,7 @@
   100% { transform: translateX(-50%) translateY(-15px) scale(0.92); }
 }
 
-/* ── Header ────────────────────────────────────────────────────────────────── */
-
-.mem-header {
-  position: relative;
-  z-index: 10;
-  width: 100%;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 14px 18px 8px;
-  box-sizing: border-box;
-}
-
-.mem-btn-exit {
-  background: rgba(255, 255, 255, 0.12);
-  border: 2px solid rgba(255, 255, 255, 0.25);
-  color: #fff;
-  font-size: 20px;
-  width: 44px;
-  height: 44px;
-  border-radius: 50%;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: background 0.2s;
-  flex-shrink: 0;
-}
-
-.mem-btn-exit:hover,
-.mem-btn-exit:active {
-  background: rgba(255, 255, 255, 0.25);
-}
-
-.mem-level-label {
-  color: #fff;
-  font-size: 22px;
-  font-weight: 700;
-  letter-spacing: 0.02em;
-  text-shadow: 0 2px 10px rgba(0, 229, 255, 0.5);
-}
-
-.mem-hdr-stars {
-  font-size: 22px;
-  display: flex;
-  gap: 2px;
-  transition: opacity 0.3s;
-}
+/* header / complete overlay → LearningGameShell (lgs-*) */
 
 /* ── Phase label ────────────────────────────────────────────────────────────── */
 
@@ -151,6 +104,8 @@
   justify-content: center;
   gap: 24px;
   width: 100%;
+  padding-top: 58px;
+  box-sizing: border-box;
   transition: opacity 0.5s ease;
 }
 
@@ -197,7 +152,7 @@
   align-items: center;
   justify-content: space-around;
   width: 100%;
-  padding: 8px 12px 24px;
+  padding: 68px 12px 24px;
   box-sizing: border-box;
   gap: 12px;
 }
@@ -312,103 +267,4 @@
   box-shadow: 0 0 20px rgba(255, 255, 255, 0.25);
 }
 
-/* ── Level Complete Overlay ─────────────────────────────────────────────────── */
-
-.mem-complete {
-  position: fixed;
-  inset: 0;
-  z-index: 50;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: rgba(0, 0, 0, 0.55);
-  backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(10px);
-  animation: mem-overlay-in 0.35s ease;
-}
-
-@keyframes mem-overlay-in {
-  from { opacity: 0; }
-  to   { opacity: 1; }
-}
-
-.mem-complete-card {
-  background: linear-gradient(145deg, rgba(10, 20, 60, 0.95), rgba(5, 5, 30, 0.95));
-  border: 2px solid rgba(0, 229, 255, 0.4);
-  border-radius: 28px;
-  padding: 40px 52px;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 16px;
-  box-shadow: 0 0 60px rgba(0, 229, 255, 0.25), 0 20px 60px rgba(0, 0, 0, 0.6);
-  animation: mem-card-pop 0.45s cubic-bezier(0.2, 1.6, 0.4, 1);
-}
-
-@keyframes mem-card-pop {
-  from { transform: scale(0.5); opacity: 0; }
-  to   { transform: scale(1);   opacity: 1; }
-}
-
-.mem-complete-emoji {
-  font-size: 58px;
-  animation: mem-emoji-spin 0.6s ease;
-}
-
-@keyframes mem-emoji-spin {
-  0%   { transform: rotate(-20deg) scale(0.6); }
-  60%  { transform: rotate(15deg)  scale(1.15); }
-  100% { transform: rotate(0deg)   scale(1); }
-}
-
-.mem-complete-title {
-  color: #fff;
-  font-size: 32px;
-  font-weight: 800;
-  text-shadow: 0 0 20px rgba(0, 229, 255, 0.7);
-}
-
-.mem-complete-stars {
-  display: flex;
-  gap: 6px;
-  font-size: 36px;
-}
-
-.mem-cstar {
-  opacity: 0.2;
-  transition: opacity 0.3s;
-  display: inline-block;
-}
-
-.mem-cstar.on {
-  opacity: 1;
-  animation: mem-star-pop 0.4s cubic-bezier(0.2, 1.6, 0.4, 1) both;
-}
-
-.mem-cstar.on:nth-child(2) { animation-delay: 0.1s; }
-.mem-cstar.on:nth-child(3) { animation-delay: 0.2s; }
-
-@keyframes mem-star-pop {
-  from { transform: scale(0); }
-  to   { transform: scale(1); }
-}
-
-.mem-btn-next {
-  background: linear-gradient(135deg, #00bcd4, #006064);
-  border: none;
-  border-radius: 50px;
-  color: #fff;
-  font-size: 20px;
-  font-weight: 700;
-  padding: 14px 36px;
-  cursor: pointer;
-  transition: transform 0.15s, box-shadow 0.15s;
-  margin-top: 4px;
-  box-shadow: 0 6px 24px rgba(0, 188, 212, 0.4);
-}
-
-.mem-btn-next:hover,
-.mem-btn-next:active {
-  transform: scale(0.95);
-  box-shadow: 0 3px 12px rgba(0, 188, 212, 0.3);
-}
+/* Level complete overlay → LearningGameShell (lgs-*) */

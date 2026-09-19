@@ -1,9 +1,19 @@
 /**
  * Piano mode – songs and solfège config.
+ * Add songs to PIANO_SONGS to grow the melody list.
  */
 
-const C4 = 261.63, D4 = 293.66, E4 = 329.63, F4 = 349.23, G4 = 392.0, A4 = 440.0;
-const C5 = 523.25, B4 = 493.88, D5 = 587.33, E5 = 659.25, G5 = 783.99;
+const C4 = 261.63,
+  D4 = 293.66,
+  E4 = 329.63,
+  F4 = 349.23,
+  G4 = 392.0,
+  A4 = 440.0;
+const C5 = 523.25,
+  B4 = 493.88,
+  D5 = 587.33,
+  E5 = 659.25,
+  G5 = 783.99;
 
 export const PIANO_SONGS = [
   {

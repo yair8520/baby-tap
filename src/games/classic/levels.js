@@ -1,7 +1,10 @@
 /**
  * Classic tap mode – level progression config.
  * Levels unlock as the player reaches combo milestones.
+ * Add rows to CLASSIC_LEVELS to extend progression.
  */
+import { getLevelByThreshold } from "../levelUtils.js";
+
 export const CLASSIC_LEVELS = [
   {
     id: 1,
@@ -28,6 +31,10 @@ export const CLASSIC_LEVELS = [
     trailLength: 12,
   },
 ];
+
+export function getClassicLevelConfig(combo) {
+  return getLevelByThreshold(CLASSIC_LEVELS, combo, "minCombo");
+}
 
 export const COMBO_GAP_MS = 650; // ms gap to break combo
 export const IDLE_TIMEOUT_MS = 6000;

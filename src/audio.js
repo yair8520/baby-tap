@@ -73,11 +73,13 @@ export async function playSound(type = 'normal') {
         ['sine', 'triangle', 'sine'][Math.floor(Math.random() * 3)], 0.22, startAt, dur)
       nextNoteTime = startAt + dur
     }
-  } catch (e) {}
+  } catch {
+    // Audio is optional and may be blocked until the browser allows playback.
+  }
 }
 
 // ── Melody note player ────────────────────────────────────────────────────────
-export async function playMelodyNote(noteIdxRef, songIdxRef, setSongName, setShowSongName, songNameTimerRef, lang = 'he') {
+export async function playMelodyNote(noteIdxRef, songIdxRef, setSongName, setShowSongName, songNameTimerRef, lang = 'he', scheduleTimeout = setTimeout) {
   if (globalMute) return
   const song = PIANO_SONGS[songIdxRef.current]
   const [freq, beats] = song.notes[noteIdxRef.current]
@@ -110,7 +112,9 @@ export async function playMelodyNote(noteIdxRef, songIdxRef, setSongName, setSho
     gain2.gain.setValueAtTime(0.07, startAt)
     gain2.gain.exponentialRampToValueAtTime(0.001, startAt + dur * 0.6)
     osc2.start(startAt); osc2.stop(startAt + dur * 0.6)
-  } catch (e) {}
+  } catch {
+    // Keep advancing the melody when audio playback is unavailable.
+  }
 
   noteIdxRef.current++
   if (noteIdxRef.current >= song.notes.length) {
@@ -120,7 +124,7 @@ export async function playMelodyNote(noteIdxRef, songIdxRef, setSongName, setSho
     setSongName(songDisplayName(next, lang))
     setShowSongName(true)
     clearTimeout(songNameTimerRef.current)
-    songNameTimerRef.current = setTimeout(() => setShowSongName(false), 2200)
+    songNameTimerRef.current = scheduleTimeout(() => setShowSongName(false), 2200)
   }
 }
 
@@ -163,7 +167,9 @@ export async function playBalloonPop() {
     cg.gain.setValueAtTime(0.05, now)
     cg.gain.exponentialRampToValueAtTime(0.001, now + 0.018)
     click.start(now); click.stop(now + 0.02)
-  } catch (e) {}
+  } catch {
+    // A failed sound effect must not interrupt the game.
+  }
 }
 
 // ── Piano note ────────────────────────────────────────────────────────────────
@@ -207,7 +213,9 @@ export function playPianoNote(freq) {
     g3.gain.linearRampToValueAtTime(0.025, now + 0.006)
     g3.gain.exponentialRampToValueAtTime(0.001, now + 0.25)
     osc3.start(now); osc3.stop(now + 0.25)
-  } catch(e) {}
+  } catch {
+    // A failed sound effect must not interrupt the game.
+  }
 }
 
 // ── Drum sounds ───────────────────────────────────────────────────────────────
@@ -314,5 +322,7 @@ export async function playDrum(type) {
       default:
         break
     }
-  } catch (e) {}
+  } catch {
+    // A failed sound effect must not interrupt the game.
+  }
 }

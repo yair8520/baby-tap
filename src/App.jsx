@@ -1,7 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import "./App.css";
-import appIcon from "./assets/icon-192.png";
-import appIconLarge from "./assets/icon-512.png";
 import ShapeMatch from "./games/shapematch";
 import ColorMix from "./games/colormix";
 import SizeSort from "./games/sizesort";
@@ -43,27 +41,7 @@ import SettingsMenu from "./components/SettingsMenu/index.jsx";
 import MemoryGame from "./games/memory/MemoryGame.jsx";
 import ShapesGame from "./games/shapes/ShapesGame.jsx";
 import { rand, randInt, nextId } from "./utils/random.js";
-
-const UI_TEXT = {
-  he: {
-    emojiRow: "👶🏻 🎉 🌈",
-    title: "Baby Tap Game",
-    subtitle: "תנו לתינוק ללחוץ על המסך\nולראות קסם צבעוני! ✨",
-    btn: "🚀 התחל מסך מלא",
-    hint: "ליציאה: לחיצה בפינה הימנית העליונה",
-    ultra: "👑 עוצמה ×",
-    fire: "🔥 לוהט ×",
-  },
-  en: {
-    emojiRow: "👶🏻 🎉 🌈",
-    title: "Baby Tap Game",
-    subtitle: "Let the baby tap the screen\nand see colorful magic! ✨",
-    btn: "🚀 Start Fullscreen",
-    hint: "To exit: tap top-right corner",
-    ultra: "👑 ULTRA ×",
-    fire: "🔥 HOT ×",
-  },
-};
+import { getT } from "./i18n/index.js";
 
 const THEME_PRESETS = {
   space: {
@@ -150,7 +128,7 @@ export default function App() {
     LANGUAGE_IDS,
   );
   const isHebrewUI = lang === "he";
-  const ui = UI_TEXT[lang];
+  const t = getT(lang);
   const [theme, setTheme] = useLocalStorage(
     STORAGE_KEYS.theme,
     "space",
@@ -215,10 +193,21 @@ export default function App() {
   const vibrateRef = useRef(true);
   const muteRef = useRef(false);
   const balloonTimerRef = useRef(null);
-  const lastBalloonPopRef = useRef(Date.now());
+  const lastBalloonPopRef = useRef(0);
   const gameModeRef = useRef("classic");
   const settingsRef = useRef(null);
   const targetScoreRef = useRef(0);
+  const spawnTargetRef = useRef(null);
+  const timeoutIdsRef = useRef(new Set());
+
+  const scheduleTimeout = useCallback((callback, delay) => {
+    const id = setTimeout(() => {
+      timeoutIdsRef.current.delete(id);
+      callback();
+    }, delay);
+    timeoutIdsRef.current.add(id);
+    return id;
+  }, []);
 
   useEffect(() => {
     vibrateRef.current = vibrateOn;
@@ -237,25 +226,11 @@ export default function App() {
     targetScoreRef.current = targetScore;
   }, [targetScore]);
 
-  // Favicons
   useEffect(() => {
-    const setHeadIcon = (selector, rel, href, type) => {
-      let link = document.head.querySelector(selector);
-      if (!link) {
-        link = document.createElement("link");
-        link.setAttribute("rel", rel);
-        document.head.appendChild(link);
-      }
-      if (type) link.setAttribute("type", type);
-      link.setAttribute("href", href);
-    };
-    setHeadIcon('link[rel="icon"]', "icon", appIcon, "image/png");
-    setHeadIcon(
-      'link[rel="apple-touch-icon"]',
-      "apple-touch-icon",
-      appIconLarge,
-    );
-  }, []);
+    document.documentElement.lang = lang;
+    document.documentElement.dir = isHebrewUI ? "rtl" : "ltr";
+    document.title = t("common.title");
+  }, [isHebrewUI, lang, t]);
 
   const vibrate = useCallback((pattern) => {
     if (!vibrateRef.current) return;
@@ -267,8 +242,8 @@ export default function App() {
 
   useEffect(() => {
     if (!isFullscreen) {
-      setShowSettingsHint(false);
-      return;
+      const resetTimer = scheduleTimeout(() => setShowSettingsHint(false), 0);
+      return () => clearTimeout(resetTimer);
     }
     const hintTimer = setTimeout(() => setShowSettingsHint(true), 2000);
     const hideTimer = setTimeout(() => setShowSettingsHint(false), 7000);
@@ -276,7 +251,7 @@ export default function App() {
       clearTimeout(hintTimer);
       clearTimeout(hideTimer);
     };
-  }, [isFullscreen]);
+  }, [isFullscreen, scheduleTimeout]);
 
   useEffect(() => {
     if (!settingsOpen) return;
@@ -285,11 +260,9 @@ export default function App() {
         setSettingsOpen(false);
       }
     };
-    document.addEventListener("mousedown", handler);
-    document.addEventListener("touchstart", handler);
+    document.addEventListener("pointerdown", handler);
     return () => {
-      document.removeEventListener("mousedown", handler);
-      document.removeEventListener("touchstart", handler);
+      document.removeEventListener("pointerdown", handler);
     };
   }, [settingsOpen]);
 
@@ -302,14 +275,16 @@ export default function App() {
   const enterFullscreen = async () => {
     if (
       !isWebView &&
-      typeof DeviceMotionEvent?.requestPermission === "function"
+      typeof globalThis.DeviceMotionEvent?.requestPermission === "function"
     ) {
       const cached = sessionStorage.getItem("motionPermission");
       if (cached !== "granted") {
         try {
-          const result = await DeviceMotionEvent.requestPermission();
+          const result = await globalThis.DeviceMotionEvent.requestPermission();
           sessionStorage.setItem("motionPermission", result);
-        } catch (e) {}
+        } catch {
+          // Motion permission is optional; fullscreen can continue without it.
+        }
       }
     }
     if (isWebView) {
@@ -329,8 +304,12 @@ export default function App() {
   };
 
   const handleCornerStart = (e) => {
+    if (e.button != null && e.button !== 0) return;
+    e.preventDefault();
     e.stopPropagation();
+    e.currentTarget.setPointerCapture?.(e.pointerId);
     holdStartRef.current = Date.now();
+    clearInterval(holdIntervalRef.current);
     holdIntervalRef.current = setInterval(() => {
       const p = Math.min((Date.now() - holdStartRef.current) / 1000, 1);
       setHoldProgress(p);
@@ -343,6 +322,7 @@ export default function App() {
   };
 
   const handleCornerEnd = (e) => {
+    e?.preventDefault();
     e?.stopPropagation();
     clearInterval(holdIntervalRef.current);
     setHoldProgress(0);
@@ -355,49 +335,69 @@ export default function App() {
   useEffect(() => {
     if (gameMode !== "balloons") return;
     const newLevel = getBalloonLevelNumber(popCount);
-    if (newLevel > balloonLevelRef.current) {
+    if (newLevel <= balloonLevelRef.current) return;
+    const levelTimer = scheduleTimeout(() => {
       balloonLevelRef.current = newLevel;
       setBalloonLevel(newLevel);
       setBalloonSavedLevel(newLevel);
       setBalloonLevelUp({ level: newLevel });
       vibrate([60, 30, 80]);
-      setTimeout(() => setBalloonLevelUp(null), 2000);
-    }
-  }, [popCount, gameMode, vibrate, setBalloonSavedLevel]);
+      scheduleTimeout(() => setBalloonLevelUp(null), 2000);
+    }, 0);
+    return () => clearTimeout(levelTimer);
+  }, [
+    popCount,
+    gameMode,
+    vibrate,
+    setBalloonSavedLevel,
+    scheduleTimeout,
+  ]);
 
   useEffect(() => {
-    if (!isFullscreen || gameMode !== "balloons") {
-      clearInterval(balloonTimerRef.current);
-      setBalloons([]);
-      setBalloonMissed(0);
-      const savedLvl = balloonLevelRef.current;
-      if (savedLvl > 1) setBalloonSavedLevel(savedLvl);
-      setPopCount(0);
-      setBalloonLevel(1);
-      balloonLevelRef.current = 1;
-      return;
-    }
-    if (balloonLevel === 1 && balloonSavedLevel > 1) {
-      const restoredPops = (balloonSavedLevel - 1) * BALLOON_LEVEL_STEP;
-      setPopCount(restoredPops);
-      setBalloonLevel(balloonSavedLevel);
-      balloonLevelRef.current = balloonSavedLevel;
-    }
-    const cfg = getBalloonConfigByLevel(balloonLevel);
-    const speed = cfg.speedFactor;
-    const interval = cfg.spawnIntervalMs;
-    const maxOnScreen = cfg.maxOnScreen;
+    const initializeTimer = scheduleTimeout(() => {
+      if (!isFullscreen || gameMode !== "balloons") {
+        clearInterval(balloonTimerRef.current);
+        setBalloons([]);
+        setBalloonMissed(0);
+        const savedLvl = balloonLevelRef.current;
+        if (savedLvl > 1) setBalloonSavedLevel(savedLvl);
+        setPopCount(0);
+        setBalloonLevel(1);
+        balloonLevelRef.current = 1;
+        return;
+      }
+      if (balloonLevel === 1 && balloonSavedLevel > 1) {
+        const restoredPops = (balloonSavedLevel - 1) * BALLOON_LEVEL_STEP;
+        setPopCount(restoredPops);
+        setBalloonLevel(balloonSavedLevel);
+        balloonLevelRef.current = balloonSavedLevel;
+      }
+      const cfg = getBalloonConfigByLevel(balloonLevel);
+      const speed = cfg.speedFactor;
+      const interval = cfg.spawnIntervalMs;
+      const maxOnScreen = cfg.maxOnScreen;
 
-    setBalloons([makeBalloon(speed), makeBalloon(speed), makeBalloon(speed)]);
-    clearInterval(balloonTimerRef.current);
-    balloonTimerRef.current = setInterval(() => {
-      setBalloons((prev) => {
-        if (prev.length >= maxOnScreen) return prev;
-        return [...prev, makeBalloon(speed)];
-      });
-    }, interval);
-    return () => clearInterval(balloonTimerRef.current);
-  }, [isFullscreen, gameMode, balloonLevel]); // eslint-disable-line react-hooks/exhaustive-deps
+      setBalloons([makeBalloon(speed), makeBalloon(speed), makeBalloon(speed)]);
+      clearInterval(balloonTimerRef.current);
+      balloonTimerRef.current = setInterval(() => {
+        setBalloons((prev) => {
+          if (prev.length >= maxOnScreen) return prev;
+          return [...prev, makeBalloon(speed)];
+        });
+      }, interval);
+    }, 0);
+    return () => {
+      clearTimeout(initializeTimer);
+      clearInterval(balloonTimerRef.current);
+    };
+  }, [
+    isFullscreen,
+    gameMode,
+    balloonLevel,
+    balloonSavedLevel,
+    scheduleTimeout,
+    setBalloonSavedLevel,
+  ]);
 
   useEffect(() => {
     if (gameMode !== "balloons") return;
@@ -414,9 +414,10 @@ export default function App() {
 
   useEffect(() => {
     if (gameMode !== "balloons" || !isFullscreen) {
-      setBalloonHint(false);
-      return;
+      const resetTimer = scheduleTimeout(() => setBalloonHint(false), 0);
+      return () => clearTimeout(resetTimer);
     }
+    lastBalloonPopRef.current = Date.now();
     const check = setInterval(() => {
       if (Date.now() - lastBalloonPopRef.current > 5000) {
         setBalloonHint(true);
@@ -425,7 +426,7 @@ export default function App() {
       }
     }, 500);
     return () => clearInterval(check);
-  }, [gameMode, isFullscreen]);
+  }, [gameMode, isFullscreen, scheduleTimeout]);
 
   const spawnTarget = useCallback(() => {
     const score = targetScoreRef.current;
@@ -441,15 +442,15 @@ export default function App() {
     const hue = randInt(0, 360);
     const id = nextId();
 
-    const removeTimer = setTimeout(() => {
+    const removeTimer = scheduleTimeout(() => {
       setTargets((prev) => {
         const still = prev.find((t) => t.id === id && !t.popped);
         if (!still) return prev;
         setTargetMissed((m) => m + 1);
         return prev.filter((t) => t.id !== id);
       });
-      setTimeout(() => {
-        if (gameModeRef.current === "targets") spawnTarget();
+      scheduleTimeout(() => {
+        if (gameModeRef.current === "targets") spawnTargetRef.current?.();
       }, 800);
     }, duration);
 
@@ -465,22 +466,29 @@ export default function App() {
       popped: false,
     };
     setTargets((prev) => [...prev, target]);
-  }, [activeEmojis]);
+  }, [activeEmojis, scheduleTimeout]);
 
   useEffect(() => {
-    if (!isFullscreen || gameMode !== "targets") {
-      targetsRef.current.forEach((t) => clearTimeout(t.removeTimer));
-      setTargets([]);
-      setTargetScore(0);
-      setTargetMissed(0);
-      return;
-    }
-    spawnTarget();
-    spawnTarget();
+    spawnTargetRef.current = spawnTarget;
+  }, [spawnTarget]);
+
+  useEffect(() => {
+    const initializeTimer = scheduleTimeout(() => {
+      if (!isFullscreen || gameMode !== "targets") {
+        targetsRef.current.forEach((t) => clearTimeout(t.removeTimer));
+        setTargets([]);
+        setTargetScore(0);
+        setTargetMissed(0);
+        return;
+      }
+      spawnTarget();
+      spawnTarget();
+    }, 0);
     return () => {
+      clearTimeout(initializeTimer);
       targetsRef.current.forEach((t) => clearTimeout(t.removeTimer));
     };
-  }, [isFullscreen, gameMode]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [isFullscreen, gameMode, scheduleTimeout, spawnTarget]);
 
   const handleTargetTap = useCallback(
     (target, e) => {
@@ -515,7 +523,7 @@ export default function App() {
         const dy = Math.sin(angle) * distance - rand(30, 60);
         const rotation = rand(-180, 180);
         const duration = rand(500, 800);
-        setTimeout(
+        scheduleTimeout(
           () => setEmojis((prev) => prev.filter((e) => e.id !== id)),
           duration,
         );
@@ -523,14 +531,14 @@ export default function App() {
       });
       setEmojis((prev) => [...prev, ...newEmojis]);
 
-      setTimeout(() => {
+      scheduleTimeout(() => {
         setTargets((prev) => prev.filter((t) => t.id !== target.id));
-        setTimeout(() => {
-          if (gameModeRef.current === "targets") spawnTarget();
+        scheduleTimeout(() => {
+          if (gameModeRef.current === "targets") spawnTargetRef.current?.();
         }, 800);
       }, 280);
     },
-    [vibrate, spawnTarget, setTargetHighScore],
+    [vibrate, scheduleTimeout, setTargetHighScore],
   );
 
   const popBalloon = useCallback(
@@ -554,7 +562,7 @@ export default function App() {
         const dy = Math.sin(angle) * distance - rand(30, 70);
         const rotation = rand(-180, 180);
         const duration = rand(500, 800);
-        setTimeout(
+        scheduleTimeout(
           () => setEmojis((prev) => prev.filter((e) => e.id !== id)),
           duration,
         );
@@ -572,8 +580,19 @@ export default function App() {
       });
       setEmojis((prev) => [...prev, ...newEmojis]);
     },
-    [vibrate],
+    [vibrate, scheduleTimeout],
   );
+
+  useEffect(() => {
+    const timeoutIds = timeoutIdsRef.current;
+    return () => {
+      clearInterval(holdIntervalRef.current);
+      clearInterval(balloonTimerRef.current);
+      targetsRef.current.forEach((target) => clearTimeout(target.removeTimer));
+      timeoutIds.forEach(clearTimeout);
+      timeoutIds.clear();
+    };
+  }, []);
 
   const handleBalloonDirectTap = useCallback(
     (balloon, e) => {
@@ -656,27 +675,26 @@ export default function App() {
         <div className="start-screen">
           <div className="start-card" dir={isHebrewUI ? "rtl" : "ltr"}>
             <div className="start-emoji-row">
-              {activeTheme.heroRow || ui.emojiRow}
+              {activeTheme.heroRow || t("common.emojiRow")}
             </div>
-            <h1 className="start-title">{ui.title}</h1>
+            <h1 className="start-title">{t("common.title")}</h1>
             <p className="start-subtitle">
-              {ui.subtitle.split("\n").map((line, i) => (
+              {t("common.subtitle").split("\n").map((line, i) => (
                 <span key={i}>
                   {line}
                   {i === 0 && <br />}
                 </span>
               ))}
             </p>
-            <button className="start-btn" onClick={enterFullscreen}>
-              {ui.btn}
+            <button type="button" className="start-btn" onClick={enterFullscreen}>
+              {t("common.startFullscreen")}
             </button>
-            <p className="start-hint">{ui.hint}</p>
+            <p className="start-hint">{t("common.exitHint")}</p>
             <a
               className="start-privacy-link"
               href="#privacy-policy"
-              rel="noopener noreferrer"
             >
-              {isHebrewUI ? "פרטיות" : "Privacy Policy"}
+              {t("common.privacyPolicy")}
             </a>
           </div>
         </div>
@@ -684,15 +702,16 @@ export default function App() {
 
       {isFullscreen && (
         <>
-          <div
+          <button
+            type="button"
             className="corner-hold"
-            onTouchStart={handleCornerStart}
-            onTouchEnd={handleCornerEnd}
-            onMouseDown={handleCornerStart}
-            onMouseUp={handleCornerEnd}
-            onMouseLeave={handleCornerEnd}
+            aria-label={t("common.exitFullscreen")}
+            onPointerDown={handleCornerStart}
+            onPointerUp={handleCornerEnd}
+            onPointerCancel={handleCornerEnd}
+            onLostPointerCapture={handleCornerEnd}
           >
-            <svg width="52" height="52" viewBox="0 0 52 52">
+            <svg width="52" height="52" viewBox="0 0 52 52" aria-hidden="true">
               <circle
                 cx="26"
                 cy="26"
@@ -722,29 +741,27 @@ export default function App() {
                 ✕
               </text>
             </svg>
-          </div>
+          </button>
 
           <div className="settings-wrap" ref={settingsRef}>
             <button
               className={`settings-gear-btn${showSettingsHint ? " settings-gear-pulse" : ""}`}
-              onTouchEnd={(e) => {
-                e.preventDefault();
-                e.stopPropagation();
+              type="button"
+              aria-label={t("common.openSettings")}
+              aria-expanded={settingsOpen}
+              aria-controls="settings-menu"
+              onClick={(e) => {
                 setShowSettingsHint(false);
                 setSettingsOpen((o) => !o);
-              }}
-              onMouseUp={(e) => {
                 e.stopPropagation();
-                setShowSettingsHint(false);
-                setSettingsOpen((o) => !o);
               }}
             >
               ⚙️
             </button>
 
             {showSettingsHint && !settingsOpen && (
-              <div className="settings-hint-bubble">
-                {isHebrewUI ? "← הגדרות ומצבים" : "Settings & modes →"}
+              <div className="settings-hint-bubble" role="status" aria-live="polite">
+                {t("menu.settingsHint")}
               </div>
             )}
 
@@ -773,34 +790,32 @@ export default function App() {
               activeEmojis={activeEmojis}
               activeColors={activeTheme.colors}
               vibrateOn={vibrateOn}
-              comboLabels={{ ultra: ui.ultra, fire: ui.fire }}
+              comboLabels={{ ultra: t("common.ultra"), fire: t("common.fire") }}
             />
           )}
 
           {gameMode === "balloons" && (
             <>
               <div className="balloon-counter">
-                🎈 {popCount} &nbsp;|&nbsp; 💨 {balloonMissed}
-                &nbsp;|&nbsp;
+                {t("balloons.counter", { pops: popCount, missed: balloonMissed })}
+                {" | "}
                 <span className="balloon-level-badge">
                   {"⚡".repeat(Math.min(balloonLevel, 5))}{" "}
-                  {isHebrewUI ? `רמה ${balloonLevel}` : `Lv ${balloonLevel}`}
+                  {t("balloons.level", { level: balloonLevel })}
                 </span>
               </div>
 
               {balloonLevelUp && (
-                <div className="balloon-levelup">
+                <div className="balloon-levelup" role="status" aria-live="polite">
                   {"🚀"}
                   <br />
-                  {isHebrewUI
-                    ? `רמה ${balloonLevelUp.level}!`
-                    : `Level ${balloonLevelUp.level}!`}
+                  {t("balloons.levelUp", { level: balloonLevelUp.level })}
                 </div>
               )}
 
               {balloonHint && (
-                <div className="balloon-hint">
-                  {isHebrewUI ? "! פוצצו את הבלונים" : "tap the balloons!"}
+                <div className="balloon-hint" role="status" aria-live="polite">
+                  {t("balloons.hint")}
                 </div>
               )}
 
@@ -834,7 +849,7 @@ export default function App() {
           {gameMode === "targets" && (
             <>
               <div className="target-score">
-                🎯 {targetScore} &nbsp;|&nbsp; 💨 {targetMissed}
+                {t("targets.score", { score: targetScore, missed: targetMissed })}
                 {targetHighScore > 0 && (
                   <span className="target-highscore">
                     {" "}

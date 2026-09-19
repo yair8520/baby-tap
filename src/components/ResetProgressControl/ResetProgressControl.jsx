@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { getT } from "../../i18n/index.js";
 import "./ResetProgressControl.css";
 
 /** @import { ResetProgressControlProps } from "./ResetProgressControl.props.js" */
@@ -6,7 +7,7 @@ import "./ResetProgressControl.css";
 /** @param {ResetProgressControlProps} props */
 export function ResetProgressControl({ lang, onReset }) {
   const [confirming, setConfirming] = useState(false);
-  const isHe = lang === "he";
+  const t = getT(lang);
 
   const reset = () => {
     onReset();
@@ -16,33 +17,25 @@ export function ResetProgressControl({ lang, onReset }) {
   return (
     <div className="rpc-control">
       <div className="rpc-copy">
-        <span className="rpc-title">
-          {isHe ? "איפוס התקדמות" : "Reset progress"}
-        </span>
-        <span className="rpc-description">
-          {isHe
-            ? "השפה, העיצוב והצלילים יישמרו"
-            : "Language, theme and audio settings will be kept"}
-        </span>
+        <span className="rpc-title">{t("progress.title")}</span>
+        <span className="rpc-description">{t("progress.description")}</span>
       </div>
 
       {confirming ? (
         <div className="rpc-confirm">
-          <span className="rpc-warning">
-            {isHe ? "למחוק את כל ההתקדמות?" : "Delete all game progress?"}
-          </span>
+          <span className="rpc-warning">{t("progress.warning")}</span>
           <div className="rpc-actions">
             <button type="button" className="rpc-cancel" onClick={() => setConfirming(false)}>
-              {isHe ? "ביטול" : "Cancel"}
+              {t("progress.cancel")}
             </button>
             <button type="button" className="rpc-confirm-button" onClick={reset}>
-              {isHe ? "כן, לאפס" : "Yes, reset"}
+              {t("progress.confirm")}
             </button>
           </div>
         </div>
       ) : (
         <button type="button" className="rpc-start" onClick={() => setConfirming(true)}>
-          {isHe ? "איפוס…" : "Reset…"}
+          {t("progress.reset")}
         </button>
       )}
     </div>

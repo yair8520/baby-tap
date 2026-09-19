@@ -94,17 +94,23 @@ export default function SleepGame({ lang = "he", muteOn = false }) {
         try {
           s.stop?.();
           s.disconnect?.();
-        } catch (_e) {}
+        } catch {
+          // Nodes may already have stopped or disconnected.
+        }
       });
       nodes.oscillators?.forEach((o) => {
         try {
           o.stop?.();
           o.disconnect?.();
-        } catch (_e) {}
+        } catch {
+          // Nodes may already have stopped or disconnected.
+        }
       });
       nodes.master?.disconnect?.();
       nodes.extra?.forEach((n) => n.disconnect?.());
-    } catch (_e) {}
+    } catch {
+      // Cleanup is best-effort because Web Audio node state varies by browser.
+    }
     sleepAudioRef.current = null;
   }, []);
 
@@ -138,7 +144,9 @@ export default function SleepGame({ lang = "he", muteOn = false }) {
 
           sleepAudioRef.current = { master, sources: [src] };
           return;
-        } catch (_e) {}
+        } catch {
+          // Fall back to generated ambience when the recording cannot load.
+        }
       }
 
       const makeNoiseBuffer = (kind = "white") => {

@@ -32,16 +32,19 @@ export default function PatternGame({ onExit, lang = 'he', vibrateOn = true }) {
   // ── Build level ──────────────────────────────────────────────────────────
 
   useEffect(() => {
-    levelDoneRef.current = false;
-    const data = buildLevel(levelIdx);
-    setPattern(data);
-    setSelectedId(null);
-    setIsCorrect(null);
-    setMistakes(0);
-    setLevelDone(false);
-    setAnswered(false);
-    setDisabledIds(new Set());
-    setRevealed(false);
+    const initializeTimer = setTimeout(() => {
+      levelDoneRef.current = false;
+      const data = buildLevel(levelIdx);
+      setPattern(data);
+      setSelectedId(null);
+      setIsCorrect(null);
+      setMistakes(0);
+      setLevelDone(false);
+      setAnswered(false);
+      setDisabledIds(new Set());
+      setRevealed(false);
+    }, 0);
+    return () => clearTimeout(initializeTimer);
   }, [levelIdx, roundKey]);
 
   // Cleanup on unmount

@@ -14,29 +14,36 @@ import './ShapeMatch.css';
 
 // ─── Spark burst on correct match ─────────────────────────────────────────────
 
+const SPARK_PARTICLES = Array.from({ length: 12 }, (_, i) => {
+  const angle = (i / 12) * 360;
+  const distance = 50 + ((i * 19) % 36);
+  return {
+    dx: Math.cos((angle * Math.PI) / 180) * distance,
+    dy: Math.sin((angle * Math.PI) / 180) * distance,
+    size: 7 + ((i * 5) % 7),
+    delay: i * 0.02,
+  };
+});
+
 function SparkBurst({ x, y, color }) {
   return (
     <>
-      {Array.from({ length: 12 }, (_, i) => {
-        const angle = (i / 12) * 360;
-        const dist  = 50 + Math.random() * 35;
-        return (
-          <div
-            key={i}
-            className="shm-spark"
-            style={{
-              left:       x,
-              top:        y,
-              '--dx':     `${Math.cos((angle * Math.PI) / 180) * dist}px`,
-              '--dy':     `${Math.sin((angle * Math.PI) / 180) * dist}px`,
-              background: color,
-              width:      `${7 + Math.random() * 6}px`,
-              height:     `${7 + Math.random() * 6}px`,
-              animationDelay: `${i * 0.02}s`,
-            }}
-          />
-        );
-      })}
+      {SPARK_PARTICLES.map((particle, i) => (
+        <div
+          key={i}
+          className="shm-spark"
+          style={{
+            left: x,
+            top: y,
+            '--dx': `${particle.dx}px`,
+            '--dy': `${particle.dy}px`,
+            background: color,
+            width: `${particle.size}px`,
+            height: `${particle.size}px`,
+            animationDelay: `${particle.delay}s`,
+          }}
+        />
+      ))}
     </>
   );
 }
@@ -79,16 +86,21 @@ export default function ShapeMatch({ onExit, lang = 'he', vibrateOn = true }) {
   // build level whenever levelIdx or dimensions change
   useEffect(() => {
     if (!w || !h) return;
-    const { slots: s, pieces: p } = buildLevel(levelIdx, w, h);
-    setSlots(s);
-    setPieces(p);
-    setMistakes(0);
-    mistakesRef.current = 0;
-    setLevelDone(false);
-    setSparks([]);
-    draggingRef.current = null;
-    setDragging(null);
-    return () => clearTimeout(completeTimerRef.current);
+    const initializeTimer = setTimeout(() => {
+      const { slots: s, pieces: p } = buildLevel(levelIdx, w, h);
+      setSlots(s);
+      setPieces(p);
+      setMistakes(0);
+      mistakesRef.current = 0;
+      setLevelDone(false);
+      setSparks([]);
+      draggingRef.current = null;
+      setDragging(null);
+    }, 0);
+    return () => {
+      clearTimeout(initializeTimer);
+      clearTimeout(completeTimerRef.current);
+    };
   }, [levelIdx, roundKey, w, h]);
 
   // ── drag handlers ──────────────────────────────────────────────────────────

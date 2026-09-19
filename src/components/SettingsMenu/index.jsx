@@ -1,36 +1,37 @@
 import "./SettingsMenu.css";
 import { useLocalStorage } from "../../hooks/useLocalStorage.js";
+import { getT } from "../../i18n/index.js";
 import { STORAGE_KEYS } from "../../storage/keys.js";
 import { ResetProgressControl } from "../ResetProgressControl/index.js";
 
 const GAME_MODES = [
-  { id: "classic",  emoji: "🎮", he: "קלאסי",   en: "Classic" },
-  { id: "balloons", emoji: "🎈", he: "בלונים",   en: "Balloons" },
-  { id: "drums",    emoji: "🥁", he: "תופים",    en: "Drums" },
-  { id: "targets",  emoji: "🎯", he: "מטרות",    en: "Targets" },
-  { id: "autoshow", emoji: "🌙", he: "שינה",     en: "Sleep" },
+  { id: "classic", emoji: "🎮", key: "games.classic" },
+  { id: "balloons", emoji: "🎈", key: "games.balloons" },
+  { id: "drums", emoji: "🥁", key: "games.drums" },
+  { id: "targets", emoji: "🎯", key: "games.targets" },
+  { id: "autoshow", emoji: "🌙", key: "games.sleep" },
 ];
 
 const LEARNING_MODES = [
-  { id: "piano",       emoji: "🎹", he: "פסנתר",        en: "Piano" },
-  { id: "memory",      emoji: "🧠", he: "זיכרון",       en: "Memory" },
-  { id: "shapes",      emoji: "🎨", he: "צורות",        en: "Shapes" },
-  { id: "shapematch",  emoji: "🔵", he: "התאמת צורות",  en: "Shape Match" },
-  { id: "colormix",    emoji: "🧪", he: "ערבוב צבעים",  en: "Mix Colors" },
-  { id: "sizesort",    emoji: "📏", he: "מיון גדלים",   en: "Size Sort" },
-  { id: "shapememory", emoji: "🃏", he: "זכור סדרה",    en: "Sequence" },
-  { id: "pattern",     emoji: "🔷", he: "דפוס",         en: "Pattern" },
+  { id: "piano", emoji: "🎹", key: "games.piano" },
+  { id: "memory", emoji: "🧠", key: "games.memory" },
+  { id: "shapes", emoji: "🎨", key: "games.shapes" },
+  { id: "shapematch", emoji: "🔵", key: "games.shapematch" },
+  { id: "colormix", emoji: "🧪", key: "games.colormix" },
+  { id: "sizesort", emoji: "📏", key: "games.sizesort" },
+  { id: "shapememory", emoji: "🃏", key: "games.shapememory" },
+  { id: "pattern", emoji: "🔷", key: "games.pattern" },
 ];
 
 const TABS = [
-  { id: "games",    he: "🎮 משחקים", en: "🎮 Games" },
-  { id: "learning", he: "📚 למידה",  en: "📚 Learning" },
-  { id: "audio",    he: "🔊 שמע",    en: "🔊 Audio" },
-  { id: "display",  he: "🎨 תצוגה",  en: "🎨 Display" },
+  { id: "games", key: "menu.tabGames" },
+  { id: "learning", key: "menu.tabLearning" },
+  { id: "audio", key: "menu.tabAudio" },
+  { id: "display", key: "menu.tabDisplay" },
 ];
 const TAB_IDS = TABS.map((tab) => tab.id);
 
-export default function SettingsMenu({
+export function SettingsMenu({
   lang,
   gameMode,
   theme,
@@ -52,20 +53,28 @@ export default function SettingsMenu({
     TAB_IDS,
   );
 
-  const L = (he, en) => (isHe ? he : en);
-
-  /** Unified touch+mouse handler to avoid duplicate fires */
-  const press = (fn) => ({
-    onTouchEnd: (e) => { e.preventDefault(); e.stopPropagation(); fn(); },
-    onMouseUp:  (e) => { e.stopPropagation(); fn(); },
-  });
+  const t = getT(lang);
+  const stopPointerPropagation = (event) => event.stopPropagation();
 
   return (
-    <div className="sm-panel" dir={isHe ? "rtl" : "ltr"}>
+    <div
+      id="settings-menu"
+      className="sm-panel"
+      dir={isHe ? "rtl" : "ltr"}
+      onPointerDown={stopPointerPropagation}
+      onPointerUp={stopPointerPropagation}
+    >
       {/* Header */}
       <div className="sm-header">
-        <span className="sm-title">{L("הגדרות", "Settings")}</span>
-        <button className="sm-close" {...press(onClose)} aria-label="close">✕</button>
+        <span className="sm-title">{t("menu.title")}</span>
+        <button
+          type="button"
+          className="sm-close"
+          onClick={onClose}
+          aria-label={t("menu.close")}
+        >
+          ✕
+        </button>
       </div>
 
       {/* Tab bar */}
@@ -73,12 +82,16 @@ export default function SettingsMenu({
         {TABS.map((tab) => (
           <button
             key={tab.id}
+            id={`settings-tab-${tab.id}`}
+            type="button"
             role="tab"
             aria-selected={activeTab === tab.id}
+            aria-controls={`settings-panel-${tab.id}`}
+            tabIndex={activeTab === tab.id ? 0 : -1}
             className={`sm-tab${activeTab === tab.id ? " sm-tab--active" : ""}`}
-            {...press(() => setActiveTab(tab.id))}
+            onClick={() => setActiveTab(tab.id)}
           >
-            {isHe ? tab.he : tab.en}
+            {t(tab.key)}
           </button>
         ))}
       </div>
@@ -88,17 +101,25 @@ export default function SettingsMenu({
 
         {/* ── GAMES tab ── */}
         {activeTab === "games" && (
-          <section className="sm-section">
-            <h3 className="sm-section-label">{L("בחר מצב משחק", "Choose Game Mode")}</h3>
+          <section
+            id="settings-panel-games"
+            className="sm-section"
+            role="tabpanel"
+            aria-labelledby="settings-tab-games"
+            tabIndex={0}
+          >
+            <h3 className="sm-section-label">{t("games.label")}</h3>
             <div className="sm-mode-grid">
               {GAME_MODES.map((m) => (
                 <button
+                  type="button"
                   key={m.id}
                   className={`sm-mode-btn${gameMode === m.id ? " sm-mode-btn--active" : ""}`}
-                  {...press(() => { onGameModeChange(m.id); onClose(); })}
+                  aria-pressed={gameMode === m.id}
+                  onClick={() => { onGameModeChange(m.id); onClose(); }}
                 >
                   <span className="sm-mode-emoji">{m.emoji}</span>
-                  <span className="sm-mode-label">{isHe ? m.he : m.en}</span>
+                  <span className="sm-mode-label">{t(m.key)}</span>
                 </button>
               ))}
             </div>
@@ -107,20 +128,28 @@ export default function SettingsMenu({
 
         {/* ── LEARNING tab ── */}
         {activeTab === "learning" && (
-          <section className="sm-section">
-            <h3 className="sm-section-label">{L("מצבי למידה", "Learning Modes")}</h3>
+          <section
+            id="settings-panel-learning"
+            className="sm-section"
+            role="tabpanel"
+            aria-labelledby="settings-tab-learning"
+            tabIndex={0}
+          >
+            <h3 className="sm-section-label">{t("learning.label")}</h3>
             <p className="sm-section-desc">
-              {L("משחקי חשיבה ולמידה לילדים", "Educational games for kids")}
+              {t("learning.description")}
             </p>
             <div className="sm-mode-grid">
               {LEARNING_MODES.map((m) => (
                 <button
+                  type="button"
                   key={m.id}
                   className={`sm-mode-btn${gameMode === m.id ? " sm-mode-btn--active" : ""}`}
-                  {...press(() => { onGameModeChange(m.id); onClose(); })}
+                  aria-pressed={gameMode === m.id}
+                  onClick={() => { onGameModeChange(m.id); onClose(); }}
                 >
                   <span className="sm-mode-emoji">{m.emoji}</span>
-                  <span className="sm-mode-label">{isHe ? m.he : m.en}</span>
+                  <span className="sm-mode-label">{t(m.key)}</span>
                 </button>
               ))}
             </div>
@@ -129,30 +158,40 @@ export default function SettingsMenu({
 
         {/* ── AUDIO tab ── */}
         {activeTab === "audio" && (
-          <section className="sm-section">
-            <h3 className="sm-section-label">{L("הגדרות שמע", "Audio Settings")}</h3>
+          <section
+            id="settings-panel-audio"
+            className="sm-section"
+            role="tabpanel"
+            aria-labelledby="settings-tab-audio"
+            tabIndex={0}
+          >
+            <h3 className="sm-section-label">{t("audio.label")}</h3>
 
             <div className="sm-toggle-row">
               <span className="sm-toggle-label">
                 <span className="sm-toggle-icon">{muteOn ? "🔇" : "🔊"}</span>
-                {L("צליל", "Sound")}
+                {t("audio.sound")}
               </span>
               <button
+                type="button"
                 className={`sm-toggle${muteOn ? "" : " sm-toggle--on"}`}
-                {...press(() => onMuteChange(!muteOn))}
+                onClick={() => onMuteChange(!muteOn)}
                 aria-pressed={!muteOn}
+                aria-label={t("menu.soundToggle")}
               />
             </div>
 
             <div className="sm-toggle-row">
               <span className="sm-toggle-label">
                 <span className="sm-toggle-icon">{vibrateOn ? "📳" : "🔕"}</span>
-                {L("רטט", "Vibrate")}
+                {t("audio.vibrate")}
               </span>
               <button
+                type="button"
                 className={`sm-toggle${vibrateOn ? " sm-toggle--on" : ""}`}
-                {...press(() => onVibrateChange(!vibrateOn))}
+                onClick={() => onVibrateChange(!vibrateOn)}
                 aria-pressed={vibrateOn}
+                aria-label={t("menu.vibrateToggle")}
               />
             </div>
           </section>
@@ -160,17 +199,25 @@ export default function SettingsMenu({
 
         {/* ── DISPLAY tab ── */}
         {activeTab === "display" && (
-          <section className="sm-section">
-            <h3 className="sm-section-label">{L("שפה", "Language")}</h3>
+          <section
+            id="settings-panel-display"
+            className="sm-section"
+            role="tabpanel"
+            aria-labelledby="settings-tab-display"
+            tabIndex={0}
+          >
+            <h3 className="sm-section-label">{t("display.language")}</h3>
             <div className="sm-mode-grid sm-mode-grid--2">
               {[
                 { id: "he", emoji: "🇮🇱", label: "עברית" },
                 { id: "en", emoji: "🇬🇧", label: "English" },
               ].map((l) => (
                 <button
+                  type="button"
                   key={l.id}
                   className={`sm-mode-btn${lang === l.id ? " sm-mode-btn--active" : ""}`}
-                  {...press(() => onLangChange(l.id))}
+                  aria-pressed={lang === l.id}
+                  onClick={() => onLangChange(l.id)}
                 >
                   <span className="sm-mode-emoji">{l.emoji}</span>
                   <span className="sm-mode-label">{l.label}</span>
@@ -178,13 +225,15 @@ export default function SettingsMenu({
               ))}
             </div>
 
-            <h3 className="sm-section-label">{L("ערכת נושא", "Theme")}</h3>
+            <h3 className="sm-section-label">{t("display.theme")}</h3>
             <div className="sm-mode-grid sm-mode-grid--4">
               {Object.values(themePresets).map((t) => (
                 <button
+                  type="button"
                   key={t.id}
                   className={`sm-mode-btn${theme === t.id ? " sm-mode-btn--active" : ""}`}
-                  {...press(() => onThemeChange(t.id))}
+                  aria-pressed={theme === t.id}
+                  onClick={() => onThemeChange(t.id)}
                 >
                   <span className="sm-mode-emoji">{t.emoji}</span>
                   <span className="sm-mode-label">{t.label[lang]}</span>
@@ -199,3 +248,5 @@ export default function SettingsMenu({
     </div>
   );
 }
+
+export default SettingsMenu;

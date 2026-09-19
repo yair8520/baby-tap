@@ -338,7 +338,7 @@ export default function App() {
           {gameMode === "drums" && <DrumsGame vibrateOn={vibrateOn} />}
 
           {gameMode === "targets" && (
-            <TargetsGame activeEmojis={activeEmojis} vibrateOn={vibrateOn} />
+            <TargetsGame lang={lang} activeEmojis={activeEmojis} vibrateOn={vibrateOn} />
           )}
 
           {gameMode === "autoshow" && (

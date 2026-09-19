@@ -4,6 +4,7 @@ import { playSound } from "../../audio.js";
 import { useLocalStorage } from "../../hooks/useLocalStorage.js";
 import { STORAGE_KEYS } from "../../storage/keys.js";
 import { rand, randInt, nextId } from "../../utils/random.js";
+import { getT } from "../../i18n/index.js";
 import { getTargetLevelConfig } from "./levels.js";
 import "./TargetsGame.css";
 
@@ -19,9 +20,11 @@ function vibrate(pattern, vibrateOn) {
  * Targets mode – tap targets before the timer drains.
  */
 export default function TargetsGame({
+  lang = "he",
   activeEmojis = [],
   vibrateOn = true,
 }) {
+  const t = getT(lang);
   const [targets, setTargets] = useState([]);
   const [targetScore, setTargetScore] = useState(0);
   const [targetMissed, setTargetMissed] = useState(0);
@@ -172,7 +175,7 @@ export default function TargetsGame({
   return (
     <>
       <div className="target-score">
-        🎯 {targetScore} &nbsp;|&nbsp; 💨 {targetMissed}
+        {t("targets.score", { score: targetScore, missed: targetMissed })}
         {targetHighScore > 0 && (
           <span className="target-highscore">
             {" "}

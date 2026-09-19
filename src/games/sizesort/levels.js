@@ -36,6 +36,11 @@ export const SIZESORT_LEVELS = [
   { id: 8, count: 5, label: { he: "מומחה", en: "Expert" } },
   { id: 9, count: 5, label: { he: "קשה מאוד", en: "Very Hard" } },
   { id: 10, count: 5, label: { he: "אלוף", en: "Master" } },
+  { id: 11, count: 5, label: { he: "ספיד", en: "Speed" } },
+  { id: 12, count: 5, label: { he: "פרו", en: "Pro" } },
+  { id: 13, count: 5, label: { he: "ערבוב", en: "Remix" } },
+  { id: 14, count: 5, label: { he: "עלית", en: "Elite" } },
+  { id: 15, count: 5, label: { he: "אגדה", en: "Legend" } },
 ];
 
 export function getSizeSortLevel(levelIdx) {

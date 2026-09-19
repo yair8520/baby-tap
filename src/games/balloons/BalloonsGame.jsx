@@ -4,6 +4,7 @@ import { playBalloonPop } from "../../audio.js";
 import { useLocalStorage } from "../../hooks/useLocalStorage.js";
 import { STORAGE_KEYS } from "../../storage/keys.js";
 import { rand, randInt, nextId } from "../../utils/random.js";
+import { getT } from "../../i18n/index.js";
 import {
   BALLOON_LEVEL_STEP,
   getBalloonLevelNumber,
@@ -44,7 +45,7 @@ function makeBalloon(speedFactor = 1) {
  * Balloon pop mode – rising balloons, level progression, sparkles.
  */
 export default function BalloonsGame({ lang = "he", vibrateOn = true }) {
-  const isHebrewUI = lang === "he";
+  const t = getT(lang);
 
   const [balloons, setBalloons] = useState([]);
   const [balloonHint, setBalloonHint] = useState(false);
@@ -198,11 +199,11 @@ export default function BalloonsGame({ lang = "he", vibrateOn = true }) {
   return (
     <>
       <div className="balloon-counter">
-        🎈 {popCount} &nbsp;|&nbsp; 💨 {balloonMissed}
+        {t("balloons.counter", { pops: popCount, missed: balloonMissed })}
         &nbsp;|&nbsp;
         <span className="balloon-level-badge">
           {"⚡".repeat(Math.min(balloonLevel, 5))}{" "}
-          {isHebrewUI ? `רמה ${balloonLevel}` : `Lv ${balloonLevel}`}
+          {t("balloons.level", { level: balloonLevel })}
         </span>
       </div>
 
@@ -210,16 +211,12 @@ export default function BalloonsGame({ lang = "he", vibrateOn = true }) {
         <div className="balloon-levelup">
           {"🚀"}
           <br />
-          {isHebrewUI
-            ? `רמה ${balloonLevelUp.level}!`
-            : `Level ${balloonLevelUp.level}!`}
+          {t("balloons.levelUp", { level: balloonLevelUp.level })}
         </div>
       )}
 
       {balloonHint && (
-        <div className="balloon-hint">
-          {isHebrewUI ? "! פוצצו את הבלונים" : "tap the balloons!"}
-        </div>
+        <div className="balloon-hint">{t("balloons.hint")}</div>
       )}
 
       {balloons.map((b) => (

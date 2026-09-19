@@ -17,6 +17,11 @@ export const BALLOON_LEVELS = [
   { id: 8, speedFactor: 3.1, spawnIntervalMs: 710, maxOnScreen: 14 },
   { id: 9, speedFactor: 3.4, spawnIntervalMs: 660, maxOnScreen: 15 },
   { id: 10, speedFactor: 3.7, spawnIntervalMs: 600, maxOnScreen: 16 },
+  { id: 11, speedFactor: 4.0, spawnIntervalMs: 560, maxOnScreen: 17 },
+  { id: 12, speedFactor: 4.3, spawnIntervalMs: 520, maxOnScreen: 18 },
+  { id: 13, speedFactor: 4.6, spawnIntervalMs: 480, maxOnScreen: 18 },
+  { id: 14, speedFactor: 4.9, spawnIntervalMs: 450, maxOnScreen: 19 },
+  { id: 15, speedFactor: 5.2, spawnIntervalMs: 420, maxOnScreen: 20 },
 ];
 
 /** 0-based index from pop count */

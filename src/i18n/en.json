@@ -1,7 +1,7 @@
 {
   "common": {
     "emojiRow": "👶🏻 🎉 🌈",
-    "title": "Baby Spark! ✨",
+    "title": "Baby Tap! ✨",
     "subtitle": "Let the baby tap the screen\nand see colorful magic! ✨",
     "startFullscreen": "🚀 Start Fullscreen",
     "exitHint": "To exit: hold top-left corner for 2 seconds",
@@ -31,7 +31,15 @@
   },
   "learning": {
     "label": "Learning Modes",
-    "description": "Educational games for kids"
+    "description": "Educational games for kids",
+    "piano": "Piano",
+    "memory": "Memory",
+    "shapes": "Shapes",
+    "shapematch": "Shape Match",
+    "colormix": "Mix Colors",
+    "sizesort": "Size Sort",
+    "shapememory": "Sequence",
+    "pattern": "Pattern"
   },
   "audio": {
     "label": "Audio Settings",
@@ -49,7 +57,10 @@
       "animals": "Animals",
       "ocean": "Ocean",
       "farm": "Farm"
-    }
+    },
+    "progress": "Progress",
+    "resetProgress": "Reset game progress",
+    "resetConfirm": "Reset all saved levels and scores? Settings will be kept."
   },
   "balloons": {
     "counter": "🎈 {{pops}} | 💨 {{missed}}",

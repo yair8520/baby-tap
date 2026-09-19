@@ -2,17 +2,10 @@
  * Shape Memory (sequence recall) – level definitions.
  */
 import { clampLevelIndex } from "../levelUtils.js";
+import { LEARNING_PALETTE, LEARNING_SHAPES } from "../shared/palette.js";
 
-export const PALETTE = [
-  { id: "red", fill: "#FF3B3B" },
-  { id: "blue", fill: "#2979FF" },
-  { id: "yellow", fill: "#FFD600" },
-  { id: "green", fill: "#00C853" },
-  { id: "purple", fill: "#BB44FF" },
-  { id: "orange", fill: "#FF7700" },
-];
-
-export const ALL_SHAPES = ["circle", "square", "triangle", "star"];
+export const PALETTE = LEARNING_PALETTE.map(({ id, fill }) => ({ id, fill }));
+export const ALL_SHAPES = LEARNING_SHAPES.filter((s) => s !== "hexagon");
 
 export const SHAPEMEMORY_LEVELS = [
   {
@@ -62,6 +55,38 @@ export const SHAPEMEMORY_LEVELS = [
     shapes: 4,
     colors: 6,
     label: { he: "אלוף", en: "Master" },
+  },
+  {
+    id: 7,
+    seqLen: 5,
+    showMs: 1800,
+    shapes: 5,
+    colors: 6,
+    label: { he: "ספיד", en: "Speed" },
+  },
+  {
+    id: 8,
+    seqLen: 5,
+    showMs: 1600,
+    shapes: 5,
+    colors: 7,
+    label: { he: "פרו", en: "Pro" },
+  },
+  {
+    id: 9,
+    seqLen: 5,
+    showMs: 1500,
+    shapes: 5,
+    colors: 8,
+    label: { he: "עלית", en: "Elite" },
+  },
+  {
+    id: 10,
+    seqLen: 6,
+    showMs: 1400,
+    shapes: 5,
+    colors: 8,
+    label: { he: "אגדה", en: "Legend" },
   },
 ];
 

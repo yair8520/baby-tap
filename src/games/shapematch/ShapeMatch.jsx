@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { ShapeGeom } from '../../components/ShapeGeom';
 import { LearningGameShell, starsFromMistakes } from '../../components/LearningGameShell';
+import { SparkBurst } from '../../components/SparkBurst';
 import {
   PIECE_R,
   SLOT_R,
@@ -10,35 +11,6 @@ import {
 } from './levels.js';
 import { useGameLevel, useGameStars } from '../../hooks/useGameProgress.js';
 import './ShapeMatch.css';
-
-// ─── Spark burst on correct match ─────────────────────────────────────────────
-
-function SparkBurst({ x, y, color }) {
-  return (
-    <>
-      {Array.from({ length: 12 }, (_, i) => {
-        const angle = (i / 12) * 360;
-        const dist  = 50 + Math.random() * 35;
-        return (
-          <div
-            key={i}
-            className="shm-spark"
-            style={{
-              left:       x,
-              top:        y,
-              '--dx':     `${Math.cos((angle * Math.PI) / 180) * dist}px`,
-              '--dy':     `${Math.sin((angle * Math.PI) / 180) * dist}px`,
-              background: color,
-              width:      `${7 + Math.random() * 6}px`,
-              height:     `${7 + Math.random() * 6}px`,
-              animationDelay: `${i * 0.02}s`,
-            }}
-          />
-        );
-      })}
-    </>
-  );
-}
 
 // ─── Main component ───────────────────────────────────────────────────────────
 
@@ -165,7 +137,7 @@ export default function ShapeMatch({ onExit, lang = 'he', vibrateOn = true }) {
         const matched = piecesRef.current.filter(p => p.matched).length + 1;
         if (matched >= piecesRef.current.length) {
           const m = mistakesRef.current;
-          const stars = m === 0 ? 3 : m <= 2 ? 2 : 1;
+          const stars = starsFromMistakes(m);
           setTotalStars(prev => prev + stars);
           setTimeout(() => setLevelDone(true), 650);
         }

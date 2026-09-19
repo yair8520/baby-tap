@@ -55,6 +55,36 @@ export const TARGET_LEVELS = [
     minSize: 45,
     maxSize: 75,
   },
+  {
+    id: 6,
+    minScore: 75,
+    label: { he: "ספיד", en: "Speed" },
+    durationMs: 1000,
+    maxTargets: 6,
+    spawnIntervalMs: 680,
+    minSize: 42,
+    maxSize: 70,
+  },
+  {
+    id: 7,
+    minScore: 105,
+    label: { he: "פרו", en: "Pro" },
+    durationMs: 900,
+    maxTargets: 7,
+    spawnIntervalMs: 620,
+    minSize: 40,
+    maxSize: 65,
+  },
+  {
+    id: 8,
+    minScore: 140,
+    label: { he: "אגדה", en: "Legend" },
+    durationMs: 800,
+    maxTargets: 8,
+    spawnIntervalMs: 560,
+    minSize: 38,
+    maxSize: 60,
+  },
 ];
 
 export function getTargetLevelConfig(score) {

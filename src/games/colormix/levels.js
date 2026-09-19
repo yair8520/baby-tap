@@ -57,6 +57,11 @@ export const COLORMIX_LEVELS = [
   { id: 8, comboIds: [0, 1, 2], bowls: 2, label: { he: "שלושה", en: "Three" } },
   { id: 9, comboIds: [0, 1, 2], bowls: 2, label: { he: "מאתגר", en: "Hard" } },
   { id: 10, comboIds: [0, 1, 2], bowls: 2, label: { he: "אלוף", en: "Master" } },
+  { id: 11, comboIds: [0, 1, 2], bowls: 2, label: { he: "ספיד", en: "Speed" } },
+  { id: 12, comboIds: [0, 1, 2], bowls: 2, label: { he: "פרו", en: "Pro" } },
+  { id: 13, comboIds: [1, 2, 0], bowls: 2, label: { he: "ערבוב", en: "Remix" } },
+  { id: 14, comboIds: [0, 1, 2], bowls: 2, label: { he: "מומחה", en: "Expert" } },
+  { id: 15, comboIds: [0, 1, 2], bowls: 2, label: { he: "אגדה", en: "Legend" } },
 ];
 
 export function getColorMixLevel(levelIdx) {

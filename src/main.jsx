@@ -1,16 +1,13 @@
-import { StrictMode } from 'react'
-import { createRoot } from 'react-dom/client'
-import './index.css'
-import App from './App.jsx'
-import PrivacyPolicy from './pages/PrivacyPolicy'
+import { StrictMode } from "react";
+import { createRoot } from "react-dom/client";
+import "./index.css";
+import Root from "./Root.jsx";
+import { migrateStorage } from "./storage/index.js";
 
-// Hash-based routing so GitHub Pages (SPA) doesn't 404
-const isPrivacyPage =
-  window.location.hash.includes('privacy-policy') ||
-  window.location.pathname.includes('privacy-policy')
+migrateStorage();
 
-createRoot(document.getElementById('root')).render(
+createRoot(document.getElementById("root")).render(
   <StrictMode>
-    {isPrivacyPage ? <PrivacyPolicy /> : <App />}
+    <Root />
   </StrictMode>,
-)
+);

@@ -8,7 +8,7 @@ import {
   SPECIAL_KEY_EMOJIS,
   COMBO_HOT_EMOJIS,
   COMBO_ULTRA_EMOJIS,
-} from "../../constants.js";
+} from "../../constants";
 import {
   getAudioCtx,
   playMelodyNote,

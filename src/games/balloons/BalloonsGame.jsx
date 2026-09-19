@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from "react";
-import { IS_TOUCH, canVibrate } from "../../constants.js";
+import { IS_TOUCH, canVibrate } from "../../constants";
 import { playBalloonPop } from "../../audio.js";
 import { useLocalStorage } from "../../hooks/useLocalStorage.js";
 import { STORAGE_KEYS } from "../../storage/keys.js";

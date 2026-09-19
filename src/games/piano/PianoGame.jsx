@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from "react";
-import { IS_TOUCH, canVibrate, PIANO_KEYS } from "../../constants.js";
+import { IS_TOUCH, canVibrate, PIANO_KEYS } from "../../constants";
 import { playPianoNote } from "../../audio.js";
 import "./PianoGame.css";
 

@@ -18,7 +18,7 @@ import {
   isHebrew as defaultHebrew,
   isWebView,
   canVibrate,
-} from "./constants.js";
+} from "./constants";
 
 import { setGlobalMute, playSound } from "./audio.js";
 

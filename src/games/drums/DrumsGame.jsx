@@ -1,5 +1,5 @@
 import { useState, useCallback } from "react";
-import { canVibrate } from "../../constants.js";
+import { canVibrate } from "../../constants";
 import { playDrum } from "../../audio.js";
 import { DRUM_PADS } from "./levels.js";
 import { nextId } from "../../utils/random.js";

@@ -1,4 +1,4 @@
-import { NOTES, NUMBER_NOTES } from './constants.js'
+import { NOTES, NUMBER_NOTES } from './constants'
 import { PIANO_SONGS } from './games/piano/levels.js'
 
 function songDisplayName(song, lang = 'he') {

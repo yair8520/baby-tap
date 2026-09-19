@@ -1,33 +1,43 @@
-import { useState, useEffect } from "react";
+import { useCallback, useEffect, useState } from "react";
+import { STORAGE_PREFIX, readStored, writeStored } from "../storage/index.js";
 
 /**
- * A useState-like hook that persists to localStorage.
- * @param {string} key  - localStorage key (prefixed with "bt_")
- * @param {*} defaultValue - initial value if nothing stored
+ * A useState-like hook that persists to localStorage and stays in sync across
+ * tabs (two open copies of the app share one set of settings).
+ *
+ * @param {string} key          logical key; the `bt_` prefix is added for you
+ * @param {*} defaultValue      used when nothing is stored or storage is unusable
  */
 export function useLocalStorage(key, defaultValue) {
-  const storageKey = `bt_${key}`;
+  const storageKey = `${STORAGE_PREFIX}${key}`;
 
-  const [value, setValue] = useState(() => {
-    try {
-      const stored = localStorage.getItem(storageKey);
-      if (stored === null) return defaultValue;
-      return JSON.parse(stored);
-    } catch {
-      return defaultValue;
-    }
-  });
+  const [value, setValue] = useState(() => readStored(key, defaultValue));
 
   useEffect(() => {
-    try {
-      const serialized = JSON.stringify(value);
-      // Skip no-op writes (avoids thrashing on mount when value matches storage)
-      if (localStorage.getItem(storageKey) === serialized) return;
-      localStorage.setItem(storageKey, serialized);
-    } catch {
-      // localStorage unavailable (private mode, quota exceeded)
-    }
-  }, [storageKey, value]);
+    writeStored(key, value);
+  }, [key, value]);
 
-  return [value, setValue];
+  useEffect(() => {
+    const onStorage = (e) => {
+      if (e.key !== storageKey) return;
+      setValue(e.newValue === null ? defaultValue : safeParse(e.newValue, defaultValue));
+    };
+    window.addEventListener("storage", onStorage);
+    return () => window.removeEventListener("storage", onStorage);
+    // `defaultValue` is only read when storage is cleared elsewhere; re-subscribing
+    // on every render because a caller passed an inline object would be worse.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [storageKey]);
+
+  const set = useCallback((next) => setValue(next), []);
+
+  return [value, set];
+}
+
+function safeParse(raw, fallback) {
+  try {
+    return JSON.parse(raw);
+  } catch {
+    return fallback;
+  }
 }

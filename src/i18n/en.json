@@ -7,7 +7,10 @@
     "exitHint": "To exit: hold top-left corner for 2 seconds",
     "privacyPolicy": "Privacy Policy",
     "ultra": "👑 ULTRA ×",
-    "fire": "🔥 HOT ×"
+    "fire": "🔥 HOT ×",
+    "loading": "Loading…",
+    "exit": "Exit",
+    "close": "Close"
   },
   "menu": {
     "title": "Settings",
@@ -40,6 +43,15 @@
     "sizesort": "Size Sort",
     "shapememory": "Sequence",
     "pattern": "Pattern"
+  },
+  "shell": {
+    "level": "Level {{level}}",
+    "levelAria": "Level {{level}}",
+    "wellDone": "Great job!",
+    "totalStars": "Total ⭐ {{stars}}",
+    "replay": "Replay ↻",
+    "nextLevel": "Next Level ➜",
+    "stars": "{{count}} stars"
   },
   "audio": {
     "label": "Audio Settings",
@@ -80,7 +92,7 @@
     "play": "▶️ Play",
     "off": "⏹ Off",
     "whiteNoise": "White noise",
-    "melodies": "Melodies",
+    "melodies": "Melodies +",
     "melodiesOpen": "Melodies - Open ✅",
     "volume": "Volume",
     "sounds": {
@@ -113,17 +125,20 @@
     "level": "Level {{level}}",
     "score": "Matches: {{matches}}",
     "attempts": "Tries: {{attempts}}",
+    "attemptsShort": "{{attempts}} tries",
     "won": "Well done! 🎉",
     "nextLevel": "Next Level ➡️",
     "restart": "Play again 🔄",
-    "newGame": "New Game"
+    "newGame": "New Game",
+    "cardAria": "card"
   },
   "shapes": {
     "title": "Shapes Game",
+    "tap": "Tap the",
     "instruction": "Tap the {{color}} {{shape}}!",
     "score": "Score: {{score}}",
     "level": "Level {{level}}",
-    "levelUp": "Great! Level {{level}} 🎉",
+    "levelUp": "🎉 Level {{level}}!",
     "correct": "Correct! ✅",
     "wrong": "Oops! ❌",
     "colors": {
@@ -142,5 +157,20 @@
       "star": "star",
       "heart": "heart"
     }
+  },
+  "colormix": {
+    "mixTo": "Mix to...",
+    "bowl": "Mixing Bowl",
+    "dragColor": "Drag a color"
+  },
+  "shapememory": {
+    "memorize": "Memorize the order!",
+    "recall": "Tap in the right order!"
+  },
+  "pattern": {
+    "question": "What comes next?"
+  },
+  "sizesort": {
+    "instruction": "Smallest → Largest"
   }
 }

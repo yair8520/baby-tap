@@ -78,53 +78,7 @@
   100% { transform: translate(-50%, -18px) scale(0.92); }
 }
 
-/* ── Header ────────────────────────────────────────────────────────────────── */
-
-.pg-header {
-  position: relative;
-  z-index: 10;
-  width: 100%;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 14px 18px 8px;
-  box-sizing: border-box;
-}
-
-.pg-btn-exit {
-  background: rgba(255, 255, 255, 0.12);
-  border: 2px solid rgba(255, 255, 255, 0.25);
-  color: #fff;
-  font-size: 20px;
-  width: 44px;
-  height: 44px;
-  border-radius: 50%;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: background 0.2s;
-  flex-shrink: 0;
-}
-
-.pg-btn-exit:hover,
-.pg-btn-exit:active {
-  background: rgba(255, 255, 255, 0.25);
-}
-
-.pg-level-label {
-  color: #fff;
-  font-size: 22px;
-  font-weight: 700;
-  letter-spacing: 0.02em;
-  text-shadow: 0 2px 10px rgba(255, 152, 0, 0.5);
-}
-
-.pg-hdr-stars {
-  font-size: 22px;
-  display: flex;
-  gap: 2px;
-}
+/* header / complete overlay → LearningGameShell (lgs-*) */
 
 /* ── Content Area ───────────────────────────────────────────────────────────── */
 

@@ -1,36 +1,9 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { SIZESORT_LEVELS, buildLevel } from './levels.js';
 import { useGameLevel, useGameStars } from '../../hooks/useGameProgress.js';
+import { LearningGameShell, starsFromMistakes } from '../../components/LearningGameShell';
+import { SparkBurst } from '../../components/SparkBurst';
 import './SizeSort.css';
-
-// ─── SparkBurst ───────────────────────────────────────────────────────────────
-
-function SparkBurst({ x, y, color }) {
-  return (
-    <>
-      {Array.from({ length: 10 }, (_, i) => {
-        const angle = (i / 10) * 360;
-        const dist  = 40 + Math.random() * 35;
-        return (
-          <div
-            key={i}
-            className="ss-spark"
-            style={{
-              left:           x,
-              top:            y,
-              '--dx':         `${Math.cos((angle * Math.PI) / 180) * dist}px`,
-              '--dy':         `${Math.sin((angle * Math.PI) / 180) * dist}px`,
-              background:     color,
-              width:          `${6 + Math.random() * 6}px`,
-              height:         `${6 + Math.random() * 6}px`,
-              animationDelay: `${i * 0.02}s`,
-            }}
-          />
-        );
-      })}
-    </>
-  );
-}
 
 // ─── Main component ───────────────────────────────────────────────────────────
 
@@ -158,8 +131,7 @@ export default function SizeSort({ onExit, lang = 'he', vibrateOn = true }) {
 
         const matched = piecesRef.current.filter(p => p.matched).length + 1;
         if (matched >= piecesRef.current.length) {
-          const m = mistakesRef.current;
-          const stars = m === 0 ? 3 : m <= 2 ? 2 : 1;
+          const stars = starsFromMistakes(mistakesRef.current);
           setTotalStars(prev => prev + stars);
           setTimeout(() => setLevelDone(true), 650);
         }
@@ -183,7 +155,7 @@ export default function SizeSort({ onExit, lang = 'he', vibrateOn = true }) {
 
   // ── Derived ─────────────────────────────────────────────────────────────────
 
-  const starCount = mistakes === 0 ? 3 : mistakes <= 2 ? 2 : 1;
+  const starCount = starsFromMistakes(mistakes);
   const levelNum  = levelIdx + 1;
 
   // ── Render ──────────────────────────────────────────────────────────────────
@@ -196,133 +168,94 @@ export default function SizeSort({ onExit, lang = 'he', vibrateOn = true }) {
       onPointerUp={onPointerUp}
       onPointerLeave={onPointerUp}
     >
-      {/* Background */}
       <div className="ss-bg" />
 
-      {/* Header */}
-      <div className="ss-header">
-        <button className="ss-btn-exit" onClick={onExit}>✕</button>
-        <span className="ss-level-label">
-          {lang === 'he' ? `שלב ${levelNum}` : `Level ${levelNum}`}
-        </span>
-        <span className="ss-hdr-stars">
-          {[0, 1, 2].map(i => (
-            <span key={i} style={{ opacity: i < starCount ? 1 : 0.22 }}>⭐</span>
-          ))}
-        </span>
-      </div>
+      <LearningGameShell
+        lang={lang}
+        levelNum={levelNum}
+        totalStars={totalStars}
+        onExit={onExit}
+        levelDone={levelDone}
+        starCount={starCount}
+        onNextLevel={() => setLevelIdx(p => p + 1)}
+      >
+        <div className="ss-direction-label" style={{ top: 66 }}>
+          {lang === 'he' ? 'מהקטן לגדול →' : 'Smallest → Largest'}
+        </div>
 
-      {/* Direction label */}
-      <div className="ss-direction-label" style={{ top: 66 }}>
-        {lang === 'he' ? 'מהקטן לגדול →' : 'Smallest → Largest'}
-      </div>
-
-      {/* Slots */}
-      {slots.map(sl => (
-        <div
-          key={sl.id}
-          className={[
-            'ss-slot',
-            matchId === sl.id ? 'ss-slot-pop' : '',
-            sl.filled          ? 'ss-slot-filled' : '',
-          ].join(' ')}
-          style={{
-            width:       sl.slotD,
-            height:      sl.slotD,
-            left:        sl.cx - sl.slotD / 2,
-            top:         sl.cy - sl.slotD / 2,
-            '--slot-color': sl.color,
-            '--glow':       sl.glow,
-          }}
-        />
-      ))}
-
-      {/* Rank arrows between slots */}
-      {slots.length > 1 && slots.slice(0, -1).map((sl, i) => {
-        const nextSl = slots[i + 1];
-        const midX   = (sl.cx + nextSl.cx) / 2;
-        const midY   = sl.cy;
-        return (
+        {slots.map(sl => (
           <div
-            key={`arr-${i}`}
-            className="ss-arrow"
-            style={{ left: midX - 10, top: midY - 10 }}
-          >
-            →
-          </div>
-        );
-      })}
-
-      {/* Draggable pieces */}
-      {pieces.map(pc => {
-        const isDrag  = dragging?.pieceId === pc.id;
-        const isWrong = wrongId === pc.id;
-        const cx = isDrag ? dragging.cx : pc.cx;
-        const cy = isDrag ? dragging.cy : pc.cy;
-        const r  = pc.size / 2;
-
-        return (
-          <div
-            key={pc.id}
+            key={sl.id}
             className={[
-              'ss-piece',
-              isDrag     ? 'ss-piece-drag'    : '',
-              isWrong    ? 'ss-piece-wrong'   : '',
-              pc.matched ? 'ss-piece-matched' : '',
+              'ss-slot',
+              matchId === sl.id ? 'ss-slot-pop' : '',
+              sl.filled          ? 'ss-slot-filled' : '',
             ].join(' ')}
             style={{
-              width:      pc.size,
-              height:     pc.size,
-              left:       cx - r,
-              top:        cy - r,
-              background: pc.color,
-              '--glow':   pc.glow,
-              transition: isDrag
-                ? 'none'
-                : 'left .38s cubic-bezier(.2,1.6,.4,1), top .38s cubic-bezier(.2,1.6,.4,1)',
-            }}
-            onPointerDown={e => {
-              e.preventDefault();
-              onPointerDown(e, pc.id);
+              width:       sl.slotD,
+              height:      sl.slotD,
+              left:        sl.cx - sl.slotD / 2,
+              top:         sl.cy - sl.slotD / 2,
+              '--slot-color': sl.color,
+              '--glow':       sl.glow,
             }}
           />
-        );
-      })}
+        ))}
 
-      {/* Sparks */}
-      {sparks.map(s => (
-        <SparkBurst key={s.id} x={s.x} y={s.y} color={s.color} />
-      ))}
-
-      {/* Level-complete overlay */}
-      {levelDone && (
-        <div
-          className="ss-complete"
-          onPointerDown={e => e.stopPropagation()}
-          onPointerUp={e => e.stopPropagation()}
-        >
-          <div className="ss-complete-card">
-            <span className="ss-complete-emoji">🏆</span>
-            <div className="ss-complete-title">
-              {lang === 'he' ? 'כל הכבוד!' : 'Great job!'}
-            </div>
-            <div className="ss-complete-stars">
-              {[0, 1, 2].map(i => (
-                <span key={i} className={`ss-cstar${i < starCount ? ' on' : ''}`}>⭐</span>
-              ))}
-            </div>
-            <div className="ss-total-score">
-              {lang === 'he' ? `סה"כ ⭐ ${totalStars}` : `Total ⭐ ${totalStars}`}
-            </div>
-            <button
-              className="ss-btn-next"
-              onClick={() => setLevelIdx(p => p + 1)}
+        {slots.length > 1 && slots.slice(0, -1).map((sl, i) => {
+          const nextSl = slots[i + 1];
+          const midX   = (sl.cx + nextSl.cx) / 2;
+          const midY   = sl.cy;
+          return (
+            <div
+              key={`arr-${i}`}
+              className="ss-arrow"
+              style={{ left: midX - 10, top: midY - 10 }}
             >
-              {lang === 'he' ? 'שלב הבא ➜' : 'Next Level ➜'}
-            </button>
-          </div>
-        </div>
-      )}
+              →
+            </div>
+          );
+        })}
+
+        {pieces.map(pc => {
+          const isDrag  = dragging?.pieceId === pc.id;
+          const isWrong = wrongId === pc.id;
+          const cx = isDrag ? dragging.cx : pc.cx;
+          const cy = isDrag ? dragging.cy : pc.cy;
+          const r  = pc.size / 2;
+
+          return (
+            <div
+              key={pc.id}
+              className={[
+                'ss-piece',
+                isDrag     ? 'ss-piece-drag'    : '',
+                isWrong    ? 'ss-piece-wrong'   : '',
+                pc.matched ? 'ss-piece-matched' : '',
+              ].join(' ')}
+              style={{
+                width:      pc.size,
+                height:     pc.size,
+                left:       cx - r,
+                top:        cy - r,
+                background: pc.color,
+                '--glow':   pc.glow,
+                transition: isDrag
+                  ? 'none'
+                  : 'left .38s cubic-bezier(.2,1.6,.4,1), top .38s cubic-bezier(.2,1.6,.4,1)',
+              }}
+              onPointerDown={e => {
+                e.preventDefault();
+                onPointerDown(e, pc.id);
+              }}
+            />
+          );
+        })}
+
+        {sparks.map(s => (
+          <SparkBurst key={s.id} x={s.x} y={s.y} color={s.color} />
+        ))}
+      </LearningGameShell>
     </div>
   );
 }

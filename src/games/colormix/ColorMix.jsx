@@ -9,36 +9,9 @@ import {
   buildLevel,
 } from './levels.js';
 import { useGameLevel, useGameStars } from '../../hooks/useGameProgress.js';
+import { LearningGameShell, starsFromMistakes } from '../../components/LearningGameShell';
+import { SparkBurst } from '../../components/SparkBurst';
 import './ColorMix.css';
-
-// ─── SparkBurst ───────────────────────────────────────────────────────────────
-
-function SparkBurst({ x, y, color }) {
-  return (
-    <>
-      {Array.from({ length: 12 }, (_, i) => {
-        const angle = (i / 12) * 360;
-        const dist  = 45 + Math.random() * 35;
-        return (
-          <div
-            key={i}
-            className="cm-spark"
-            style={{
-              left:           x,
-              top:            y,
-              '--dx':         `${Math.cos((angle * Math.PI) / 180) * dist}px`,
-              '--dy':         `${Math.sin((angle * Math.PI) / 180) * dist}px`,
-              background:     color,
-              width:          `${6 + Math.random() * 7}px`,
-              height:         `${6 + Math.random() * 7}px`,
-              animationDelay: `${i * 0.018}s`,
-            }}
-          />
-        );
-      })}
-    </>
-  );
-}
 
 // ─── Main component ───────────────────────────────────────────────────────────
 
@@ -130,8 +103,7 @@ export default function ColorMix({ onExit, lang = 'he', vibrateOn = true }) {
       // Check level done
       const newMatched = targets.filter(t => t.matched).length + 1;
       if (newMatched >= targets.length) {
-        const m = mistakesRef.current;
-        const stars = m === 0 ? 3 : m <= 2 ? 2 : 1;
+        const stars = starsFromMistakes(mistakesRef.current);
         setTotalStars(prev => prev + stars);
         setTimeout(() => setLevelDone(true), 700);
       }
@@ -217,7 +189,7 @@ export default function ColorMix({ onExit, lang = 'he', vibrateOn = true }) {
 
   // ── Derived ─────────────────────────────────────────────────────────────────
 
-  const starCount = mistakes === 0 ? 3 : mistakes <= 2 ? 2 : 1;
+  const starCount = starsFromMistakes(mistakes);
   const levelNum  = levelIdx + 1;
 
   // ── Render ──────────────────────────────────────────────────────────────────
@@ -230,170 +202,127 @@ export default function ColorMix({ onExit, lang = 'he', vibrateOn = true }) {
       onPointerUp={onPointerUp}
       onPointerLeave={onPointerUp}
     >
-      {/* Background */}
       <div className="cm-bg" />
 
-      {/* Header */}
-      <div className="cm-header">
-        <button className="cm-btn-exit" onClick={onExit}>✕</button>
-        <span className="cm-level-label">
-          {lang === 'he' ? `שלב ${levelNum}` : `Level ${levelNum}`}
-        </span>
-        <span className="cm-hdr-stars">
-          {[0, 1, 2].map(i => (
-            <span key={i} style={{ opacity: i < starCount ? 1 : 0.22 }}>⭐</span>
-          ))}
-        </span>
-      </div>
-
-      {/* Target circles */}
-      <div className="cm-targets-label" style={{ top: H * 0.085 }}>
-        <span>{lang === 'he' ? 'ערבב ל...' : 'Mix to...'}</span>
-      </div>
-
-      {targets.map(tgt => (
-        <div
-          key={tgt.id}
-          className={[
-            'cm-target',
-            tgt.matched    ? 'cm-target-matched'  : '',
-            matchedTgtId === tgt.id ? 'cm-target-glow' : '',
-          ].join(' ')}
-          style={{
-            width:     BOWL_R * 2,
-            height:    BOWL_R * 2,
-            left:      tgt.cx - BOWL_R,
-            top:       tgt.cy - BOWL_R,
-            '--glow':  tgt.glow,
-            background: tgt.resultFill,
-          }}
-        >
-          {tgt.matched && <span className="cm-check">✓</span>}
-          <span className="cm-target-name">
-            {tgt.resultName[lang] ?? tgt.resultName.en}
-          </span>
+      <LearningGameShell
+        lang={lang}
+        levelNum={levelNum}
+        totalStars={totalStars}
+        onExit={onExit}
+        levelDone={levelDone}
+        starCount={starCount}
+        onNextLevel={() => setLevelIdx(p => p + 1)}
+      >
+        <div className="cm-targets-label" style={{ top: H * 0.085 }}>
+          <span>{lang === 'he' ? 'ערבב ל...' : 'Mix to...'}</span>
         </div>
-      ))}
 
-      {/* Mixing Bowls */}
-      {bowls.map(bowl => {
-        const slots = [bowl.slot1, bowl.slot2].filter(Boolean);
-        return (
+        {targets.map(tgt => (
           <div
-            key={bowl.id}
+            key={tgt.id}
             className={[
-              'cm-bowl',
-              wrongBowlId === bowl.id ? 'cm-bowl-wrong' : '',
+              'cm-target',
+              tgt.matched    ? 'cm-target-matched'  : '',
+              matchedTgtId === tgt.id ? 'cm-target-glow' : '',
             ].join(' ')}
             style={{
-              width:  BOWL_R * 2,
-              height: BOWL_R * 2,
-              left:   bowl.cx - BOWL_R,
-              top:    bowl.cy - BOWL_R,
+              width:     BOWL_R * 2,
+              height:    BOWL_R * 2,
+              left:      tgt.cx - BOWL_R,
+              top:       tgt.cy - BOWL_R,
+              '--glow':  tgt.glow,
+              background: tgt.resultFill,
             }}
           >
-            {slots.map((slot, si) => (
-              <div
-                key={si}
-                className="cm-bowl-circle"
-                style={{
-                  width:      MINI_R * 2,
-                  height:     MINI_R * 2,
-                  background: slot.fill,
-                  '--glow':   slot.glow,
-                  left:       slots.length === 1
-                    ? '50%'
-                    : si === 0 ? '28%' : '72%',
-                  top: '50%',
-                  transform: 'translate(-50%, -50%)',
-                }}
-              />
-            ))}
+            {tgt.matched && <span className="cm-check">✓</span>}
+            <span className="cm-target-name">
+              {tgt.resultName[lang] ?? tgt.resultName.en}
+            </span>
           </div>
-        );
-      })}
+        ))}
 
-      {/* Bowl label */}
-      <div
-        className="cm-bowl-label"
-        style={{ top: H * 0.47 }}
-      >
-        {lang === 'he' ? 'קערת הערבוב' : 'Mixing Bowl'}
-      </div>
-
-      {/* Source swatches at bottom */}
-      <div className="cm-sources-label" style={{ top: H * 0.80 }}>
-        {lang === 'he' ? 'גרור צבע' : 'Drag a color'}
-      </div>
-
-      {sources.map(src => {
-        const isDrag = dragging?.srcId === src.id;
-        return (
-          <div
-            key={src.id}
-            className={['cm-source', isDrag ? 'cm-source-drag' : ''].join(' ')}
-            style={{
-              width:   SOURCE_R * 2,
-              height:  SOURCE_R * 2,
-              left:    src.homeCx - SOURCE_R,
-              top:     src.homeCy - SOURCE_R,
-              background: src.fill,
-              '--glow':   src.glow,
-            }}
-            onPointerDown={e => onPointerDown(e, src.id, src.fill, src.glow)}
-          />
-        );
-      })}
-
-      {/* Dragging ghost */}
-      {dragging && (
-        <div
-          className="cm-drag-ghost"
-          style={{
-            width:      SOURCE_R * 2,
-            height:     SOURCE_R * 2,
-            left:       dragging.cx - SOURCE_R,
-            top:        dragging.cy - SOURCE_R,
-            background: dragging.fill,
-            '--glow':   dragging.glow,
-          }}
-        />
-      )}
-
-      {/* Sparks */}
-      {sparks.map(s => (
-        <SparkBurst key={s.id} x={s.x} y={s.y} color={s.color} />
-      ))}
-
-      {/* Level-complete overlay */}
-      {levelDone && (
-        <div
-          className="cm-complete"
-          onPointerDown={e => e.stopPropagation()}
-          onPointerUp={e => e.stopPropagation()}
-        >
-          <div className="cm-complete-card">
-            <span className="cm-complete-emoji">🎨</span>
-            <div className="cm-complete-title">
-              {lang === 'he' ? 'כל הכבוד!' : 'Great job!'}
-            </div>
-            <div className="cm-complete-stars">
-              {[0, 1, 2].map(i => (
-                <span key={i} className={`cm-cstar${i < starCount ? ' on' : ''}`}>⭐</span>
+        {bowls.map(bowl => {
+          const slots = [bowl.slot1, bowl.slot2].filter(Boolean);
+          return (
+            <div
+              key={bowl.id}
+              className={[
+                'cm-bowl',
+                wrongBowlId === bowl.id ? 'cm-bowl-wrong' : '',
+              ].join(' ')}
+              style={{
+                width:  BOWL_R * 2,
+                height: BOWL_R * 2,
+                left:   bowl.cx - BOWL_R,
+                top:    bowl.cy - BOWL_R,
+              }}
+            >
+              {slots.map((slot, si) => (
+                <div
+                  key={si}
+                  className="cm-bowl-circle"
+                  style={{
+                    width:      MINI_R * 2,
+                    height:     MINI_R * 2,
+                    background: slot.fill,
+                    '--glow':   slot.glow,
+                    left:       slots.length === 1
+                      ? '50%'
+                      : si === 0 ? '28%' : '72%',
+                    top: '50%',
+                    transform: 'translate(-50%, -50%)',
+                  }}
+                />
               ))}
             </div>
-            <div className="cm-total-score">
-              {lang === 'he' ? `סה"כ ⭐ ${totalStars}` : `Total ⭐ ${totalStars}`}
-            </div>
-            <button
-              className="cm-btn-next"
-              onClick={() => setLevelIdx(p => p + 1)}
-            >
-              {lang === 'he' ? 'שלב הבא ➜' : 'Next Level ➜'}
-            </button>
-          </div>
+          );
+        })}
+
+        <div className="cm-bowl-label" style={{ top: H * 0.47 }}>
+          {lang === 'he' ? 'קערת הערבוב' : 'Mixing Bowl'}
         </div>
-      )}
+
+        <div className="cm-sources-label" style={{ top: H * 0.80 }}>
+          {lang === 'he' ? 'גרור צבע' : 'Drag a color'}
+        </div>
+
+        {sources.map(src => {
+          const isDrag = dragging?.srcId === src.id;
+          return (
+            <div
+              key={src.id}
+              className={['cm-source', isDrag ? 'cm-source-drag' : ''].join(' ')}
+              style={{
+                width:   SOURCE_R * 2,
+                height:  SOURCE_R * 2,
+                left:    src.homeCx - SOURCE_R,
+                top:     src.homeCy - SOURCE_R,
+                background: src.fill,
+                '--glow':   src.glow,
+              }}
+              onPointerDown={e => onPointerDown(e, src.id, src.fill, src.glow)}
+            />
+          );
+        })}
+
+        {dragging && (
+          <div
+            className="cm-drag-ghost"
+            style={{
+              width:      SOURCE_R * 2,
+              height:     SOURCE_R * 2,
+              left:       dragging.cx - SOURCE_R,
+              top:        dragging.cy - SOURCE_R,
+              background: dragging.fill,
+              '--glow':   dragging.glow,
+            }}
+          />
+        )}
+
+        {sparks.map(s => (
+          <SparkBurst key={s.id} x={s.x} y={s.y} color={s.color} />
+        ))}
+      </LearningGameShell>
     </div>
   );
 }

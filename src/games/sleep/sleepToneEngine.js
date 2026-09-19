@@ -89,7 +89,7 @@ export function startLullaby(ctx, master, mode) {
   };
 
   scheduleAhead();
-  const intervalId = window.setInterval(scheduleAhead, 80);
+  const intervalId = window.setInterval(scheduleAhead, 200);
 
   return {
     master,

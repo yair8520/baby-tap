@@ -9,6 +9,7 @@ import {
 import { setGlobalMute, playSound } from "./audio.js";
 
 import { useLocalStorage } from "./hooks/useLocalStorage.js";
+import { usePageVisible } from "./hooks/usePageVisible.js";
 import { STORAGE_KEYS } from "./storage/keys.js";
 import { clearStoredProgress } from "./storage/progress.js";
 import { isBoolean } from "./storage/validation.js";
@@ -62,6 +63,7 @@ const LANGUAGE_IDS = ["he", "en"];
 const THEME_IDS = Object.keys(THEME_PRESETS);
 
 export default function App() {
+  const pageVisible = usePageVisible();
   const [lang, setLang] = useLocalStorage(
     STORAGE_KEYS.lang,
     defaultHebrew ? "he" : "en",
@@ -261,7 +263,10 @@ export default function App() {
 
   return (
     <LangProvider lang={lang}>
-      <div ref={containerRef} className={`app theme-${theme}`}>
+      <div
+        ref={containerRef}
+        className={`app theme-${theme}${pageVisible ? "" : " app-paused"}`}
+      >
         <div className="bg-base" />
         <div className="bg-aurora">
           <div className="aurora-blob aurora-blob-1" />

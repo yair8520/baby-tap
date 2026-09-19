@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef } from "react";
 import { getAudioCtx } from "../../audio.js";
 import { useLocalStorage } from "../../hooks/useLocalStorage.js";
+import { usePageVisible } from "../../hooks/usePageVisible.js";
 import { STORAGE_KEYS } from "../../storage/keys.js";
 import { isBoolean } from "../../storage/validation.js";
 import {
@@ -46,6 +47,7 @@ async function getSleepOpusBuffer(ctx, url) {
 
 /** Persisted sleep prefs + Web Audio engine for ambient modes. */
 export function useSleepAudio(muteOn = false) {
+  const pageVisible = usePageVisible();
   const [sleepSoundMode, setSleepSoundMode] = useLocalStorage(
     STORAGE_KEYS.sleepSoundMode,
     "rain",
@@ -279,7 +281,7 @@ export function useSleepAudio(muteOn = false) {
   );
 
   useEffect(() => {
-    if (muteOn || !sleepEnabled) {
+    if (muteOn || !sleepEnabled || !pageVisible) {
       stopSleepAudio();
       return undefined;
     }
@@ -298,6 +300,7 @@ export function useSleepAudio(muteOn = false) {
   }, [
     muteOn,
     sleepEnabled,
+    pageVisible,
     sleepSoundMode,
     sleepVolume,
     startSleepAudio,

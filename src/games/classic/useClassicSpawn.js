@@ -184,6 +184,7 @@ export function useClassicSpawn({
   useEffect(() => {
     let lastShake = 0;
     const onMotion = (e) => {
+      if (document.visibilityState === "hidden") return;
       const acc = e.accelerationIncludingGravity;
       if (!acc) return;
       const mag = Math.sqrt(

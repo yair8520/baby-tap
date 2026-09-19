@@ -1,6 +1,7 @@
 /**
  * @typedef {Object} LearningGameShellProps
  * @property {number} [levelNum]     1-based stage number.
+ * @property {boolean} [showLevel]   When false, hides the stage badge.
  * @property {number} [totalLevels]  Campaign length; the stage strip is hidden below 2.
  * @property {number} [maxUnlocked]  Highest 0-based stage the player may jump to.
  * @property {(index: number) => void} [onSelectLevel] Omit for a read-only strip.
@@ -18,6 +19,7 @@
 
 export const DEFAULT_LEARNING_GAME_SHELL_PROPS = {
   levelNum: 1,
+  showLevel: true,
   levelDone: false,
   starCount: 3,
   maxStars: 3,

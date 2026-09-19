@@ -9,6 +9,7 @@ import { DEFAULT_LEARNING_GAME_SHELL_PROPS } from "./LearningGameShell.props.js"
  */
 export function LearningGameShell({
   levelNum = DEFAULT_LEARNING_GAME_SHELL_PROPS.levelNum,
+  showLevel = DEFAULT_LEARNING_GAME_SHELL_PROPS.showLevel,
   totalLevels,
   maxUnlocked,
   onSelectLevel,
@@ -27,6 +28,7 @@ export function LearningGameShell({
     <>
       <ShellHeader
         levelNum={levelNum}
+        showLevel={showLevel}
         starCount={starCount}
         maxStars={maxStars}
         trailing={headerTrailing}

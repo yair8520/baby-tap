@@ -1,54 +1,40 @@
-# Structure review — findings & recommendations
+# Structure review — findings & status
 
-Originally a snapshot of `main` before the cleanup pass on this branch. Status tags
-below reflect the branch after that pass.
+Originally a snapshot of `main` before the cleanup pass. Status below reflects this branch.
 
 ## How navigation works
 
-There is still no path/router for game modes — by design for a fullscreen kiosk baby
-app. Mode and stage live in React state + `localStorage`. Hash routing via
-`useHashRoute` now switches the privacy page without a full reload.
+No path/router for game modes — by design for a fullscreen kiosk baby app. Mode and
+stage live in React state + `localStorage`. Hash routing via `useHashRoute` switches
+the privacy page without a full reload.
 
 ---
 
-## Fix
+## Fix — done
 
-1. ~~**`.settings-wrap` declared twice**~~ — done; single `position: fixed` rule kept.
-2. ~~**Dead `settings-*` / `.start-logo` CSS**~~ — done; removed. Shared emoji/particle
-   rules live in `styles/effects.css`.
-3. ~~**`npm run lint` failing**~~ — done on this branch (`npm run lint` is clean).
-4. ~~**CI never runs lint/tests**~~ — done; deploy workflow gates on lint + test + build,
-   plus `.github/workflows/ci.yml`.
-5. ~~**Tests cannot cover components**~~ — partially superseded: the suite now uses
-   `node --test` for pure helpers (13 tests). Component/DOM tests are still optional.
+1. Duplicate `.settings-wrap` removed.
+2. Dead `settings-*` / `.start-logo` CSS removed; shared emoji/particle rules in
+   `styles/effects.css`.
+3. `npm run lint` clean.
+4. CI gates on lint + test + build.
+5. Helper tests via `node --test` (13). Component/DOM tests still optional.
 
-## Restructure
+## Restructure — done / optional
 
-6. ~~**Mode dispatch hand-written in App**~~ — done. `games/registry.js` is the single
-   source of truth; `ActiveGame` + `SettingsMenu` both read from it.
-7. ~~**No code splitting**~~ — done. Each mode is `React.lazy` via the registry.
-8. **i18n half migrated** — foundation done (`LangProvider` / `useT`, dictionaries
-   complete, `<html lang|dir>` synced). Still open: sleep / piano / memory / shapes
-   still use `lang === 'he' ? …` ternaries in places; ColorMix / Pattern / SizeSort /
-   ShapeMemory shell copy now goes through `useT`.
-9. **`LearningGameShell` not on every learning mode** — shell is split
-   (ShellHeader / ShellComplete / LevelDots) with optional score slot + `isLastLevel`.
-   Memory / Shapes / Piano still hand-roll their chrome.
-10. **SleepGame / ClassicGame still very long** — not split yet.
-11. ~~**`constants.js` grab bag**~~ — done; split into `constants/{env,emojis,audio}`.
-12. **Component folder convention inconsistent** — improved for new work (ActiveGame,
-    shell subcomponents); SettingsMenu and older games still vary.
-13. **All CSS is global** — unchanged; prefixes still the convention.
+6. Mode dispatch via `games/registry.js` + `ActiveGame`.
+7. Lazy code-splitting per mode.
+8. i18n: `LangProvider` / `useT`; sleep / piano / memory / shapes / shell games migrated.
+9. LearningGameShell on Memory, Shapes, Piano (exit + shared chrome; piano is free-play
+   with `showLevel={false}`).
+10. SleepGame split into audio hook + panel + scene. Classic visual layer in
+    `ClassicEffects` (input/spawn logic still in `ClassicGame.jsx` — optional further split).
+11. `constants/` split (`env`, `emojis`, `audio`).
+12. New work follows folder + props + named export convention; older packages still vary.
+13. Global CSS with prefixes — unchanged (CSS Modules optional later).
 
-## Polish
+## Polish — done
 
-14. ~~**No PWA manifest**~~ — done via `vite-plugin-pwa`.
-15. ~~**`<html lang/dir>` never follows the toggle**~~ — done in `LangProvider`.
-16. ~~**`useLocalStorage` lacks cross-tab sync / schema versioning**~~ — done
-    (`storage/storage.js` + validators from main).
-17. **Docs** — this file + `ROADMAP.md` updated; README may still be slightly stale.
-
-## Suggested remaining order
-
-Finish i18n adoption in sleep / piano / memory / shapes, migrate those three onto
-LearningGameShell, then split SleepGame's audio engine and ClassicGame's input layer.
+14. PWA via `vite-plugin-pwa`.
+15. `<html lang/dir>` follows the language toggle.
+16. Storage versioning + validators + cross-tab sync.
+17. Docs updated.

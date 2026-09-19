@@ -1,7 +1,9 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { IS_TOUCH, isWebView, PIANO_KEYS } from "../../constants";
 import { playPianoNote } from "../../audio.js";
+import { LearningGameShell } from "../../components/LearningGameShell";
 import { buzz } from "../../components/LearningGameShell/vibrate.js";
+import { useT } from "../../i18n";
 import "./PianoGame.css";
 
 function getBlackKeyPos(bk, whiteKeys, wKeyWidth) {
@@ -52,11 +54,9 @@ function findPianoKeyAtPoint(clientX, clientY, containerEl, rect) {
   return findPianoKey(clientX, clientY, rect);
 }
 
-/**
- * Interactive piano keyboard mode.
- */
-export default function PianoGame({ lang = "he", vibrateOn = true }) {
-  const isHebrewUI = lang === "he";
+/** Interactive piano keyboard mode. */
+export default function PianoGame({ onExit, vibrateOn = true }) {
+  const t = useT();
   const [pressedKeys, setPressedKeys] = useState(new Set());
   const [displayedKeys, setDisplayedKeys] = useState(new Set());
   const [isPortrait, setIsPortrait] = useState(
@@ -96,7 +96,6 @@ export default function PianoGame({ lang = "he", vibrateOn = true }) {
     };
   }, [pressedKeys]);
 
-  // Orientation lock (mobile)
   useEffect(() => {
     if (!IS_TOUCH || isWebView) return;
     const orientation = window.screen?.orientation;
@@ -130,8 +129,13 @@ export default function PianoGame({ lang = "he", vibrateOn = true }) {
       const rect = containerEl.getBoundingClientRect();
       const newPressed = new Set();
       const newDisplayed = new Set(displayedKeys);
-      Array.from(e.touches).forEach((t) => {
-        const key = findPianoKeyAtPoint(t.clientX, t.clientY, containerEl, rect);
+      Array.from(e.touches).forEach((touch) => {
+        const key = findPianoKeyAtPoint(
+          touch.clientX,
+          touch.clientY,
+          containerEl,
+          rect,
+        );
         if (key) {
           newPressed.add(key.id);
           if (!pressedKeysRef.current.has(key.id)) {
@@ -156,8 +160,13 @@ export default function PianoGame({ lang = "he", vibrateOn = true }) {
     const containerEl = pianoRef.current;
     const rect = containerEl.getBoundingClientRect();
     const newPressed = new Set();
-    Array.from(e.touches).forEach((t) => {
-      const key = findPianoKeyAtPoint(t.clientX, t.clientY, containerEl, rect);
+    Array.from(e.touches).forEach((touch) => {
+      const key = findPianoKeyAtPoint(
+        touch.clientX,
+        touch.clientY,
+        containerEl,
+        rect,
+      );
       if (key) newPressed.add(key.id);
     });
     setPressedKeys(newPressed);
@@ -184,95 +193,93 @@ export default function PianoGame({ lang = "he", vibrateOn = true }) {
     setPressedKeys(new Set());
   }, []);
 
-  const shouldForcePianoLandscape =
-    isMobileViewport && isPortrait;
-
-  const SOLFEGE = isHebrewUI
-    ? { C: "דו", D: "רה", E: "מי", F: "פה", G: "סול", A: "לה", B: "סי" }
-    : { C: "Do", D: "Re", E: "Mi", F: "Fa", G: "Sol", A: "La", B: "Si" };
+  const shouldForcePianoLandscape = isMobileViewport && isPortrait;
+  const noteLabel = (label) => t(`piano.solfege.${label}`);
 
   return (
     <div
       className={`piano-mode-shell${shouldForcePianoLandscape ? " force-landscape" : ""}`}
     >
-      {IS_TOUCH && isPortrait && !shouldForcePianoLandscape && (
-        <div className="piano-rotate-hint">
-          <div className="piano-rotate-icon">🔄</div>
-          <div>
-            {isHebrewUI
-              ? "סובב את המכשיר לרוחב"
-              : "Rotate device to landscape"}
-          </div>
-        </div>
-      )}
-
-      <div className="piano-display">
-        {displayedKeys.size > 0 ? (
-          Array.from(displayedKeys).map((kid) => {
-            const k = PIANO_KEYS.find((p) => p.id === kid);
-            if (!k) return null;
-            const name =
-              (SOLFEGE[k.label] ?? "?") + (k.type === "black" ? "♯" : "");
-            return (
-              <span key={kid} className="piano-note-label">
-                {name}
-              </span>
-            );
-          })
-        ) : (
-          <span className="piano-display-hint">🎹</span>
-        )}
-      </div>
-
-      <div
-        ref={pianoRef}
-        className="piano-container"
-        onTouchStart={IS_TOUCH ? handlePianoTouch : undefined}
-        onTouchMove={IS_TOUCH ? handlePianoTouch : undefined}
-        onTouchEnd={IS_TOUCH ? handlePianoTouchEnd : undefined}
-        onMouseDown={IS_TOUCH ? undefined : handlePianoMouseDown}
-        onMouseMove={
-          IS_TOUCH
-            ? undefined
-            : (e) => {
-                if (e.buttons === 1) handlePianoMouseDown(e);
-              }
-        }
-        onMouseUp={IS_TOUCH ? undefined : handlePianoMouseUp}
-        onMouseLeave={IS_TOUCH ? undefined : handlePianoMouseUp}
+      <LearningGameShell
+        showLevel={false}
+        maxStars={0}
+        onExit={onExit}
       >
-        {PIANO_KEYS.filter((k) => k.type === "white").map((key, idx, arr) => (
-          <div
-            key={key.id}
-            className={`piano-key white-key${pressedKeys.has(key.id) ? " pressed" : ""}`}
-            data-key-id={key.id}
-            style={{
-              left: `${(idx / arr.length) * 100}%`,
-              width: `${100 / arr.length}%`,
-            }}
-          >
-            <span className="piano-key-label">{key.label}</span>
+        {IS_TOUCH && isPortrait && !shouldForcePianoLandscape && (
+          <div className="piano-rotate-hint">
+            <div className="piano-rotate-icon">🔄</div>
+            <div>{t("piano.rotate")}</div>
           </div>
-        ))}
-        {PIANO_KEYS.filter((k) => k.type === "black").map((key) => {
-          const whites = PIANO_KEYS.filter((k) => k.type === "white");
-          const ww = 100 / whites.length;
-          const noteChar = key.id.slice(0, -1);
-          const octave = key.id.slice(-1);
-          const leftWhiteId = noteChar[0] + octave;
-          const leftIdx = whites.findIndex((k) => k.id === leftWhiteId);
-          if (leftIdx < 0) return null;
-          const leftPct = (leftIdx + 1) * ww - ww * 0.3;
-          return (
+        )}
+
+        <div className="piano-display">
+          {displayedKeys.size > 0 ? (
+            Array.from(displayedKeys).map((kid) => {
+              const k = PIANO_KEYS.find((p) => p.id === kid);
+              if (!k) return null;
+              const name =
+                (noteLabel(k.label) || "?") + (k.type === "black" ? "♯" : "");
+              return (
+                <span key={kid} className="piano-note-label">
+                  {name}
+                </span>
+              );
+            })
+          ) : (
+            <span className="piano-display-hint">🎹</span>
+          )}
+        </div>
+
+        <div
+          ref={pianoRef}
+          className="piano-container"
+          onTouchStart={IS_TOUCH ? handlePianoTouch : undefined}
+          onTouchMove={IS_TOUCH ? handlePianoTouch : undefined}
+          onTouchEnd={IS_TOUCH ? handlePianoTouchEnd : undefined}
+          onMouseDown={IS_TOUCH ? undefined : handlePianoMouseDown}
+          onMouseMove={
+            IS_TOUCH
+              ? undefined
+              : (e) => {
+                  if (e.buttons === 1) handlePianoMouseDown(e);
+                }
+          }
+          onMouseUp={IS_TOUCH ? undefined : handlePianoMouseUp}
+          onMouseLeave={IS_TOUCH ? undefined : handlePianoMouseUp}
+        >
+          {PIANO_KEYS.filter((k) => k.type === "white").map((key, idx, arr) => (
             <div
               key={key.id}
-              className={`piano-key black-key${pressedKeys.has(key.id) ? " pressed" : ""}`}
+              className={`piano-key white-key${pressedKeys.has(key.id) ? " pressed" : ""}`}
               data-key-id={key.id}
-              style={{ left: `${leftPct}%`, width: `${ww * 0.6}%` }}
-            />
-          );
-        })}
-      </div>
+              style={{
+                left: `${(idx / arr.length) * 100}%`,
+                width: `${100 / arr.length}%`,
+              }}
+            >
+              <span className="piano-key-label">{key.label}</span>
+            </div>
+          ))}
+          {PIANO_KEYS.filter((k) => k.type === "black").map((key) => {
+            const whites = PIANO_KEYS.filter((k) => k.type === "white");
+            const ww = 100 / whites.length;
+            const noteChar = key.id.slice(0, -1);
+            const octave = key.id.slice(-1);
+            const leftWhiteId = noteChar[0] + octave;
+            const leftIdx = whites.findIndex((k) => k.id === leftWhiteId);
+            if (leftIdx < 0) return null;
+            const leftPct = (leftIdx + 1) * ww - ww * 0.3;
+            return (
+              <div
+                key={key.id}
+                className={`piano-key black-key${pressedKeys.has(key.id) ? " pressed" : ""}`}
+                data-key-id={key.id}
+                style={{ left: `${leftPct}%`, width: `${ww * 0.6}%` }}
+              />
+            );
+          })}
+        </div>
+      </LearningGameShell>
     </div>
   );
 }

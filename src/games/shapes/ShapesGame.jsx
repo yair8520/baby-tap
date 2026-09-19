@@ -1,14 +1,15 @@
 import { useState, useEffect, useCallback, useRef } from "react";
+import { LearningGameShell } from "../../components/LearningGameShell";
 import {
   SHAPES_LEVELS,
   SHAPE_COLORS,
-  SHAPE_TYPES,
   generateChallenge,
   getShapesLevelIndex,
 } from "./levels.js";
 import { useLocalStorage } from "../../hooks/useLocalStorage.js";
 import { STORAGE_KEYS } from "../../storage/keys.js";
 import { isNonNegativeInteger } from "../../storage/validation.js";
+import { useT } from "../../i18n";
 import "./ShapesGame.css";
 
 function ShapeIcon({ shape, color, size = 80 }) {
@@ -19,21 +20,41 @@ function ShapeIcon({ shape, color, size = 80 }) {
     case "circle":
       return (
         <svg width={s} height={s} viewBox="0 0 100 100">
-          <circle cx="50" cy="50" r="42" fill={hex} stroke="rgba(255,255,255,0.3)" strokeWidth="3" />
+          <circle
+            cx="50"
+            cy="50"
+            r="42"
+            fill={hex}
+            stroke="rgba(255,255,255,0.3)"
+            strokeWidth="3"
+          />
         </svg>
       );
     case "square":
       return (
         <svg width={s} height={s} viewBox="0 0 100 100">
-          <rect x="10" y="10" width="80" height="80" rx="10" ry="10"
-            fill={hex} stroke="rgba(255,255,255,0.3)" strokeWidth="3" />
+          <rect
+            x="10"
+            y="10"
+            width="80"
+            height="80"
+            rx="10"
+            ry="10"
+            fill={hex}
+            stroke="rgba(255,255,255,0.3)"
+            strokeWidth="3"
+          />
         </svg>
       );
     case "triangle":
       return (
         <svg width={s} height={s} viewBox="0 0 100 100">
-          <polygon points="50,8 92,88 8,88"
-            fill={hex} stroke="rgba(255,255,255,0.3)" strokeWidth="3" />
+          <polygon
+            points="50,8 92,88 8,88"
+            fill={hex}
+            stroke="rgba(255,255,255,0.3)"
+            strokeWidth="3"
+          />
         </svg>
       );
     case "star":
@@ -41,7 +62,10 @@ function ShapeIcon({ shape, color, size = 80 }) {
         <svg width={s} height={s} viewBox="0 0 100 100">
           <polygon
             points="50,5 61,35 95,35 68,57 79,91 50,70 21,91 32,57 5,35 39,35"
-            fill={hex} stroke="rgba(255,255,255,0.3)" strokeWidth="2" />
+            fill={hex}
+            stroke="rgba(255,255,255,0.3)"
+            strokeWidth="2"
+          />
         </svg>
       );
     case "heart":
@@ -49,7 +73,10 @@ function ShapeIcon({ shape, color, size = 80 }) {
         <svg width={s} height={s} viewBox="0 0 100 100">
           <path
             d="M50 80 C10 55 5 20 25 12 C35 8 45 14 50 22 C55 14 65 8 75 12 C95 20 90 55 50 80Z"
-            fill={hex} stroke="rgba(255,255,255,0.3)" strokeWidth="2" />
+            fill={hex}
+            stroke="rgba(255,255,255,0.3)"
+            strokeWidth="2"
+          />
         </svg>
       );
     default:
@@ -57,10 +84,8 @@ function ShapeIcon({ shape, color, size = 80 }) {
   }
 }
 
-export default function ShapesGame({ lang, onSound }) {
-  const isHe = lang === "he";
-  const L = (he, en) => (isHe ? he : en);
-
+export default function ShapesGame({ onExit, onSound }) {
+  const t = useT();
   const [score, setScore] = useLocalStorage(
     STORAGE_KEYS.shapesScore,
     0,
@@ -68,7 +93,7 @@ export default function ShapesGame({ lang, onSound }) {
   );
   const levelIdx = getShapesLevelIndex(score);
   const [challenge, setChallenge] = useState(null);
-  const [feedback, setFeedback] = useState(null); // { correct: bool, shapeId }
+  const [feedback, setFeedback] = useState(null);
   const [locked, setLocked] = useState(false);
   const [levelUpFlash, setLevelUpFlash] = useState(false);
   const timersRef = useRef(new Set());
@@ -110,97 +135,91 @@ export default function ShapesGame({ lang, onSound }) {
 
   useEffect(() => () => clearTimers(), [clearTimers]);
 
-  const handleTap = useCallback((shapeItem) => {
-    if (locked || !challenge) return;
-    setLocked(true);
+  const handleTap = useCallback(
+    (shapeItem) => {
+      if (locked || !challenge) return;
+      setLocked(true);
 
-    const correct =
-      shapeItem.color === challenge.targetColor &&
-      shapeItem.shape === challenge.targetShape;
+      const correct =
+        shapeItem.color === challenge.targetColor &&
+        shapeItem.shape === challenge.targetShape;
 
-    setFeedback({ correct, shapeId: shapeItem.id });
+      setFeedback({ correct, shapeId: shapeItem.id });
 
-    if (correct) {
-      onSound?.("match");
-      setScore((s) => s + 1);
-    } else {
-      onSound?.("miss");
-    }
+      if (correct) {
+        onSound?.("match");
+        setScore((s) => s + 1);
+      } else {
+        onSound?.("miss");
+      }
 
-    schedule(() => {
-      nextChallenge(currentLevel);
-    }, 700);
-  }, [locked, challenge, currentLevel, nextChallenge, onSound, schedule, setScore]);
+      schedule(() => {
+        nextChallenge(currentLevel);
+      }, 700);
+    },
+    [locked, challenge, currentLevel, nextChallenge, onSound, schedule, setScore],
+  );
 
   if (!challenge) return null;
 
-  const targetColorLabel = isHe
-    ? SHAPE_COLORS[challenge.targetColor]?.he
-    : SHAPE_COLORS[challenge.targetColor]?.en;
-  const targetShapeLabel = isHe
-    ? SHAPE_TYPES[challenge.targetShape]?.he
-    : SHAPE_TYPES[challenge.targetShape]?.en;
-
-  // Responsive shape size
+  const targetColorLabel = t(`shapes.colors.${challenge.targetColor}`);
+  const targetShapeLabel = t(`shapes.shapeNames.${challenge.targetShape}`);
   const shapeSize = Math.min(
     Math.floor(Math.min(window.innerWidth, window.innerHeight) * 0.18),
-    88
+    88,
   );
 
   return (
-    <div className="sg-root" dir={isHe ? "rtl" : "ltr"}>
-      {/* Header */}
-      <div className="sg-header">
-        <span className="sg-level-badge">
-          {L(`רמה ${currentLevel.id}`, `Level ${currentLevel.id}`)}
-        </span>
-        <span className="sg-score">
-          {L(`ניקוד: ${score}`, `Score: ${score}`)}
-        </span>
-      </div>
+    <div className="sg-root">
+      <LearningGameShell
+        levelNum={currentLevel.id}
+        totalLevels={SHAPES_LEVELS.length}
+        maxUnlocked={levelIdx}
+        onExit={onExit}
+        maxStars={0}
+        headerTrailing={t("shapes.score", { score })}
+      >
+        {levelUpFlash && (
+          <div className="sg-levelup">
+            {t("shapes.levelUp", { level: currentLevel.id })}
+          </div>
+        )}
 
-      {/* Level-up flash */}
-      {levelUpFlash && (
-        <div className="sg-levelup">
-          {L(`🎉 רמה ${currentLevel.id}!`, `🎉 Level ${currentLevel.id}!`)}
+        <div className="sg-instruction">
+          <span className="sg-instruction-tap">{t("shapes.tap")}</span>
+          <span
+            className="sg-target-color"
+            style={{ color: SHAPE_COLORS[challenge.targetColor]?.hex }}
+          >
+            {targetColorLabel}
+          </span>
+          <span className="sg-target-shape">{targetShapeLabel}!</span>
         </div>
-      )}
 
-      {/* Instruction */}
-      <div className="sg-instruction">
-        <span className="sg-instruction-tap">{L("גע ב", "Tap the")}</span>
-        <span className="sg-target-color" style={{ color: SHAPE_COLORS[challenge.targetColor]?.hex }}>
-          {targetColorLabel}
-        </span>
-        <span className="sg-target-shape">{targetShapeLabel}!</span>
-      </div>
-
-      {/* Shapes grid */}
-      <div className="sg-grid" style={{ "--cols": Math.ceil(Math.sqrt(challenge.shapes.length)) }}>
-        {challenge.shapes.map((item) => {
-          const isFeedback = feedback && feedback.shapeId === item.id;
-          return (
-            <button
-              key={item.id}
-              className={`sg-shape-btn${isFeedback ? (feedback.correct ? " sg-correct" : " sg-wrong") : ""}`}
-              onPointerUp={() => handleTap(item)}
-              aria-label={`${item.color} ${item.shape}`}
-            >
-              <ShapeIcon shape={item.shape} color={item.color} size={shapeSize} />
-            </button>
-          );
-        })}
-      </div>
-
-      {/* Level dots */}
-      <div className="sg-level-dots">
-        {SHAPES_LEVELS.map((lvl, i) => (
-          <div
-            key={lvl.id}
-            className={`sg-dot${i === levelIdx ? " sg-dot--active" : ""}${i > levelIdx ? " sg-dot--locked" : " sg-dot--done"}`}
-          />
-        ))}
-      </div>
+        <div
+          className="sg-grid"
+          style={{ "--cols": Math.ceil(Math.sqrt(challenge.shapes.length)) }}
+        >
+          {challenge.shapes.map((item) => {
+            const isFeedback = feedback && feedback.shapeId === item.id;
+            return (
+              <button
+                key={item.id}
+                type="button"
+                className={`sg-shape-btn${isFeedback ? (feedback.correct ? " sg-correct" : " sg-wrong") : ""}`}
+                onPointerUp={() => handleTap(item)}
+                aria-label={`${item.color} ${item.shape}`}
+              >
+                <ShapeIcon
+                  shape={item.shape}
+                  color={item.color}
+                  size={shapeSize}
+                />
+              </button>
+            );
+          })}
+        </div>
+      </LearningGameShell>
     </div>
   );
 }

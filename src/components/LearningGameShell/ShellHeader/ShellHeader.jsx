@@ -2,9 +2,10 @@ import { useT } from "../../../i18n";
 import { DEFAULT_SHELL_HEADER_PROPS } from "./ShellHeader.props.js";
 import "./ShellHeader.css";
 
-/** Exit button, stage badge and the running star row (or a score slot). */
+/** Exit button, optional stage badge and the running star row (or a score slot). */
 export function ShellHeader({
   levelNum = DEFAULT_SHELL_HEADER_PROPS.levelNum,
+  showLevel = DEFAULT_SHELL_HEADER_PROPS.showLevel,
   starCount = DEFAULT_SHELL_HEADER_PROPS.starCount,
   maxStars = DEFAULT_SHELL_HEADER_PROPS.maxStars,
   trailing = null,
@@ -22,9 +23,13 @@ export function ShellHeader({
       >
         ✕
       </button>
-      <span className="lgs-level-label">
-        {t("learning.level", { level: levelNum })}
-      </span>
+      {showLevel ? (
+        <span className="lgs-level-label">
+          {t("learning.level", { level: levelNum })}
+        </span>
+      ) : (
+        <span className="lgs-hdr-slot" />
+      )}
       {maxStars > 0 ? (
         <span
           className="lgs-hdr-stars"

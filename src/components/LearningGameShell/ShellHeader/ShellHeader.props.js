@@ -1,6 +1,7 @@
 /**
  * @typedef {Object} ShellHeaderProps
  * @property {number} [levelNum]  1-based stage number shown in the badge.
+ * @property {boolean} [showLevel] When false, hides the stage badge (free-play modes).
  * @property {number} [starCount] Stars earned so far in this stage.
  * @property {number} [maxStars]  Stars obtainable per stage; 0 swaps the star row for `trailing`.
  * @property {import('react').ReactNode} [trailing] Shown instead of stars for score-based games.
@@ -9,6 +10,7 @@
 
 export const DEFAULT_SHELL_HEADER_PROPS = {
   levelNum: 1,
+  showLevel: true,
   starCount: 3,
   maxStars: 3,
 };

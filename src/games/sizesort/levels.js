@@ -200,8 +200,13 @@ export function buildLevel(levelIdx, W, H) {
     glow: color.glow,
   }));
 
+  const shuffledRanks = [...Array(count).keys()].sort(
+    () => Math.random() - 0.5,
+  );
+  const placedSizes = shuffledRanks.map((rank) => sizes[rank]);
+
   const pieceTotalW =
-    sizes.reduce((a, s) => a + s, 0) + (count - 1) * pieceGap;
+    placedSizes.reduce((a, s) => a + s, 0) + (count - 1) * pieceGap;
   let pieceStartX = (W - pieceTotalW) / 2;
 
   // Keep homes inside drag+shake bounds even if the largest piece lands at an edge.
@@ -216,13 +221,9 @@ export function buildLevel(levelIdx, W, H) {
   const pieceXPositions = [];
   let xCursor = pieceStartX;
   for (let i = 0; i < count; i++) {
-    pieceXPositions.push(xCursor + sizes[i] / 2);
-    xCursor += sizes[i] + pieceGap;
+    pieceXPositions.push(xCursor + placedSizes[i] / 2);
+    xCursor += placedSizes[i] + pieceGap;
   }
-
-  const shuffledRanks = [...Array(count).keys()].sort(
-    () => Math.random() - 0.5,
-  );
 
   const pieces = shuffledRanks.map((rank, posIdx) => {
     const size = sizes[rank];

@@ -9,38 +9,27 @@ import ClassicGame from "./games/classic";
 import DrumsGame from "./games/drums";
 import PianoGame from "./games/piano";
 import SleepGame from "./games/sleep";
+import { Balloons } from "./games/balloons";
+import { Targets } from "./games/targets";
 
 import {
-  IS_TOUCH,
   isHebrew as defaultHebrew,
   isWebView,
   canVibrate,
 } from "./constants.js";
-import {
-  BALLOON_LEVELS,
-  BALLOON_LEVEL_STEP,
-  getBalloonLevelNumber,
-  getBalloonConfigByLevel,
-} from "./games/balloons/levels.js";
-import { getTargetLevelConfig } from "./games/targets/levels.js";
 
 import {
   setGlobalMute,
   playSound,
-  playBalloonPop,
 } from "./audio.js";
 
 import { useLocalStorage } from "./hooks/useLocalStorage.js";
 import { STORAGE_KEYS } from "./storage/keys.js";
 import { clearStoredProgress } from "./storage/progress.js";
-import {
-  isBoolean,
-  isNonNegativeInteger,
-} from "./storage/validation.js";
+import { isBoolean } from "./storage/validation.js";
 import SettingsMenu from "./components/SettingsMenu/index.jsx";
 import MemoryGame from "./games/memory/MemoryGame.jsx";
 import ShapesGame from "./games/shapes/ShapesGame.jsx";
-import { rand, randInt, nextId } from "./utils/random.js";
 import { getT } from "./i18n/index.js";
 
 const THEME_PRESETS = {
@@ -95,32 +84,6 @@ const GAME_MODE_IDS = [
   "shapememory",
   "pattern",
 ];
-const isBalloonLevel = (value) =>
-  Number.isInteger(value) &&
-  value >= 1 &&
-  value <= BALLOON_LEVELS.length;
-
-// speedFactor: 1 = normal, 2 = twice as fast, etc.
-function makeBalloon(speedFactor = 1) {
-  const size = randInt(65, 106);
-  const hue = randInt(0, 360);
-  const sway = rand(-60, 60);
-  const rise = rand(6000 / speedFactor, 11000 / speedFactor);
-  const floatD = rand(2000, 4000);
-  return {
-    id: nextId(),
-    x: rand(size, window.innerWidth - size),
-    y: window.innerHeight + size,
-    size,
-    color: `hsl(${hue}, 80%, 70%)`,
-    colorDark: `hsl(${hue}, 70%, 50%)`,
-    sway,
-    rise,
-    floatD,
-    born: Date.now(),
-  };
-}
-
 export default function App() {
   const [lang, setLang] = useLocalStorage(
     STORAGE_KEYS.lang,
@@ -158,46 +121,12 @@ export default function App() {
   const [showSettingsHint, setShowSettingsHint] = useState(false);
   const [progressEpoch, setProgressEpoch] = useState(0);
 
-  // Shared sparkle emojis for balloons / targets
-  const [emojis, setEmojis] = useState([]);
-
-  // Balloon mode state
-  const [balloons, setBalloons] = useState([]);
-  const [balloonHint, setBalloonHint] = useState(false);
-  const [popCount, setPopCount] = useState(0);
-  const [balloonMissed, setBalloonMissed] = useState(0);
-  const [balloonLevel, setBalloonLevel] = useState(1);
-  const [balloonLevelUp, setBalloonLevelUp] = useState(null);
-  const balloonLevelRef = useRef(1);
-  const balloonsRef = useRef([]);
-  const [balloonSavedLevel, setBalloonSavedLevel] = useLocalStorage(
-    STORAGE_KEYS.balloonLevel,
-    1,
-    isBalloonLevel,
-  );
-  const [targetHighScore, setTargetHighScore] = useLocalStorage(
-    STORAGE_KEYS.targetHighScore,
-    0,
-    isNonNegativeInteger,
-  );
-
-  // Target mode state
-  const [targets, setTargets] = useState([]);
-  const [targetScore, setTargetScore] = useState(0);
-  const [targetMissed, setTargetMissed] = useState(0);
-  const targetsRef = useRef([]);
-
   const containerRef = useRef(null);
   const holdStartRef = useRef(null);
   const holdIntervalRef = useRef(null);
   const vibrateRef = useRef(true);
   const muteRef = useRef(false);
-  const balloonTimerRef = useRef(null);
-  const lastBalloonPopRef = useRef(0);
-  const gameModeRef = useRef("classic");
   const settingsRef = useRef(null);
-  const targetScoreRef = useRef(0);
-  const spawnTargetRef = useRef(null);
   const timeoutIdsRef = useRef(new Set());
 
   const scheduleTimeout = useCallback((callback, delay) => {
@@ -216,16 +145,6 @@ export default function App() {
     muteRef.current = muteOn;
     setGlobalMute(muteOn);
   }, [muteOn]);
-  useEffect(() => {
-    gameModeRef.current = gameMode;
-  }, [gameMode]);
-  useEffect(() => {
-    targetsRef.current = targets;
-  }, [targets]);
-  useEffect(() => {
-    targetScoreRef.current = targetScore;
-  }, [targetScore]);
-
   useEffect(() => {
     document.documentElement.lang = lang;
     document.documentElement.dir = isHebrewUI ? "rtl" : "ltr";
@@ -329,280 +248,13 @@ export default function App() {
   };
 
   useEffect(() => {
-    balloonsRef.current = balloons;
-  }, [balloons]);
-
-  useEffect(() => {
-    if (gameMode !== "balloons") return;
-    const newLevel = getBalloonLevelNumber(popCount);
-    if (newLevel <= balloonLevelRef.current) return;
-    const levelTimer = scheduleTimeout(() => {
-      balloonLevelRef.current = newLevel;
-      setBalloonLevel(newLevel);
-      setBalloonSavedLevel(newLevel);
-      setBalloonLevelUp({ level: newLevel });
-      vibrate([60, 30, 80]);
-      scheduleTimeout(() => setBalloonLevelUp(null), 2000);
-    }, 0);
-    return () => clearTimeout(levelTimer);
-  }, [
-    popCount,
-    gameMode,
-    vibrate,
-    setBalloonSavedLevel,
-    scheduleTimeout,
-  ]);
-
-  useEffect(() => {
-    const initializeTimer = scheduleTimeout(() => {
-      if (!isFullscreen || gameMode !== "balloons") {
-        clearInterval(balloonTimerRef.current);
-        setBalloons([]);
-        setBalloonMissed(0);
-        const savedLvl = balloonLevelRef.current;
-        if (savedLvl > 1) setBalloonSavedLevel(savedLvl);
-        setPopCount(0);
-        setBalloonLevel(1);
-        balloonLevelRef.current = 1;
-        return;
-      }
-      if (balloonLevel === 1 && balloonSavedLevel > 1) {
-        const restoredPops = (balloonSavedLevel - 1) * BALLOON_LEVEL_STEP;
-        setPopCount(restoredPops);
-        setBalloonLevel(balloonSavedLevel);
-        balloonLevelRef.current = balloonSavedLevel;
-      }
-      const cfg = getBalloonConfigByLevel(balloonLevel);
-      const speed = cfg.speedFactor;
-      const interval = cfg.spawnIntervalMs;
-      const maxOnScreen = cfg.maxOnScreen;
-
-      setBalloons([makeBalloon(speed), makeBalloon(speed), makeBalloon(speed)]);
-      clearInterval(balloonTimerRef.current);
-      balloonTimerRef.current = setInterval(() => {
-        setBalloons((prev) => {
-          if (prev.length >= maxOnScreen) return prev;
-          return [...prev, makeBalloon(speed)];
-        });
-      }, interval);
-    }, 0);
-    return () => {
-      clearTimeout(initializeTimer);
-      clearInterval(balloonTimerRef.current);
-    };
-  }, [
-    isFullscreen,
-    gameMode,
-    balloonLevel,
-    balloonSavedLevel,
-    scheduleTimeout,
-    setBalloonSavedLevel,
-  ]);
-
-  useEffect(() => {
-    if (gameMode !== "balloons") return;
-    const tick = setInterval(() => {
-      const now = Date.now();
-      setBalloons((prev) => {
-        const expired = prev.filter((b) => now - b.born >= b.rise + 200);
-        if (expired.length) setBalloonMissed((m) => m + expired.length);
-        return prev.filter((b) => now - b.born < b.rise + 200);
-      });
-    }, 500);
-    return () => clearInterval(tick);
-  }, [gameMode]);
-
-  useEffect(() => {
-    if (gameMode !== "balloons" || !isFullscreen) {
-      const resetTimer = scheduleTimeout(() => setBalloonHint(false), 0);
-      return () => clearTimeout(resetTimer);
-    }
-    lastBalloonPopRef.current = Date.now();
-    const check = setInterval(() => {
-      if (Date.now() - lastBalloonPopRef.current > 5000) {
-        setBalloonHint(true);
-      } else {
-        setBalloonHint(false);
-      }
-    }, 500);
-    return () => clearInterval(check);
-  }, [gameMode, isFullscreen, scheduleTimeout]);
-
-  const spawnTarget = useCallback(() => {
-    const score = targetScoreRef.current;
-    const cfg = getTargetLevelConfig(score);
-    const duration = cfg.durationMs;
-    const maxTargets = cfg.maxTargets;
-    if (targetsRef.current.length >= maxTargets) return;
-
-    const size = randInt(cfg.minSize, cfg.maxSize + 1);
-    const x = rand(80 + size / 2, window.innerWidth - 80 - size / 2);
-    const y = rand(80 + size / 2, window.innerHeight - 80 - size / 2);
-    const emoji = activeEmojis[randInt(0, activeEmojis.length)];
-    const hue = randInt(0, 360);
-    const id = nextId();
-
-    const removeTimer = scheduleTimeout(() => {
-      setTargets((prev) => {
-        const still = prev.find((t) => t.id === id && !t.popped);
-        if (!still) return prev;
-        setTargetMissed((m) => m + 1);
-        return prev.filter((t) => t.id !== id);
-      });
-      scheduleTimeout(() => {
-        if (gameModeRef.current === "targets") spawnTargetRef.current?.();
-      }, 800);
-    }, duration);
-
-    const target = {
-      id,
-      x,
-      y,
-      size,
-      emoji,
-      hue,
-      duration,
-      removeTimer,
-      popped: false,
-    };
-    setTargets((prev) => [...prev, target]);
-  }, [activeEmojis, scheduleTimeout]);
-
-  useEffect(() => {
-    spawnTargetRef.current = spawnTarget;
-  }, [spawnTarget]);
-
-  useEffect(() => {
-    const initializeTimer = scheduleTimeout(() => {
-      if (!isFullscreen || gameMode !== "targets") {
-        targetsRef.current.forEach((t) => clearTimeout(t.removeTimer));
-        setTargets([]);
-        setTargetScore(0);
-        setTargetMissed(0);
-        return;
-      }
-      spawnTarget();
-      spawnTarget();
-    }, 0);
-    return () => {
-      clearTimeout(initializeTimer);
-      targetsRef.current.forEach((t) => clearTimeout(t.removeTimer));
-    };
-  }, [isFullscreen, gameMode, scheduleTimeout, spawnTarget]);
-
-  const handleTargetTap = useCallback(
-    (target, e) => {
-      e.stopPropagation();
-      e.preventDefault();
-      if (target.popped) return;
-
-      clearTimeout(target.removeTimer);
-      setTargets((prev) =>
-        prev.map((t) => (t.id === target.id ? { ...t, popped: true } : t)),
-      );
-
-      setTargetScore((s) => {
-        const next = s + 1;
-        setTargetHighScore((hs) => Math.max(hs, next));
-        return next;
-      });
-
-      playSound("number");
-      vibrate([20]);
-
-      const cx = e.changedTouches ? e.changedTouches[0].clientX : e.clientX;
-      const cy = e.changedTouches ? e.changedTouches[0].clientY : e.clientY;
-      const sparkles = ["✨", "🌟", "💫", "⭐", "🎉"];
-      const newEmojis = Array.from({ length: 5 }, () => {
-        const id = nextId();
-        const emoji = sparkles[randInt(0, sparkles.length)];
-        const size = randInt(24, 44);
-        const angle = rand(0, Math.PI * 2);
-        const distance = rand(40, 110);
-        const dx = Math.cos(angle) * distance;
-        const dy = Math.sin(angle) * distance - rand(30, 60);
-        const rotation = rand(-180, 180);
-        const duration = rand(500, 800);
-        scheduleTimeout(
-          () => setEmojis((prev) => prev.filter((e) => e.id !== id)),
-          duration,
-        );
-        return { id, emoji, x: cx, y: cy, size, dx, dy, rotation, duration };
-      });
-      setEmojis((prev) => [...prev, ...newEmojis]);
-
-      scheduleTimeout(() => {
-        setTargets((prev) => prev.filter((t) => t.id !== target.id));
-        scheduleTimeout(() => {
-          if (gameModeRef.current === "targets") spawnTargetRef.current?.();
-        }, 800);
-      }, 280);
-    },
-    [vibrate, scheduleTimeout, setTargetHighScore],
-  );
-
-  const popBalloon = useCallback(
-    (balloon, clientX, clientY) => {
-      setBalloons((prev) => prev.filter((b) => b.id !== balloon.id));
-      setPopCount((c) => c + 1);
-      lastBalloonPopRef.current = Date.now();
-      setBalloonHint(false);
-      playBalloonPop();
-      vibrate([25]);
-
-      const sparkles = ["✨", "🌟", "💫", "⭐", "🎉", "💥"];
-      const count = randInt(3, 6);
-      const newEmojis = Array.from({ length: count }, () => {
-        const id = nextId();
-        const emoji = sparkles[randInt(0, sparkles.length)];
-        const size = randInt(28, 50);
-        const angle = rand(0, Math.PI * 2);
-        const distance = rand(40, 120);
-        const dx = Math.cos(angle) * distance;
-        const dy = Math.sin(angle) * distance - rand(30, 70);
-        const rotation = rand(-180, 180);
-        const duration = rand(500, 800);
-        scheduleTimeout(
-          () => setEmojis((prev) => prev.filter((e) => e.id !== id)),
-          duration,
-        );
-        return {
-          id,
-          emoji,
-          x: clientX,
-          y: clientY,
-          size,
-          dx,
-          dy,
-          rotation,
-          duration,
-        };
-      });
-      setEmojis((prev) => [...prev, ...newEmojis]);
-    },
-    [vibrate, scheduleTimeout],
-  );
-
-  useEffect(() => {
     const timeoutIds = timeoutIdsRef.current;
     return () => {
       clearInterval(holdIntervalRef.current);
-      clearInterval(balloonTimerRef.current);
-      targetsRef.current.forEach((target) => clearTimeout(target.removeTimer));
       timeoutIds.forEach(clearTimeout);
       timeoutIds.clear();
     };
   }, []);
-
-  const handleBalloonDirectTap = useCallback(
-    (balloon, e) => {
-      e.preventDefault();
-      e.stopPropagation();
-      const point = e.touches?.[0] || e.changedTouches?.[0] || e;
-      popBalloon(balloon, point.clientX, point.clientY);
-    },
-    [popBalloon],
-  );
 
   const resetProgress = useCallback(() => {
     try {
@@ -610,19 +262,8 @@ export default function App() {
     } catch {
       // Preference storage may be unavailable; still reset live game state.
     }
-    targetsRef.current.forEach((target) => clearTimeout(target.removeTimer));
-    setBalloonSavedLevel(1);
-    setTargetHighScore(0);
-    setBalloons([]);
-    setPopCount(0);
-    setBalloonMissed(0);
-    setBalloonLevel(1);
-    balloonLevelRef.current = 1;
-    setTargets([]);
-    setTargetScore(0);
-    setTargetMissed(0);
     setProgressEpoch((epoch) => epoch + 1);
-  }, [setBalloonSavedLevel, setTargetHighScore]);
+  }, []);
 
   const C = 2 * Math.PI * 22;
 
@@ -795,128 +436,22 @@ export default function App() {
           )}
 
           {gameMode === "balloons" && (
-            <>
-              <div className="balloon-counter">
-                {t("balloons.counter", { pops: popCount, missed: balloonMissed })}
-                {" | "}
-                <span className="balloon-level-badge">
-                  {"⚡".repeat(Math.min(balloonLevel, 5))}{" "}
-                  {t("balloons.level", { level: balloonLevel })}
-                </span>
-              </div>
-
-              {balloonLevelUp && (
-                <div className="balloon-levelup" role="status" aria-live="polite">
-                  {"🚀"}
-                  <br />
-                  {t("balloons.levelUp", { level: balloonLevelUp.level })}
-                </div>
-              )}
-
-              {balloonHint && (
-                <div className="balloon-hint" role="status" aria-live="polite">
-                  {t("balloons.hint")}
-                </div>
-              )}
-
-              {balloons.map((b) => (
-                <div
-                  key={b.id}
-                  className="balloon"
-                  onTouchStart={(e) => handleBalloonDirectTap(b, e)}
-                  onMouseDown={
-                    IS_TOUCH
-                      ? undefined
-                      : (e) => handleBalloonDirectTap(b, e)
-                  }
-                  style={{
-                    left: b.x,
-                    top: b.y,
-                    width: b.size,
-                    height: b.size * 1.15,
-                    background: `radial-gradient(circle at 35% 30%, white 0%, ${b.color} 40%, ${b.colorDark} 100%)`,
-                    "--rise": `${b.rise}ms`,
-                    "--dur": `${b.floatD}ms`,
-                    "--sway": `${b.sway}px`,
-                  }}
-                />
-              ))}
-            </>
+            <Balloons
+              key={`balloons-${progressEpoch}`}
+              t={t}
+              vibrate={vibrate}
+            />
           )}
 
           {gameMode === "drums" && <DrumsGame vibrateOn={vibrateOn} />}
 
           {gameMode === "targets" && (
-            <>
-              <div className="target-score">
-                {t("targets.score", { score: targetScore, missed: targetMissed })}
-                {targetHighScore > 0 && (
-                  <span className="target-highscore">
-                    {" "}
-                    &nbsp;|&nbsp; 🏆 {targetHighScore}
-                  </span>
-                )}
-              </div>
-
-              {targets.map((target) => {
-                const circumference =
-                  2 * Math.PI * ((target.size + 10) / 2 - 4);
-                return (
-                  <div
-                    key={target.id}
-                    className={`target${target.popped ? " target-pop" : ""}`}
-                    style={{
-                      left: target.x,
-                      top: target.y,
-                      width: target.size,
-                      height: target.size,
-                      fontSize: Math.round(target.size * 0.65),
-                      background: `radial-gradient(circle at 35% 30%, hsl(${target.hue},100%,85%) 0%, hsl(${target.hue},80%,60%) 50%, hsl(${target.hue},70%,40%) 100%)`,
-                      boxShadow: `0 4px 20px hsl(${target.hue},70%,50%,0.6)`,
-                    }}
-                    onTouchEnd={
-                      IS_TOUCH
-                        ? (e) => handleTargetTap(target, e)
-                        : undefined
-                    }
-                    onMouseUp={
-                      IS_TOUCH
-                        ? undefined
-                        : (e) => handleTargetTap(target, e)
-                    }
-                  >
-                    {target.emoji}
-                    {!target.popped && (
-                      <svg
-                        className="target-ring"
-                        viewBox={`0 0 ${target.size + 10} ${target.size + 10}`}
-                        style={{
-                          width: target.size + 10,
-                          height: target.size + 10,
-                        }}
-                      >
-                        <circle
-                          cx={(target.size + 10) / 2}
-                          cy={(target.size + 10) / 2}
-                          r={(target.size + 10) / 2 - 4}
-                          fill="none"
-                          stroke="rgba(255,255,255,0.9)"
-                          strokeWidth="4"
-                          strokeLinecap="round"
-                          strokeDasharray={`${circumference} ${circumference}`}
-                          strokeDashoffset="0"
-                          transform={`rotate(-90 ${(target.size + 10) / 2} ${(target.size + 10) / 2})`}
-                          style={{
-                            animation: `targetRingDrain ${target.duration}ms linear forwards`,
-                            "--circ": circumference,
-                          }}
-                        />
-                      </svg>
-                    )}
-                  </div>
-                );
-              })}
-            </>
+            <Targets
+              key={`targets-${progressEpoch}`}
+              activeEmojis={activeEmojis}
+              t={t}
+              vibrate={vibrate}
+            />
           )}
 
           {gameMode === "autoshow" && (
@@ -951,24 +486,6 @@ export default function App() {
             />
           )}
 
-          {/* Shared sparkles for balloons / targets */}
-          {emojis.map((item) => (
-            <div
-              key={item.id}
-              className="emoji-item"
-              style={{
-                left: item.x,
-                top: item.y,
-                fontSize: item.size,
-                "--dx": `${item.dx}px`,
-                "--dy": `${item.dy}px`,
-                "--rot": `${item.rotation}deg`,
-                "--dur": `${item.duration}ms`,
-              }}
-            >
-              {item.emoji}
-            </div>
-          ))}
         </>
       )}
 

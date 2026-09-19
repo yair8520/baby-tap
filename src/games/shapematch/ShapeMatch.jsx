@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { ShapeGeom } from '../../components/ShapeGeom';
+import { LearningGameShell, starsFromMistakes } from '../../components/LearningGameShell';
 import {
   PIECE_R,
   SLOT_R,
@@ -188,7 +189,7 @@ export default function ShapeMatch({ onExit, lang = 'he', vibrateOn = true }) {
 
   // ── derived ────────────────────────────────────────────────────────────────
 
-  const starCount = mistakes === 0 ? 3 : mistakes <= 2 ? 2 : 1;
+  const starCount = starsFromMistakes(mistakes);
   const levelNum  = levelIdx + 1;
 
   // ── render ─────────────────────────────────────────────────────────────────
@@ -204,119 +205,84 @@ export default function ShapeMatch({ onExit, lang = 'he', vibrateOn = true }) {
       {/* animated background */}
       <div className="shm-bg" />
 
-      {/* header */}
-      <div className="shm-header">
-        <button className="shm-btn-exit" onClick={onExit}>✕</button>
-        <span className="shm-level-label">
-          {lang === 'he' ? `שלב ${levelNum}` : `Level ${levelNum}`}
-        </span>
-        <span className="shm-hdr-stars">
-          {[0, 1, 2].map(i => (
-            <span key={i} style={{ opacity: i < starCount ? 1 : 0.22 }}>⭐</span>
-          ))}
-        </span>
-      </div>
-
-      {/* slot outlines */}
-      {slots.map(sl => (
-        <div
-          key={sl.id}
-          className={`shm-slot${matchId === sl.id ? ' sm-slot-pop' : ''}`}
-          style={{
-            width:  SLOT_R * 2,
-            height: SLOT_R * 2,
-            left:   sl.cx - SLOT_R,
-            top:    sl.cy - SLOT_R,
-          }}
-        >
-          <ShapeGeom
-            shape={sl.shape}
-            size={SLOT_R * 2}
-            fill={sl.filled ? sl.fill + '35' : sl.fill + '18'}
-            stroke={sl.fill}
-            strokeWidth={sl.filled ? 6 : 11}
-          />
-        </div>
-      ))}
-
-      {/* draggable pieces */}
-      {pieces.map(pc => {
-        const isDrag  = dragging?.pieceId === pc.id;
-        const isWrong = wrongId === pc.id;
-        const cx = isDrag ? dragging.cx : pc.cx;
-        const cy = isDrag ? dragging.cy : pc.cy;
-
-        return (
+      <LearningGameShell
+        lang={lang}
+        levelNum={levelNum}
+        totalStars={totalStars}
+        onExit={onExit}
+        levelDone={levelDone}
+        starCount={starCount}
+        onNextLevel={() => setLevelIdx(p => p + 1)}
+      >
+        {/* slot outlines */}
+        {slots.map(sl => (
           <div
-            key={pc.id}
-            className={[
-              'shm-piece',
-              isDrag     ? 'shm-piece-drag'    : '',
-              isWrong    ? 'shm-piece-wrong'   : '',
-              pc.matched ? 'shm-piece-matched' : '',
-            ].join(' ')}
+            key={sl.id}
+            className={`shm-slot${matchId === sl.id ? ' sm-slot-pop' : ''}`}
             style={{
-              width:      PIECE_R * 2,
-              height:     PIECE_R * 2,
-              left:       cx - PIECE_R,
-              top:        cy - PIECE_R,
-              '--glow':   pc.glow,
-              transition: isDrag
-                ? 'none'
-                : 'left .38s cubic-bezier(.2,1.6,.4,1), top .38s cubic-bezier(.2,1.6,.4,1)',
-            }}
-            onPointerDown={e => {
-              e.preventDefault();
-              onPointerDown(e, pc.id);
+              width:  SLOT_R * 2,
+              height: SLOT_R * 2,
+              left:   sl.cx - SLOT_R,
+              top:    sl.cy - SLOT_R,
             }}
           >
             <ShapeGeom
-              shape={pc.shape}
-              size={PIECE_R * 2}
-              fill={pc.fill}
-              stroke="rgba(255,255,255,0.75)"
-              strokeWidth={3.5}
+              shape={sl.shape}
+              size={SLOT_R * 2}
+              fill={sl.filled ? sl.fill + '35' : sl.fill + '18'}
+              stroke={sl.fill}
+              strokeWidth={sl.filled ? 6 : 11}
             />
           </div>
-        );
-      })}
+        ))}
 
-      {/* spark particles */}
-      {sparks.map(s => (
-        <SparkBurst key={s.id} x={s.x} y={s.y} color={s.color} />
-      ))}
+        {/* draggable pieces */}
+        {pieces.map(pc => {
+          const isDrag  = dragging?.pieceId === pc.id;
+          const isWrong = wrongId === pc.id;
+          const cx = isDrag ? dragging.cx : pc.cx;
+          const cy = isDrag ? dragging.cy : pc.cy;
 
-      {/* level complete overlay */}
-      {levelDone && (
-        <div
-          className="shm-complete"
-          onPointerDown={e => e.stopPropagation()}
-          onPointerUp={e => e.stopPropagation()}
-        >
-          <div className="shm-complete-card">
-            <span className="shm-complete-emoji">🎉</span>
-            <div className="shm-complete-title">
-              {lang === 'he' ? 'כל הכבוד!' : 'Great job!'}
-            </div>
-            <div className="shm-complete-stars">
-              {[0, 1, 2].map(i => (
-                <span key={i} className={`shm-cstar${i < starCount ? ' on' : ''}`}>⭐</span>
-              ))}
-            </div>
-            <div className="shm-total-score">
-              {lang === 'he'
-                ? `סה"כ ⭐ ${totalStars}`
-                : `Total ⭐ ${totalStars}`}
-            </div>
-            <button
-              className="shm-btn-next"
-              onClick={() => setLevelIdx(p => p + 1)}
+          return (
+            <div
+              key={pc.id}
+              className={[
+                'shm-piece',
+                isDrag     ? 'shm-piece-drag'    : '',
+                isWrong    ? 'shm-piece-wrong'   : '',
+                pc.matched ? 'shm-piece-matched' : '',
+              ].join(' ')}
+              style={{
+                width:      PIECE_R * 2,
+                height:     PIECE_R * 2,
+                left:       cx - PIECE_R,
+                top:        cy - PIECE_R,
+                '--glow':   pc.glow,
+                transition: isDrag
+                  ? 'none'
+                  : 'left .38s cubic-bezier(.2,1.6,.4,1), top .38s cubic-bezier(.2,1.6,.4,1)',
+              }}
+              onPointerDown={e => {
+                e.preventDefault();
+                onPointerDown(e, pc.id);
+              }}
             >
-              {lang === 'he' ? 'שלב הבא ➜' : 'Next Level ➜'}
-            </button>
-          </div>
-        </div>
-      )}
+              <ShapeGeom
+                shape={pc.shape}
+                size={PIECE_R * 2}
+                fill={pc.fill}
+                stroke="rgba(255,255,255,0.75)"
+                strokeWidth={3.5}
+              />
+            </div>
+          );
+        })}
+
+        {/* spark particles */}
+        {sparks.map(s => (
+          <SparkBurst key={s.id} x={s.x} y={s.y} color={s.color} />
+        ))}
+      </LearningGameShell>
     </div>
   );
 }

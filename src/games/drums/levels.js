@@ -40,6 +40,3 @@ export const DRUM_PADS = [
     bg: "linear-gradient(135deg, #7B1FA2, #4A148C)",
   },
 ];
-
-/** @deprecated use DRUM_PADS */
-export const DRUM_PAD_DEFS = DRUM_PADS;

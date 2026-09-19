@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { ShapeGeom } from '../../components/ShapeGeom';
+import { LearningGameShell, starsFromMistakes } from '../../components/LearningGameShell';
 import { PATTERN_LEVELS, buildLevel } from './levels.js';
 import { useGameLevel } from '../../hooks/useGameProgress.js';
 import './PatternGame.css';
@@ -88,7 +89,7 @@ export default function PatternGame({ onExit, lang = 'he', vibrateOn = true }) {
 
   if (!pattern) return null;
 
-  const starCount = mistakes === 0 ? 3 : mistakes <= 2 ? 2 : 1;
+  const starCount = starsFromMistakes(mistakes);
   const levelNum  = levelIdx + 1;
 
   const { displayPattern, answer, choices } = pattern;
@@ -103,93 +104,66 @@ export default function PatternGame({ onExit, lang = 'he', vibrateOn = true }) {
         <div className="pg-blob pg-blob3" />
       </div>
 
-      {/* Header */}
-      <div className="pg-header">
-        <button className="pg-btn-exit" onClick={onExit}>✕</button>
-        <span className="pg-level-label">
-          {lang === 'he' ? `שלב ${levelNum}` : `Level ${levelNum}`}
-        </span>
-        <span className="pg-hdr-stars">
-          {[0, 1, 2].map(i => (
-            <span key={i} style={{ opacity: i < starCount ? 1 : 0.22 }}>⭐</span>
-          ))}
-        </span>
-      </div>
+      <LearningGameShell
+        lang={lang}
+        levelNum={levelNum}
+        onExit={onExit}
+        levelDone={levelDone}
+        starCount={starCount}
+        onNextLevel={() => setLevelIdx(p => p + 1)}
+      >
+        {/* Pattern display */}
+        <div className="pg-content">
+          <div className="pg-instruction">
+            {lang === 'he' ? 'מה הבא בסדרה?' : 'What comes next?'}
+          </div>
 
-      {/* Pattern display */}
-      <div className="pg-content">
-        <div className="pg-instruction">
-          {lang === 'he' ? 'מה הבא בסדרה?' : 'What comes next?'}
-        </div>
-
-        <div className="pg-pattern-row">
-          {displayPattern.map((item, i) => (
-            <div key={i} className="pg-pattern-item" style={{ '--delay': `${i * 0.08}s` }}>
-              <ShapeGeom shape={item.shape} size={75} fill={item.fill} stroke="rgba(255,255,255,0.5)" strokeWidth={3} />
-            </div>
-          ))}
-
-          {/* Question tile */}
-          <div className={`pg-question-tile${revealed ? ' pg-question-revealed' : ''}`}>
-            {revealed ? (
-              <div className="pg-question-answer-shape">
-                <ShapeGeom shape={answer.shape} size={75} fill={answer.fill} stroke="rgba(255,255,255,0.5)" strokeWidth={3} />
+          <div className="pg-pattern-row">
+            {displayPattern.map((item, i) => (
+              <div key={i} className="pg-pattern-item" style={{ '--delay': `${i * 0.08}s` }}>
+                <ShapeGeom shape={item.shape} size={75} fill={item.fill} stroke="rgba(255,255,255,0.5)" strokeWidth={3} />
               </div>
-            ) : (
-              <span className="pg-question-mark">?</span>
-            )}
+            ))}
+
+            {/* Question tile */}
+            <div className={`pg-question-tile${revealed ? ' pg-question-revealed' : ''}`}>
+              {revealed ? (
+                <div className="pg-question-answer-shape">
+                  <ShapeGeom shape={answer.shape} size={75} fill={answer.fill} stroke="rgba(255,255,255,0.5)" strokeWidth={3} />
+                </div>
+              ) : (
+                <span className="pg-question-mark">?</span>
+              )}
+            </div>
+          </div>
+
+          {/* Choices */}
+          <div className="pg-choices-row">
+            {choices.map((choice) => {
+              const isSelected = selectedId === choice.id;
+              const isWrongSelected = isSelected && isCorrect === false;
+              const isRightSelected = isSelected && isCorrect === true;
+              const isDisabled = disabledIds.has(choice.id);
+
+              return (
+                <button
+                  key={choice.id}
+                  className={[
+                    'pg-choice',
+                    isWrongSelected ? 'pg-choice-wrong'   : '',
+                    isRightSelected ? 'pg-choice-correct' : '',
+                    isDisabled      ? 'pg-choice-disabled': '',
+                  ].join(' ')}
+                  onPointerDown={() => handleChoice(choice)}
+                  disabled={isDisabled || answered}
+                >
+                  <ShapeGeom shape={choice.shape} size={80} fill={choice.fill} stroke="rgba(255,255,255,0.45)" strokeWidth={3} />
+                </button>
+              );
+            })}
           </div>
         </div>
-
-        {/* Choices */}
-        <div className="pg-choices-row">
-          {choices.map((choice) => {
-            const isSelected = selectedId === choice.id;
-            const isWrongSelected = isSelected && isCorrect === false;
-            const isRightSelected = isSelected && isCorrect === true;
-            const isDisabled = disabledIds.has(choice.id);
-
-            return (
-              <button
-                key={choice.id}
-                className={[
-                  'pg-choice',
-                  isWrongSelected ? 'pg-choice-wrong'   : '',
-                  isRightSelected ? 'pg-choice-correct' : '',
-                  isDisabled      ? 'pg-choice-disabled': '',
-                ].join(' ')}
-                onPointerDown={() => handleChoice(choice)}
-                disabled={isDisabled || answered}
-              >
-                <ShapeGeom shape={choice.shape} size={80} fill={choice.fill} stroke="rgba(255,255,255,0.45)" strokeWidth={3} />
-              </button>
-            );
-          })}
-        </div>
-      </div>
-
-      {/* Level complete overlay */}
-      {levelDone && (
-        <div className="pg-complete">
-          <div className="pg-complete-card">
-            <span className="pg-complete-emoji">🎉</span>
-            <div className="pg-complete-title">
-              {lang === 'he' ? 'כל הכבוד!' : 'Great job!'}
-            </div>
-            <div className="pg-complete-stars">
-              {[0, 1, 2].map(i => (
-                <span key={i} className={`pg-cstar${i < starCount ? ' on' : ''}`}>⭐</span>
-              ))}
-            </div>
-            <button
-              className="pg-btn-next"
-              onClick={() => setLevelIdx(p => p + 1)}
-            >
-              {lang === 'he' ? 'שלב הבא ➜' : 'Next Level ➜'}
-            </button>
-          </div>
-        </div>
-      )}
+      </LearningGameShell>
     </div>
   );
 }

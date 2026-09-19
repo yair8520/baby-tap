@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { ShapeGeom } from '../../components/ShapeGeom';
-import { LearningGameShell } from '../../components/LearningGameShell';
+import { LearningGameShell, starsFromMistakes } from '../../components/LearningGameShell';
 import {
   SHAPEMEMORY_LEVELS,
   getShapeMemoryLevel,
@@ -156,7 +156,7 @@ export default function ShapeMemory({ onExit, lang = 'he', vibrateOn = true }) {
     };
   }, []);
 
-  const starCount = mistakes === 0 ? 3 : mistakes <= 2 ? 2 : 1;
+  const starCount = starsFromMistakes(mistakes);
   const levelNum  = levelIdx + 1;
 
   // ── Render ────────────────────────────────────────────────────────────────

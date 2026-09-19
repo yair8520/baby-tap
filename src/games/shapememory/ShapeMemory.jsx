@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { ShapeGeom } from '../../components/ShapeGeom';
+import { LearningGameShell } from '../../components/LearningGameShell';
 import {
   SHAPEMEMORY_LEVELS,
   getShapeMemoryLevel,
@@ -168,109 +169,82 @@ export default function ShapeMemory({ onExit, lang = 'he', vibrateOn = true }) {
         <div className="mem-blob mem-blob3" />
       </div>
 
-      {/* Header */}
-      <div className="mem-header">
-        <button className="mem-btn-exit" onClick={onExit}>✕</button>
-        <span className="mem-level-label">
-          {lang === 'he' ? `שלב ${levelNum}` : `Level ${levelNum}`}
-        </span>
-        <span className="mem-hdr-stars">
-          {[0, 1, 2].map(i => (
-            <span key={i} style={{ opacity: i < starCount ? 1 : 0.22 }}>⭐</span>
-          ))}
-        </span>
-      </div>
-
-      {/* SHOW phase */}
-      {phase === 'show' && (
-        <div className={`mem-show-area${fading ? ' mem-fade-out' : ''}`}>
-          <div className="mem-phase-label">
-            {lang === 'he' ? 'זכור את הסדר!' : 'Memorize the order!'}
-          </div>
-          <div className="mem-sequence-row">
-            {sequence.map((item, i) => (
-              <div key={i} className="mem-show-item" style={{ '--item-delay': `${i * 0.1}s` }}>
-                <ShapeGeom shape={item.shape} size={80} fill={item.fill} stroke="rgba(255,255,255,0.6)" strokeWidth={3} />
-              </div>
-            ))}
-          </div>
-          <CountdownRing remaining={countdown} total={totalShowSec} />
-        </div>
-      )}
-
-      {/* RECALL phase */}
-      {phase === 'recall' && (
-        <div className="mem-recall-area">
-          <div className="mem-phase-label">
-            {lang === 'he' ? 'בחר בסדר הנכון!' : 'Tap in the right order!'}
-          </div>
-
-          {/* Answer slots */}
-          <div className="mem-slots-row">
-            {sequence.map((item, i) => {
-              const filled = userAnswers[i];
-              const isCurrent = i === userAnswers.length;
-              const isWrong   = wrongSlot === i;
-              const isGlow    = slotGlow === i;
-              return (
-                <div
-                  key={i}
-                  className={[
-                    'mem-slot',
-                    isCurrent && !filled ? 'mem-slot-current' : '',
-                    isWrong ? 'mem-slot-wrong' : '',
-                    isGlow  ? 'mem-slot-glow'  : '',
-                  ].join(' ')}
-                >
-                  {filled ? (
-                    <ShapeGeom shape={filled.shape} size={70} fill={filled.fill} stroke="rgba(255,255,255,0.5)" strokeWidth={3} />
-                  ) : (
-                    <div className="mem-slot-empty">
-                      {isCurrent && <span className="mem-slot-pointer">▼</span>}
-                    </div>
-                  )}
-                </div>
-              );
-            })}
-          </div>
-
-          {/* Palette */}
-          <div className="mem-palette-grid">
-            {palette.map((item) => (
-              <button
-                key={item.id}
-                className="mem-palette-item"
-                onPointerDown={() => handlePaletteTap(item)}
-              >
-                <ShapeGeom shape={item.shape} size={72} fill={item.fill} stroke="rgba(255,255,255,0.5)" strokeWidth={3} />
-              </button>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* Level complete overlay */}
-      {levelDone && (
-        <div className="mem-complete">
-          <div className="mem-complete-card">
-            <span className="mem-complete-emoji">🎉</span>
-            <div className="mem-complete-title">
-              {lang === 'he' ? 'כל הכבוד!' : 'Great job!'}
+      <LearningGameShell
+        lang={lang}
+        levelNum={levelNum}
+        onExit={onExit}
+        levelDone={levelDone}
+        starCount={starCount}
+        onNextLevel={() => setLevelIdx(p => p + 1)}
+      >
+        {/* SHOW phase */}
+        {phase === 'show' && (
+          <div className={`mem-show-area${fading ? ' mem-fade-out' : ''}`}>
+            <div className="mem-phase-label">
+              {lang === 'he' ? 'זכור את הסדר!' : 'Memorize the order!'}
             </div>
-            <div className="mem-complete-stars">
-              {[0, 1, 2].map(i => (
-                <span key={i} className={`mem-cstar${i < starCount ? ' on' : ''}`}>⭐</span>
+            <div className="mem-sequence-row">
+              {sequence.map((item, i) => (
+                <div key={i} className="mem-show-item" style={{ '--item-delay': `${i * 0.1}s` }}>
+                  <ShapeGeom shape={item.shape} size={80} fill={item.fill} stroke="rgba(255,255,255,0.6)" strokeWidth={3} />
+                </div>
               ))}
             </div>
-            <button
-              className="mem-btn-next"
-              onClick={() => setLevelIdx(p => p + 1)}
-            >
-              {lang === 'he' ? 'שלב הבא ➜' : 'Next Level ➜'}
-            </button>
+            <CountdownRing remaining={countdown} total={totalShowSec} />
           </div>
-        </div>
-      )}
+        )}
+
+        {/* RECALL phase */}
+        {phase === 'recall' && (
+          <div className="mem-recall-area">
+            <div className="mem-phase-label">
+              {lang === 'he' ? 'בחר בסדר הנכון!' : 'Tap in the right order!'}
+            </div>
+
+            {/* Answer slots */}
+            <div className="mem-slots-row">
+              {sequence.map((item, i) => {
+                const filled = userAnswers[i];
+                const isCurrent = i === userAnswers.length;
+                const isWrong   = wrongSlot === i;
+                const isGlow    = slotGlow === i;
+                return (
+                  <div
+                    key={i}
+                    className={[
+                      'mem-slot',
+                      isCurrent && !filled ? 'mem-slot-current' : '',
+                      isWrong ? 'mem-slot-wrong' : '',
+                      isGlow  ? 'mem-slot-glow'  : '',
+                    ].join(' ')}
+                  >
+                    {filled ? (
+                      <ShapeGeom shape={filled.shape} size={70} fill={filled.fill} stroke="rgba(255,255,255,0.5)" strokeWidth={3} />
+                    ) : (
+                      <div className="mem-slot-empty">
+                        {isCurrent && <span className="mem-slot-pointer">▼</span>}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+
+            {/* Palette */}
+            <div className="mem-palette-grid">
+              {palette.map((item) => (
+                <button
+                  key={item.id}
+                  className="mem-palette-item"
+                  onPointerDown={() => handlePaletteTap(item)}
+                >
+                  <ShapeGeom shape={item.shape} size={72} fill={item.fill} stroke="rgba(255,255,255,0.5)" strokeWidth={3} />
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+      </LearningGameShell>
     </div>
   );
 }

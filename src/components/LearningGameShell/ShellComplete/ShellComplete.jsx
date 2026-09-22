@@ -1,3 +1,4 @@
+import { useEffect, useRef } from "react";
 import { useT } from "../../../i18n";
 import { DEFAULT_SHELL_COMPLETE_PROPS } from "./ShellComplete.props.js";
 import "./ShellComplete.css";
@@ -6,13 +7,23 @@ import "./ShellComplete.css";
 export function ShellComplete({
   starCount = DEFAULT_SHELL_COMPLETE_PROPS.starCount,
   maxStars = DEFAULT_SHELL_COMPLETE_PROPS.maxStars,
-  totalStars,
   isLastLevel = DEFAULT_SHELL_COMPLETE_PROPS.isLastLevel,
   onNextLevel,
   onReplay,
 }) {
   const t = useT();
   const stop = (e) => e.stopPropagation();
+  const advance = isLastLevel ? onReplay : onNextLevel;
+  const advanceRef = useRef(advance);
+
+  useEffect(() => {
+    advanceRef.current = advance;
+  }, [advance]);
+
+  useEffect(() => {
+    const timer = window.setTimeout(() => advanceRef.current?.(), 1800);
+    return () => window.clearTimeout(timer);
+  }, []);
 
   return (
     <div
@@ -29,7 +40,7 @@ export function ShellComplete({
           🎉
         </span>
         <div id="learning-complete-title" className="lgs-complete-title">
-          {isLastLevel ? t("learning.allComplete") : t("learning.greatJob")}
+          {t("learning.greatJob")}
         </div>
         <div className="lgs-complete-stars" aria-hidden="true">
           {Array.from({ length: maxStars }, (_, i) => (
@@ -37,23 +48,6 @@ export function ShellComplete({
               ⭐
             </span>
           ))}
-        </div>
-        {totalStars != null && (
-          <div className="lgs-total-score">
-            {t("learning.totalStars", { total: totalStars })}
-          </div>
-        )}
-        <div className="lgs-actions">
-          {onReplay && (
-            <button type="button" className="lgs-btn-replay" onClick={onReplay}>
-              {t("learning.replay")}
-            </button>
-          )}
-          {onNextLevel && !isLastLevel && (
-            <button type="button" className="lgs-btn-next" onClick={onNextLevel}>
-              {t("learning.nextLevel")}
-            </button>
-          )}
         </div>
       </div>
     </div>

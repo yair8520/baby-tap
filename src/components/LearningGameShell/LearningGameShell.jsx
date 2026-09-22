@@ -13,7 +13,6 @@ export function LearningGameShell({
   totalLevels,
   maxUnlocked,
   onSelectLevel,
-  totalStars,
   onExit,
   levelDone = DEFAULT_LEARNING_GAME_SHELL_PROPS.levelDone,
   starCount = DEFAULT_LEARNING_GAME_SHELL_PROPS.starCount,
@@ -50,7 +49,6 @@ export function LearningGameShell({
         <ShellComplete
           starCount={starCount}
           maxStars={maxStars}
-          totalStars={totalStars}
           isLastLevel={isLastLevel}
           onNextLevel={onNextLevel}
           onReplay={onReplay}

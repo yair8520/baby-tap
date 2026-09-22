@@ -2,22 +2,12 @@ import { LULLABIES, LULLABY_IDS } from "./lullabies.js";
 
 export { LULLABIES, LULLABY_IDS };
 
-export const SLEEP_OPUS_URLS = {
-  rain: new URL("../../assets/sounds/small_42-Rain-10min.opus", import.meta.url)
-    .href,
-  ocean: new URL(
-    "../../assets/sounds/small_47-Waves-10min.opus",
-    import.meta.url,
-  ).href,
-  // Storm recording — only for the storm mode (not "night wind").
-  storm: new URL(
-    "../../assets/sounds/small_24-Storm-10min.opus",
-    import.meta.url,
-  ).href,
-  waterfall: new URL(
-    "../../assets/sounds/small_32-Waterfall-10min.opus",
-    import.meta.url,
-  ).href,
+// Short, normalized, seamless loops derived from the existing nature recordings.
+export const SLEEP_RECORDINGS = {
+  rain: new URL("../../assets/sounds/rain.mp3", import.meta.url).href,
+  ocean: new URL("../../assets/sounds/ocean.mp3", import.meta.url).href,
+  storm: new URL("../../assets/sounds/storm.mp3", import.meta.url).href,
+  waterfall: new URL("../../assets/sounds/waterfall.mp3", import.meta.url).href,
 };
 
 export const SLEEP_SOUND_MODES = [

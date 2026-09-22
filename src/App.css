@@ -486,6 +486,46 @@ body, html, #root {
   }
 }
 
+/* Mobile Safari repaints large blurred layers on every animation frame. */
+.app-performance-lite .aurora-blob {
+  filter: none;
+  mix-blend-mode: normal;
+  animation: none;
+  opacity: 0.3;
+}
+
+.app-performance-lite .bg-stars,
+.app-performance-lite .theme-symbol {
+  animation: none;
+}
+
+.app-performance-lite .theme-symbol { opacity: 0.14; }
+
+.app-performance-lite .start-screen,
+.app-performance-lite .start-card {
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+}
+
+.app-performance-lite .ss-bg::before,
+.app-performance-lite .ss-bg::after,
+.app-performance-lite .shm-bg::before,
+.app-performance-lite .shm-bg::after,
+.app-performance-lite .cm-bg::before,
+.app-performance-lite .cm-bg::after,
+.app-performance-lite .pg-blob,
+.app-performance-lite .mem-blob {
+  filter: none;
+  animation: none;
+  opacity: 0.2;
+}
+
+.app-performance-lite .sm-panel,
+.app-performance-lite .sleep-panel {
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .aurora-blob,
   .bg-stars,
@@ -494,4 +534,3 @@ body, html, #root {
     animation: none !important;
   }
 }
-

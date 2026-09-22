@@ -1,7 +1,7 @@
 import { LULLABIES, lullabyBeatSeconds } from "./lullabies.js";
 
 function makeNoiseBuffer(ctx, kind = "white") {
-  const length = ctx.sampleRate * 2;
+  const length = ctx.sampleRate;
   const buffer = ctx.createBuffer(1, length, ctx.sampleRate);
   const data = buffer.getChannelData(0);
   let lastOut = 0;
@@ -13,18 +13,77 @@ function makeNoiseBuffer(ctx, kind = "white") {
     if (kind === "brown") {
       const brown = (lastOut + 0.02 * white) / 1.02;
       lastOut = brown;
-      data[i] = brown * 3.5;
+      data[i] = brown;
     } else if (kind === "pink") {
       b0 = 0.99886 * b0 + white * 0.0555179;
       b1 = 0.99586 * b1 + white * 0.0750759;
       b2 = 0.99332 * b2 + white * 0.153852;
       const pink = b0 + b1 + b2 + white * 0.3104856;
-      data[i] = pink * 3.5;
+      data[i] = pink;
     } else {
       data[i] = white;
     }
   }
+  let peak = 0;
+  for (let i = 0; i < length; i++) peak = Math.max(peak, Math.abs(data[i]));
+  const scale = peak > 0 ? 0.72 / peak : 1;
+  for (let i = 0; i < length; i++) data[i] *= scale;
   return buffer;
+}
+
+/** Lightweight, codec-free ambience tuned for phone speakers. */
+export function startAmbientNoise(ctx, master, mode) {
+  const kind =
+    mode === "ocean" || mode === "brown"
+      ? "brown"
+      : mode === "pink"
+        ? "pink"
+        : "white";
+  const src = ctx.createBufferSource();
+  src.buffer = makeNoiseBuffer(ctx, kind);
+  src.loop = true;
+
+  const highpass = ctx.createBiquadFilter();
+  highpass.type = "highpass";
+  const lowpass = ctx.createBiquadFilter();
+  lowpass.type = "lowpass";
+  const colorGain = ctx.createGain();
+  const settings = {
+    rain: [520, 7200, 0.95],
+    ocean: [110, 1500, 1.15],
+    wind: [180, 2400, 0.82],
+    storm: [90, 3200, 1.0],
+    waterfall: [280, 6500, 0.9],
+    white: [90, 7600, 0.62],
+    pink: [70, 5200, 0.78],
+    brown: [70, 2600, 1.15],
+  }[mode] || [80, 5000, 0.8];
+
+  highpass.frequency.value = settings[0];
+  lowpass.frequency.value = settings[1];
+  colorGain.gain.value = settings[2];
+  src.connect(highpass);
+  highpass.connect(lowpass);
+  lowpass.connect(colorGain);
+  colorGain.connect(master);
+
+  const oscillators = [];
+  const extra = [highpass, lowpass, colorGain];
+  if (["ocean", "wind", "storm"].includes(mode)) {
+    const lfo = ctx.createOscillator();
+    const lfoGain = ctx.createGain();
+    lfo.frequency.value = mode === "ocean" ? 0.11 : mode === "wind" ? 0.07 : 0.045;
+    lfoGain.gain.value = mode === "ocean" ? 0.24 : 0.16;
+    colorGain.gain.value = settings[2] - lfoGain.gain.value;
+    lfo.connect(lfoGain);
+    lfoGain.connect(colorGain.gain);
+    lfo.start();
+    oscillators.push(lfo);
+    extra.push(lfoGain);
+  }
+
+  src.start();
+  return { master, sources: [src], oscillators, extra };
 }
 
 /**

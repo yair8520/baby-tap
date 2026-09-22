@@ -106,7 +106,7 @@ export function useClassicSpawn({
         );
         return { id, emoji, x, y, size, dx, dy, rotation, duration };
       });
-      setEmojis((prev) => [...prev, ...newEmojis]);
+      setEmojis((prev) => [...prev.slice(-20), ...newEmojis].slice(-28));
 
       const burstCount = isNumber ? 10 : 7;
       const colors = activeColorsRef.current;
@@ -129,7 +129,7 @@ export function useClassicSpawn({
           shape: Math.random() > 0.5 ? "circle" : "square",
         };
       });
-      setParticles((prev) => [...prev, ...newParticles]);
+      setParticles((prev) => [...prev.slice(-28), ...newParticles].slice(-36));
 
       const ctx = getAudioCtx();
       if (!ctx || getNextMelodyTime() - ctx.currentTime < 0.9) {

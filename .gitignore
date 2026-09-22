@@ -13,7 +13,7 @@ dist-ssr
 *.local
 
 # Stray build artifacts in root
-assets/
+/assets/
 favicon.svg
 icon-192.png
 icons.svg

@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef } from "react";
-import { getAudioCtx } from "../../audio.js";
+import { getAudioCtx, unlockAudio } from "../../audio.js";
 import { useLocalStorage } from "../../hooks/useLocalStorage.js";
 import { usePageVisible } from "../../hooks/usePageVisible.js";
 import { STORAGE_KEYS } from "../../storage/keys.js";
@@ -8,11 +8,11 @@ import {
   LULLABIES,
   MELODY_SOUNDS,
   NOISE_SOUNDS,
-  SLEEP_OPUS_URLS,
+  SLEEP_RECORDINGS,
   SLEEP_SOUND_MODES,
 } from "./sleepCatalog.js";
 import {
-  makeNoiseBuffer,
+  startAmbientNoise,
   startHeartbeat,
   startLullaby,
 } from "./sleepToneEngine.js";
@@ -20,29 +20,29 @@ import {
 export {
   MELODY_SOUNDS,
   NOISE_SOUNDS,
-  SLEEP_OPUS_URLS,
   SLEEP_SOUND_MODES,
 };
 
 const isSleepVolume = (value) =>
   Number.isFinite(value) && value >= 0 && value <= 0.9;
 
-const sleepOpusBufferCache = new Map();
+const recordingCache = new Map();
 
-async function getSleepOpusBuffer(ctx, url) {
-  if (!url) return null;
-  if (!sleepOpusBufferCache.has(url)) {
-    sleepOpusBufferCache.set(
-      url,
-      (async () => {
-        const res = await fetch(url);
-        if (!res.ok) throw new Error(`Failed to fetch audio: ${res.status}`);
-        const ab = await res.arrayBuffer();
-        return await ctx.decodeAudioData(ab);
-      })(),
-    );
+function getRecording(ctx, url) {
+  if (!recordingCache.has(url)) {
+    const pending = fetch(url)
+      .then((response) => {
+        if (!response.ok) throw new Error(`Audio request failed: ${response.status}`);
+        return response.arrayBuffer();
+      })
+      .then((bytes) => ctx.decodeAudioData(bytes))
+      .catch((error) => {
+        recordingCache.delete(url);
+        throw error;
+      });
+    recordingCache.set(url, pending);
   }
-  return sleepOpusBufferCache.get(url);
+  return recordingCache.get(url);
 }
 
 /** Persisted sleep prefs + Web Audio engine for ambient modes. */
@@ -127,31 +127,29 @@ export function useSleepAudio(muteOn = false) {
         }
       };
 
-      const sleepOpusUrl = SLEEP_OPUS_URLS[mode];
-      if (sleepOpusUrl) {
+      if (!stillCurrent()) {
+        abandonMaster();
+        return;
+      }
+
+      const recordingUrl = SLEEP_RECORDINGS[mode];
+      if (recordingUrl) {
         try {
-          const buffer = await getSleepOpusBuffer(ctx, sleepOpusUrl);
+          const buffer = await getRecording(ctx, recordingUrl);
           if (!stillCurrent()) {
             abandonMaster();
             return;
           }
-          if (buffer) {
-            const src = ctx.createBufferSource();
-            src.buffer = buffer;
-            src.loop = true;
-            src.connect(master);
-            src.start();
-            sleepAudioRef.current = { master, sources: [src] };
-            return;
-          }
+          const src = ctx.createBufferSource();
+          src.buffer = buffer;
+          src.loop = true;
+          src.connect(master);
+          src.start();
+          sleepAudioRef.current = { master, sources: [src] };
+          return;
         } catch {
-          // Fall back to generated ambience when the recording cannot load.
+          // Keep the mode audible if offline or audio decoding fails.
         }
-      }
-
-      if (!stillCurrent()) {
-        abandonMaster();
-        return;
       }
 
       if (LULLABIES[mode]) {
@@ -168,117 +166,18 @@ export function useSleepAudio(muteOn = false) {
         return;
       }
 
-      if (mode === "wind") {
-        const src = ctx.createBufferSource();
-        src.buffer = makeNoiseBuffer(ctx, "white");
-        src.loop = true;
-        const bp = ctx.createBiquadFilter();
-        bp.type = "bandpass";
-        bp.frequency.value = 450;
-        bp.Q.value = 0.6;
-        const lfo = ctx.createOscillator();
-        const lfoGain = ctx.createGain();
-        lfo.type = "sine";
-        lfo.frequency.value = 0.08;
-        lfoGain.gain.value = 260;
-        lfo.connect(lfoGain);
-        lfoGain.connect(bp.frequency);
-        src.connect(bp);
-        bp.connect(master);
-        src.start();
-        lfo.start();
-        sleepAudioRef.current = {
-          master,
-          sources: [src],
-          oscillators: [lfo],
-          extra: [bp, lfoGain],
-        };
-        return;
-      }
-
-      const noiseKind =
-        mode === "ocean" || mode === "brown"
-          ? "brown"
-          : mode === "pink"
-            ? "pink"
-            : "white";
-
-      const src = ctx.createBufferSource();
-      src.buffer = makeNoiseBuffer(ctx, noiseKind);
-      src.loop = true;
-      const filter1 = ctx.createBiquadFilter();
-      const filter2 = ctx.createBiquadFilter();
-
-      if (mode === "rain") {
-        filter1.type = "bandpass";
-        filter1.frequency.value = 1700;
-        filter1.Q.value = 0.75;
-        filter2.type = "lowpass";
-        filter2.frequency.value = 800;
-        filter2.Q.value = 0.6;
-      } else if (mode === "ocean") {
-        filter1.type = "bandpass";
-        filter1.frequency.value = 260;
-        filter1.Q.value = 0.5;
-        filter2.type = "lowpass";
-        filter2.frequency.value = 520;
-        filter2.Q.value = 0.6;
-      } else if (mode === "storm") {
-        filter1.type = "bandpass";
-        filter1.frequency.value = 900;
-        filter1.Q.value = 0.55;
-        filter2.type = "lowpass";
-        filter2.frequency.value = 1400;
-        filter2.Q.value = 0.5;
-      } else if (mode === "waterfall") {
-        filter1.type = "bandpass";
-        filter1.frequency.value = 1200;
-        filter1.Q.value = 0.45;
-        filter2.type = "lowpass";
-        filter2.frequency.value = 2400;
-        filter2.Q.value = 0.5;
-      } else if (mode === "white") {
-        filter1.type = "lowpass";
-        filter1.frequency.value = 1100;
-        filter1.Q.value = 0.6;
-        filter2.type = "highpass";
-        filter2.frequency.value = 80;
-        filter2.Q.value = 0.5;
-      } else if (mode === "pink") {
-        filter1.type = "lowpass";
-        filter1.frequency.value = 900;
-        filter1.Q.value = 0.7;
-        filter2.type = "highpass";
-        filter2.frequency.value = 60;
-        filter2.Q.value = 0.5;
-      } else if (mode === "brown") {
-        filter1.type = "lowpass";
-        filter1.frequency.value = 650;
-        filter1.Q.value = 0.8;
-        filter2.type = "highpass";
-        filter2.frequency.value = 40;
-        filter2.Q.value = 0.5;
-      } else {
-        filter1.type = "lowpass";
-        filter1.frequency.value = 850;
-        filter1.Q.value = 0.7;
-        filter2.type = "highpass";
-        filter2.frequency.value = 70;
-        filter2.Q.value = 0.5;
-      }
-
-      src.connect(filter1);
-      filter1.connect(filter2);
-      filter2.connect(master);
-      src.start();
-      sleepAudioRef.current = {
-        master,
-        sources: [src],
-        extra: [filter1, filter2],
-      };
+      sleepAudioRef.current = startAmbientNoise(ctx, master, mode);
     },
     [stopSleepAudio],
   );
+
+  const ensureSleepAudio = useCallback(async () => {
+    if (muteRef.current || !sleepEnabled || !pageVisible) return;
+    const unlocked = await unlockAudio();
+    if (unlocked && !sleepAudioRef.current) {
+      await startSleepAudio(sleepSoundMode, sleepVolume);
+    }
+  }, [pageVisible, sleepEnabled, sleepSoundMode, sleepVolume, startSleepAudio]);
 
   useEffect(() => {
     if (muteOn || !sleepEnabled || !pageVisible) {
@@ -314,5 +213,6 @@ export function useSleepAudio(muteOn = false) {
     setSleepVolume,
     sleepEnabled,
     setSleepEnabled,
+    ensureSleepAudio,
   };
 }

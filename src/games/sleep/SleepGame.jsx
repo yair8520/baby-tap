@@ -15,6 +15,7 @@ export default function SleepGame({ muteOn = false }) {
     setSleepVolume,
     sleepEnabled,
     setSleepEnabled,
+    ensureSleepAudio,
   } = useSleepAudio(muteOn);
 
   const [sleepMenuOpen, setSleepMenuOpen] = useState(true);
@@ -46,7 +47,7 @@ export default function SleepGame({ muteOn = false }) {
     .join(" ");
 
   return (
-    <div className={sceneClass}>
+    <div className={sceneClass} onPointerDownCapture={ensureSleepAudio}>
       <SleepScene soundMode={sleepSoundMode} />
 
       <button

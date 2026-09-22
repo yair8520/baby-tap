@@ -6,10 +6,11 @@ import {
   isWebView,
 } from "./constants";
 
-import { setGlobalMute, playSound, suspendAudio, resumeAudio } from "./audio.js";
+import { setGlobalMute, playSound, suspendAudio, resumeAudio, unlockAudio } from "./audio.js";
 
 import { useLocalStorage } from "./hooks/useLocalStorage.js";
 import { usePageVisible } from "./hooks/usePageVisible.js";
+import { usePerformanceLite } from "./hooks/usePerformanceLite.js";
 import { STORAGE_KEYS } from "./storage/keys.js";
 import { clearStoredProgress } from "./storage/progress.js";
 import { isBoolean } from "./storage/validation.js";
@@ -65,6 +66,7 @@ const THEME_IDS = Object.keys(THEME_PRESETS);
 
 export default function App() {
   const pageVisible = usePageVisible();
+  const performanceLite = usePerformanceLite();
   const [lang, setLang] = useLocalStorage(
     STORAGE_KEYS.lang,
     defaultHebrew ? "he" : "en",
@@ -177,6 +179,8 @@ export default function App() {
   }, []);
 
   const enterFullscreen = async () => {
+    // Unlock before the first await: iOS requires a direct user gesture.
+    void unlockAudio();
     if (
       !isWebView &&
       typeof globalThis.DeviceMotionEvent?.requestPermission === "function"
@@ -271,18 +275,19 @@ export default function App() {
     <LangProvider lang={lang}>
       <div
         ref={containerRef}
-        className={`app theme-${theme}${pageVisible ? "" : " app-paused"}`}
+        className={`app theme-${theme}${pageVisible ? "" : " app-paused"}${performanceLite ? " app-performance-lite" : ""}`}
       >
         <div className="bg-base" />
         <AmbientBackground
           mode={
             !isFullscreen
-              ? "full"
+              ? performanceLite ? "lite" : "full"
               : hideAppChrome || gameMode === "autoshow"
                 ? "off"
                 : "lite"
           }
           symbols={activeEmojis}
+          performanceLite={performanceLite}
         />
 
         {!isFullscreen && (

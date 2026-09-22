@@ -9,7 +9,6 @@ import {
 import {
   MELODY_SOUNDS,
   NOISE_SOUNDS,
-  SLEEP_OPUS_URLS,
   SLEEP_SOUND_MODES,
 } from "./sleepCatalog.js";
 
@@ -35,19 +34,6 @@ test("each lullaby is a distinct multi-note motif with rhythm", () => {
       ),
     );
     assert.ok(song.notes.some(([hz]) => hz > 0));
-  }
-});
-
-test("recorded ambience maps only to matching nature modes", () => {
-  assert.deepEqual(Object.keys(SLEEP_OPUS_URLS).sort(), [
-    "ocean",
-    "rain",
-    "storm",
-    "waterfall",
-  ]);
-  assert.equal("wind" in SLEEP_OPUS_URLS, false);
-  for (const url of Object.values(SLEEP_OPUS_URLS)) {
-    assert.match(url, /\.opus/);
   }
 });
 

@@ -38,9 +38,13 @@ export function useClassicPointers({
   const mouseLongIntervalRef = useRef(null);
   const mousePosRef = useRef(null);
   const lastTapPosRef = useRef(null);
+  const lastSwipePaintRef = useRef(0);
 
   useEffect(() => {
     const onTouchMove = (e) => {
+      const now = performance.now();
+      const shouldPaint = now - lastSwipePaintRef.current >= 32;
+      if (shouldPaint) lastSwipePaintRef.current = now;
       Array.from(e.touches).forEach((t) => {
         activeTouchPosRef.current[t.identifier] = {
           x: t.clientX,
@@ -56,13 +60,13 @@ export function useClassicPointers({
             clearInterval(longPressIntervalRef.current[t.identifier]);
           }
         }
-        if (isSwipingRef.current[t.identifier]) {
+        if (shouldPaint && isSwipingRef.current[t.identifier]) {
           const id = nextId();
           const colors = activeColorsRef.current;
           const color = colors[randInt(0, colors.length)];
           const size = rand(18, 42);
           setTrail((prev) => [
-            ...prev,
+            ...prev.slice(-17),
             { id, x: t.clientX, y: t.clientY, color, size, swipe: true },
           ]);
           scheduleTimeout(

@@ -20,6 +20,23 @@ export function getAudioCtx() {
   return audioCtx
 }
 
+/** Unlock Web Audio from a direct user gesture (required by iOS Safari). */
+export async function unlockAudio() {
+  if (globalMute) return false
+  try {
+    const ctx = getAudioCtx()
+    if (ctx.state === 'suspended') await ctx.resume()
+    const buffer = ctx.createBuffer(1, 1, ctx.sampleRate)
+    const source = ctx.createBufferSource()
+    source.buffer = buffer
+    source.connect(ctx.destination)
+    source.start(0)
+    return ctx.state === 'running'
+  } catch {
+    return false
+  }
+}
+
 /** Pause the shared AudioContext to save battery when muted/backgrounded. */
 export function suspendAudio() {
   if (!audioCtx || audioCtx.state !== 'running') return

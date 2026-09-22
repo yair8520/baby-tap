@@ -2,13 +2,13 @@
  * Menu / classic-play ambience. Heavy blur+animation layers; keep off when a
  * game paints its own opaque background.
  */
-export function AmbientBackground({ mode = "full", symbols = [] }) {
+export function AmbientBackground({ mode = "full", symbols = [], performanceLite = false }) {
   if (mode === "off") return null;
 
   const lite = mode === "lite";
   const blobCount = lite ? 2 : 4;
   const bubbleCount = lite ? 0 : 12;
-  const symbolCount = lite ? 6 : 10;
+  const symbolCount = performanceLite ? 3 : lite ? 6 : 10;
 
   return (
     <>

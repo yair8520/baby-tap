@@ -5,7 +5,6 @@
  * @property {number} [totalLevels]  Campaign length; the stage strip is hidden below 2.
  * @property {number} [maxUnlocked]  Highest 0-based stage the player may jump to.
  * @property {(index: number) => void} [onSelectLevel] Omit for a read-only strip.
- * @property {number} [totalStars]   Career total shown on the completion card.
  * @property {() => void} [onExit]
  * @property {boolean} [levelDone]   Shows the completion overlay.
  * @property {number} [starCount]    Stars earned in the current stage.
@@ -13,7 +12,7 @@
  * @property {import('react').ReactNode} [headerTrailing] Replaces the star row when maxStars is 0.
  * @property {() => void} [onNextLevel]
  * @property {() => void} [onReplay]
- * @property {boolean} [isLastLevel] Hides the next-level button and swaps the title.
+ * @property {boolean} [isLastLevel] Replays the last stage after the celebration.
  * @property {import('react').ReactNode} [children] The playfield.
  */
 
